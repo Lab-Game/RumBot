@@ -1,0 +1,24 @@
+{
+  "name": "rumbot",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/Lab-Game/RumBot#readme",
+  "bugs": {
+    "url": "https://github.com/Lab-Game/RumBot/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lab-Game/RumBot.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "npx vite-node src/index.ts"
+  },
+  "dependencies": {
+    "@types/node": "^24.2.1",
+    "vite-node": "^3.2.4"
+  }
+}
