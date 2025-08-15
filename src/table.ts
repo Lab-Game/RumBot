@@ -21,10 +21,20 @@ export class Table {
         return true;
     }
 
-    play(meld: Meld) {
+    play(meld: Meld) : number{
+        let points = 0;
         for (const card of meld.cards) {
             this.join[card.index] = meld.join;
+            points += card.points();
         }
+
+        let firstCard = meld.cards[0];
+        if (firstCard.isAce() && meld.join === Meld.Join.RUN &&
+            (meld.cards.length == 3 || this.join[firstCard.prevInSuit().index] !== Meld.Join.RUN)){
+            points -= 10;
+        }
+
+        return points;
     }
 
     toString(): string {

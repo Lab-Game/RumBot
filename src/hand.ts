@@ -15,6 +15,10 @@ export class Hand {
         return this.knownCards.has(card);
     }
 
+    hasCards(cards: Card[]): boolean {
+        return cards.every(card => this.hasCard(card));
+    }
+
     addCard(card: Card) {
         this.knownCards.add(card);
     }

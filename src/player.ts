@@ -1,5 +1,7 @@
 import { Hand } from "./hand";
 import { Game } from "./game";
+import { Card } from "./card";
+import { Meld } from "./meld";
 
 export class Player {
 
@@ -16,6 +18,32 @@ export class Player {
         this.isBot = false;
         this.hand = new Hand();
         this.points = 0;
+    }
+
+    melds(): Meld[] {
+        let candidates = new Set<Meld>();
+        for (const card of this.hand.knownCards) {
+            for (const meld of card.meldList) {
+                candidates.add(meld);
+            }
+        }
+
+        let melds: Meld[] = [];
+        for (const meld of candidates) {
+            if (this.hand.hasCards(meld.cards) && this.game.table.canPlay(meld)) {
+                melds.push(meld);
+            }
+        }
+        return melds;
+    }
+
+    playMeld(meld: Meld) {
+        if (this.hand.hasCards(meld.cards) && this.game.table.canPlay(meld)) {
+            this.points += this.game.table.play(meld);
+            this.hand.removeCards(meld.cards);
+        } else {
+            throw new Error(`Cannot play meld: ${meld}`);
+        }
     }
 
     toString() : string {

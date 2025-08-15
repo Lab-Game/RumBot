@@ -32,8 +32,7 @@ export class Bot {
             } else if (messageType == "player") {
                 this.game.currentPlayerIndex = parseInt(fields[1]);
                 if (this.game.currentPlayer().isBot) {
-                    // Call to Bot AI logic goes here
-                    console.log("Bot's turn logic not implemented yet.");
+                    this.draw();
                 }
             } else if (messageType == "take") {
                 let numCards = parseInt(fields[1]);
@@ -43,6 +42,14 @@ export class Bot {
                 } else {
                     this.game.currentPlayer().hand.addUnknownCards(1);
                 }
+            } else if (messageType == "drawn") {
+                if (this.game.currentPlayer() !== this.game.bot()) {
+                    throw new Error("Drawn cards are revealed only on the bot's turn.");
+                }
+                let card = Card.fromString(fields[1]);
+                this.game.currentPlayer().hand.addCard(card);
+                this.meld();
+                this.discard();
             } else if (messageType == "run") {
                 let cards = fields.slice(1).map(cardName => Card.fromString(cardName));
                 let meld = Meld.find(Meld.Join.RUN, cards);
@@ -63,5 +70,29 @@ export class Bot {
 
             console.log("Game state:", String(this.game));
         });
+    }
+
+    draw() {
+        // This is where the bot would decide how many cards to draw.
+        // For now, we will just log that it is called.
+        console.log("Bot drawCards called.");
+        let cards = this.game.removeFromDiscard(0);
+        this.game.currentPlayer().hand.addCards(cards);
+    }
+
+    meld() {
+        // This is where the bot would decide how to play a meld.
+        // For now, we will just log that it is called.
+        console.log("Bot meld called.");
+        let melds = this.game.currentPlayer().melds();
+        if (melds.length > 0) {
+            this.game.currentPlayer.playMeld(melds[0]);
+        }
+    }
+
+    discard() {
+        // This is where the bot would decide which card to discard.
+        // For now, we will just log that it is called.
+        console.log("Bot discard called.");
     }
 };

@@ -8,4 +8,3 @@ console.log("Initializaing melds...");
 Meld.init();
 console.log("Starting bot...");
 let b = new Bot();
-
