@@ -154,6 +154,7 @@ for (const card of Card.deck) {
     }
 }
 
+/*
 for (const card of Card.deck) {
     console.log("card:", card.toString());
     console.log("  tripleset:", card.tripleSet.toString());
@@ -162,4 +163,5 @@ for (const card of Card.deck) {
     console.log("  singleRun:", card.singleRun.toString());
     console.log("  singleRunLow:", card.singleRunLow?.toString());
 }
+*/
 

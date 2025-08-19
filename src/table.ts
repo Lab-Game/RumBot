@@ -1,4 +1,4 @@
-import { Meld } from './meld';
+import { Card, Meld } from './card';
 import { Hand } from './hand';
 
 export class Table {
@@ -10,18 +10,18 @@ export class Table {
         let melds: Meld[] = [];
 
         for (const card of hand.cards) {
-            let possibleMelds = Meld.cardToMelds.get(card)!;
-            for (const meld of possibleMelds) {
-                if (meld.cards.every(c => hand.hasCard(c))) {
-                    melds.push(meld);
-                }
+            if (card.tripleSet.cards.every(c => hand.hasCard(c))) {
+                melds.push(card.tripleSet);
+            }
+            if (card.tripleRun?.cards.every(c => hand.hasCard(c))) {
+                melds.push(card.tripleRun);
             }
         }
 
         for (const meld of this.melds) {
-            for (const ext of meld.extensions) {
-                if (ext.cards.every(c => hand.hasCard(c))) {
-                    melds.push(ext);
+            for (const addition of meld.addOns) {
+                if (addition.cards.every(c => hand.hasCard(c))) {
+                    melds.push(addition);
                 }
             }
         }
@@ -31,18 +31,18 @@ export class Table {
 
     oneMeld(hand: Hand): Meld | undefined {
         for (const card of hand.cards) {
-            let possibleMelds = Meld.cardToMelds.get(card)!;
-            for (const meld of possibleMelds) {
-                if (meld.cards.every(c => hand.hasCard(c))) {
-                    return meld;
-                }
+            if (card.tripleSet.cards.every(c => hand.hasCard(c))) {
+                return card.tripleSet;
+            }
+            if (card.tripleRun?.cards.every(c => hand.hasCard(c))) {
+                return card.tripleRun;
             }
         }
 
         for (const meld of this.melds) {
-            for (const ext of meld.extensions) {
-                if (ext.cards.every(c => hand.hasCard(c))) {
-                    return ext;
+            for (const addition of meld.addOns) {
+                if (addition.cards.every(c => hand.hasCard(c))) {
+                    return addition;
                 }
             }
         }
