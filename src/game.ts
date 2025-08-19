@@ -4,21 +4,52 @@ import { Player } from "./player";
 
 export class Game {
 
+    deck : Card[];
+    discardPile : Card[] = [];
     players : Player[] = [];
-    discardPile : Card[];
+    playerIndex : number;
     table : Table;
-    currentPlayerIndex : number;
-    botIndex : number;
+    unseenCards : Set<Card> = new Set<Card>(Card.deck);
 
-    constructor(numPlayers : number, botIndex : number, discard : Card) {
+    constructor(numPlayers : number) {
+        this.playerIndex = 0;
         for (let i = 0; i < numPlayers; i++) {
             new Player(this);
         }
-        this.discardPile = [ discard ];
+
+        this.deck = [...Card.deck];
+        // shuffle the deck!
+
+        // deal cards
+        for (let i = 0; i < 7; ++i) {
+            for (const player of this.players) {
+                let card = this.deck.pop();
+                if (card !== undefined) {
+                    player.hand.addCard(card);
+                    this.unseenCards.delete(card);
+                } else {
+                    throw new Error("Ran out of cards during deal.");
+                }
+            }
+        }
+
+        let discard = this.deck.pop();
+        if (discard !== undefined) {
+            this.discardPile.push(discard);
+        } else {
+            throw new Error("Ran out of cards when creating discard pile.");
+        }
+        this.unseenCards.delete(discard)
+
         this.table = new Table();
-        this.currentPlayerIndex = 0;
-        this.botIndex = botIndex;
-        this.bot().isBot = true;
+    }
+
+    next() {
+        this.playerIndex = (this.playerIndex + 1) % this.players.length;
+    }
+
+    currentPlayer() : Player {
+        return this.players[this.playerIndex];
     }
 
     addToDiscard(card: Card) {
@@ -29,19 +60,10 @@ export class Game {
         return this.discardPile.splice(-numCards);
     }
 
-    currentPlayer() : Player {
-        return this.players[this.currentPlayerIndex];
-    }
-
-    bot() : Player {
-        return this.players[this.botIndex];
-    }
-
     toString() : string {
         let playersString = this.players.map(player => String(player)).join("");
         let discardString = `discard: ${Card.cardsToString(this.discardPile)}\n`;
-        let TableString = `table: ${this.table.toString()}\n`;
-        return playersString + discardString + TableString +
-            `current player: ${this.currentPlayerIndex} (${this.currentPlayer().isBot ? "Bot" : "Human"})\n`;
+        let tableString = `table: ${this.table.toString()}\n`;
+        return playersString + discardString + tableString;
     }
 }

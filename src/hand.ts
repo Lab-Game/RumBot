@@ -1,18 +1,19 @@
 import { Card } from './card';
 
 export class Hand {
-    knownCards: Set<Card> = new Set<Card>();
-    unknownCards: number = 0;
+    cards: Set<Card> = new Set<Card>();
+    publicCards: Set<Card> = new Set<Card>();
 
-    constructor() {
+    constructor(...cardNames: string[]) {
+        this.addCards(cardNames.map(cardName => Card.fromString(cardName)));
     }
 
     numCards(): number {
-        return this.knownCards.size + this.unknownCards;
+        return this.cards.size;
     }
 
     hasCard(card: Card): boolean {
-        return this.knownCards.has(card);
+        return this.cards.has(card);
     }
 
     hasCards(cards: Card[]): boolean {
@@ -20,7 +21,7 @@ export class Hand {
     }
 
     addCard(card: Card) {
-        this.knownCards.add(card);
+        this.cards.add(card);
     }
 
     addCards(cards: Card[]) {
@@ -29,15 +30,21 @@ export class Hand {
         }
     }
 
-    addUnknownCards(num: number) {
-        this.unknownCards += num;
+    addPublicCard(card: Card) {
+        this.cards.add(card);
+        this.publicCards.add(card);
+    }
+
+    addPublicCards(cards: Card[]) {
+        for (const card of cards) {
+            this.addPublicCard(card);
+        }
     }
 
     removeCard(card: Card) {
-        if (this.knownCards.has(card)) {
-            this.knownCards.delete(card);
-        } else if (this.unknownCards > 0) {
-            this.unknownCards -= 1;
+        if (this.cards.has(card)) {
+            this.cards.delete(card);
+            this.publicCards.delete(card);
         } else {
             throw new Error(`Card ${card} not in hand`);
         }
@@ -49,7 +56,11 @@ export class Hand {
         }
     }
 
+    points() : number {
+        return 0;
+    }
+
     toString(): string {
-        return `${Card.cardsToString(Array.from(this.knownCards))} ${this.unknownCards}x??`;
+        return `${Card.cardsToString(Array.from(this.cards))} [${Card.cardsToString(Array.from(this.publicCards))}]`;
     }
 }

@@ -7,7 +7,6 @@ export class Player {
 
     game : Game;
     index : number;
-    isBot : boolean;
     hand : Hand;
     points : number;
 
@@ -15,15 +14,14 @@ export class Player {
         this.game = game;
         this.index = this.game.players.length;
         this.game.players.push(this);
-        this.isBot = false;
         this.hand = new Hand();
         this.points = 0;
     }
 
     melds(): Meld[] {
         let candidates = new Set<Meld>();
-        for (const card of this.hand.knownCards) {
-            for (const meld of card.meldList) {
+        for (const card of this.hand.cards) {
+            for (const meld of card.melds) {
                 candidates.add(meld);
             }
         }
@@ -37,6 +35,18 @@ export class Player {
         return melds;
     }
 
+    oneMeld(): Meld | undefined {
+        for (const card of this.hand.cards) {
+            for (const meld of card.melds) {
+                if (this.hand.hasCards(meld.cards) && this.game.table.canPlay(meld)) {
+                    return meld;
+                }
+            }
+        }
+
+        return undefined;
+    }
+
     playMeld(meld: Meld) {
         if (this.hand.hasCards(meld.cards) && this.game.table.canPlay(meld)) {
             this.points += this.game.table.play(meld);
@@ -46,7 +56,11 @@ export class Player {
         }
     }
 
+    unplayMeld(meld: Meld) {
+        
+    }
+
     toString() : string {
-        return `Player ${this.index} ${this.isBot ? "(Bot)" : ""}: ${this.hand.toString()} (${this.points}pts)\n`;
+        return `Player ${this.index}: ${this.hand.toString()} (${this.points}pts)\n`;
     }
 }

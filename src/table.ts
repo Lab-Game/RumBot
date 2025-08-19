@@ -1,43 +1,52 @@
-import { Card } from './card';
 import { Meld } from './meld';
+import { Hand } from './hand';
 
 export class Table {
-    join: Meld.Join[] = new Array(52).fill(Meld.Join.NONE);
+    melds: Meld[] = [];
 
     constructor() {}
 
-    canPlay(meld: Meld): boolean {
-        if (meld.cards.length == 1) {
-            let card = meld.cards[0];
-            if (meld.join === Meld.Join.RUN) {
-                let prev = card.prevInSuit();
-                let next = card.nextInSuit();
-                return ((!prev.isAce() && this.join[prev.index] == Meld.Join.RUN) ||
-                        (!next.isAce() && this.join[next.index] == Meld.Join.RUN));
-            } else if (meld.join === Meld.Join.SET) {
-                return this.join[card.nextWithValue().index] == Meld.Join.SET;
+    findMelds(hand: Hand) {
+        let melds: Meld[] = [];
+
+        for (const card of hand.cards) {
+            let possibleMelds = Meld.cardToMelds.get(card)!;
+            for (const meld of possibleMelds) {
+                if (meld.cards.every(c => hand.hasCard(c))) {
+                    melds.push(meld);
+                }
             }
         }
-        return true;
-    }
 
-    play(meld: Meld) : number{
-        let points = 0;
-        for (const card of meld.cards) {
-            this.join[card.index] = meld.join;
-            points += card.points();
+        for (const meld of this.melds) {
+            for (const ext of meld.extensions) {
+                if (ext.cards.every(c => hand.hasCard(c))) {
+                    melds.push(ext);
+                }
+            }
         }
 
-        let firstCard = meld.cards[0];
-        if (firstCard.isAce() && meld.join === Meld.Join.RUN &&
-            (meld.cards.length == 3 || this.join[firstCard.prevInSuit().index] !== Meld.Join.RUN)){
-            points -= 10;
-        }
-
-        return points;
+        return melds;
     }
 
-    toString(): string {
-        return this.join.map((join, index) => (join == Meld.Join.NONE ? "" : (".rs"[join] + Card.deck[index]))).join(" ");
+    oneMeld(hand: Hand): Meld | undefined {
+        for (const card of hand.cards) {
+            let possibleMelds = Meld.cardToMelds.get(card)!;
+            for (const meld of possibleMelds) {
+                if (meld.cards.every(c => hand.hasCard(c))) {
+                    return meld;
+                }
+            }
+        }
+
+        for (const meld of this.melds) {
+            for (const ext of meld.extensions) {
+                if (ext.cards.every(c => hand.hasCard(c))) {
+                    return ext;
+                }
+            }
+        }
+
+        return undefined;
     }
 }
