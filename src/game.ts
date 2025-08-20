@@ -7,18 +7,23 @@ export class Game {
     deck : Card[];
     discardPile : Card[] = [];
     players : Player[] = [];
-    playerIndex : number;
+    currentPlayerIndex : number;
     table : Table;
     unseenCards : Set<Card> = new Set<Card>(Card.deck);
 
     constructor(numPlayers : number) {
-        this.playerIndex = 0;
+        this.currentPlayerIndex = 0;
         for (let i = 0; i < numPlayers; i++) {
             new Player(this);
         }
 
         this.deck = [...Card.deck];
-        // shuffle the deck!
+
+        // Shuffle the deck
+        for (let i = this.deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+        }        
 
         // deal cards
         for (let i = 0; i < 7; ++i) {
@@ -45,11 +50,11 @@ export class Game {
     }
 
     next() {
-        this.playerIndex = (this.playerIndex + 1) % this.players.length;
+        this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
     }
 
     currentPlayer() : Player {
-        return this.players[this.playerIndex];
+        return this.players[this.currentPlayerIndex];
     }
 
     addToDiscard(card: Card) {
@@ -58,6 +63,10 @@ export class Game {
 
     removeFromDiscard(numCards: number): Card[] {
         return this.discardPile.splice(-numCards);
+    }
+
+    returnToDiscard(cards: Card[]) {
+        this.discardPile.push(...cards);
     }
 
     toString() : string {

@@ -16,18 +16,24 @@ export class Arena {
 
     runGame() {
         const game = new Game(this.bots.length);
+
+        for (let i = 0; i < this.bots.length; i++) {
+            this.bots[i].beginGame(game);
+        }
+
         while (true) {
-            this.bots[game.playerIndex].play(game);
+            this.bots[game.currentPlayerIndex].makePlay();
             if (game.currentPlayer().hand.numCards() == 0) {
-                for (let i = 0; i < game.players.length; i++) {
-                    this.bots[i].score += game.players[i].points - game.players[i].hand.points();
-                }
-                return;
+                break;
             } else {
                 game.next();
             }
 
-            break; // for testing
+            break; // for safety during testing
+        }
+
+        for (let i = 0; i < this.bots.length; i++) {
+            this.bots[i].endGame();
         }
     }
 }

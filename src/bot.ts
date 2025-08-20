@@ -1,27 +1,38 @@
-import { Card } from "./card";
 import { Game } from "./game";
 import { Player } from "./player";
-import { Meld, } from "./meld";
+import { Play } from "./play";
+import {  Hand } from "./hand";
 
 export class Bot {
 
-    score: number = 0;
     game: Game;
     player: Player;
+    score: number = 0;
+    play: Play = new Play();
+    plays: Play[] = [];
 
     constructor() {
     }
 
-    play(game: Game) {
+    beginGame(game: Game) {
         this.game = game;
         this.player = this.game.currentPlayer();
-        this.evalHand();
     }
 
-    evalHand() {
-        // Try adding each unseen card to the hand.
-        const unseenCards = this.game.unseenCards;
+    generatePlays() {
+        this.plays.length = 0;
+        this.chooseDiscardsTaken();
+    }
 
-        const table = this.game.table;
+    chooseDiscardsTaken() {
+        for (let n = 1; n < this.game.discardPile.length; n++) {
+            this.play.discardsTaken = n;
+            let discards = this.game.removeFromDiscard(n);
+            this.game.returnToDiscard(discards);
+        }
+    }
+
+    endGame() {
+        this.score += this.player.points - this.player.hand.points();
     }
 };

@@ -18,15 +18,6 @@ export class Player {
         this.points = 0;
     }
 
-    playMeld(meld: Meld) {
-        if (this.hand.hasCards(meld.cards) && this.game.table.canPlay(meld)) {
-            this.points += this.game.table.play(meld);
-            this.hand.removeCards(meld.cards);
-        } else {
-            throw new Error(`Cannot play meld: ${meld}`);
-        }
-    }
-
     toString() : string {
         return `Player ${this.index}: ${this.hand.toString()} (${this.points}pts)\n`;
     }
