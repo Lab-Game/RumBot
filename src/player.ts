@@ -18,35 +18,6 @@ export class Player {
         this.points = 0;
     }
 
-    melds(): Meld[] {
-        let candidates = new Set<Meld>();
-        for (const card of this.hand.cards) {
-            for (const meld of card.melds) {
-                candidates.add(meld);
-            }
-        }
-
-        let melds: Meld[] = [];
-        for (const meld of candidates) {
-            if (this.hand.hasCards(meld.cards) && this.game.table.canPlay(meld)) {
-                melds.push(meld);
-            }
-        }
-        return melds;
-    }
-
-    oneMeld(): Meld | undefined {
-        for (const card of this.hand.cards) {
-            for (const meld of card.melds) {
-                if (this.hand.hasCards(meld.cards) && this.game.table.canPlay(meld)) {
-                    return meld;
-                }
-            }
-        }
-
-        return undefined;
-    }
-
     playMeld(meld: Meld) {
         if (this.hand.hasCards(meld.cards) && this.game.table.canPlay(meld)) {
             this.points += this.game.table.play(meld);
@@ -54,10 +25,6 @@ export class Player {
         } else {
             throw new Error(`Cannot play meld: ${meld}`);
         }
-    }
-
-    unplayMeld(meld: Meld) {
-        
     }
 
     toString() : string {

@@ -96,12 +96,12 @@ export class Meld {
         this.addOns = [];
     }
 
-    toShortString(): string {
+    toString(): string {
         return `[${Card.cardsToString(this.cards)}: ${this.points} pts]`;
     }
 
-    toString(): string {
-        return `${this.toShortString()} + ${this.addOns.map(meld => meld.toShortString()).join(", ")}`;
+    toLongString(): string {
+        return `${this.toString()} + ${this.addOns.map(meld => meld.toString()).join(", ")}`;
     }
 }
 

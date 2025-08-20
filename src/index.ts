@@ -8,3 +8,5 @@ for (const meld of melds) {
     console.log(meld.toString());
 }
 console.log("Melds found:", melds.length);
+
+table.allMelds(hand);

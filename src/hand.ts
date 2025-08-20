@@ -61,6 +61,6 @@ export class Hand {
     }
 
     toString(): string {
-        return `${Card.cardsToString(Array.from(this.cards))} [${Card.cardsToString(Array.from(this.publicCards))}]`;
+        return `${Card.cardsToString(Array.from(this.cards))}`;
     }
 }
