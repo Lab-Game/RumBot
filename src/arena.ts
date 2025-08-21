@@ -17,12 +17,17 @@ export class Arena {
     runGame() {
         const game = new Game(this.bots.length);
 
+        for (const player of game.players) {
+            console.log(player.toString());
+        }
+        console.log(`Discard pile: ${game.discardPile[0]}`);
+
         for (let i = 0; i < this.bots.length; i++) {
             this.bots[i].beginGame(game);
         }
 
         while (true) {
-            this.bots[game.currentPlayerIndex].makePlay();
+            this.bots[game.currentPlayerIndex].generatePlays();
             if (game.currentPlayer().hand.numCards() == 0) {
                 break;
             } else {

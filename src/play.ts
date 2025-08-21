@@ -14,6 +14,7 @@ export class Play {
     discardsTaken: number;
     newCards: Card[];
     melds: Meld[];
+    nonMelds: Set<Meld>
     discard: Card | null;
     evaluation: number;
 
@@ -25,9 +26,11 @@ export class Play {
             this.discard = play.discard;
             this.evaluation = play.evaluation;
         } else {
+            // Build a full structure
             this.discardsTaken = 0;
             this.newCards = [];
             this.melds = [];
+            this.nonMelds = new Set<Meld>();
             this.discard = null;
             this.evaluation = 0;
         }
