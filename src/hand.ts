@@ -60,6 +60,12 @@ export class Hand {
         return 0;
     }
 
+    clone() {
+        const clone = new Hand();
+        clone.cards = new Set<Card>(this.cards);
+        return clone;
+    }
+
     toString(): string {
         return `${Card.cardsToString(Array.from(this.cards))}`;
     }
