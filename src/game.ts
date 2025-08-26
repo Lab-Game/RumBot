@@ -1,55 +1,104 @@
-import { Card } from "./card";
-import { Table } from "./table";
+import { Card, Meld } from "./card";
 import { Player } from "./player";
+import { Table } from "./table";
 
 export class Game {
-
-    deck : Card[];
-    discardPile : Card[] = [];
-    players : Player[] = [];
+    drawPile : Card[];
+    discardPile : Card[];
+    undiscards : Set<Card>;  // Discards taken into a player's hand
+    numPlayers : number;
     currentPlayerIndex : number;
-    table : Table;
-    unseenCards : Set<Card> = new Set<Card>(Card.deck);
+    players : Player[];
+    melds : Set<Meld>;
 
-    constructor(numPlayers : number) {
-        this.currentPlayerIndex = 0;
-        for (let i = 0; i < numPlayers; i++) {
-            new Player(this);
+    private constructor() {
+        // Constructor is empty, because object creation is handled
+        // by static functions.  We can either create a game from
+        // scratch or create a variant where cards whose location is
+        // unknown to a specified player are randomly reordered.
+    }
+
+    // Set up a new game with deck shuffled and cards dealt for a
+    // specified number of players.
+    static newGame(numPlayers : number) : Game {
+        const game = new Game();
+
+        // Create the draw pile
+        game.drawPile = [...Card.deck];
+        Card.shuffleDeck(game.drawPile);
+
+        // Create players and deal hands
+        game.numPlayers = numPlayers;
+        game.players = Array.from({length:game.numPlayers}).map(() => new Player(game));
+        game.currentPlayerIndex = 0;
+        for (let i = 0; i < 7; ++i) {
+            for (const player of game.players) {
+                player.hand.addCard(game.drawPile.pop()!);
+            }
         }
 
-        this.deck = [...Card.deck];
+        // Create discard pile with one card
+        game.discardPile = [ game.drawPile.pop()! ];
 
-        // Shuffle the deck
-        for (let i = this.deck.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
-        }        
+        // Create melds set, initially empty
+        game.melds = new Set<Meld>();
 
-        // deal cards
-        for (let i = 0; i < 7; ++i) {
-            for (const player of this.players) {
-                let card = this.deck.pop();
-                if (card !== undefined) {
-                    player.hand.addCard(card);
-                    this.unseenCards.delete(card);
-                } else {
-                    throw new Error("Ran out of cards during deal.");
+        return game;
+    }
+
+    static variantGame(original: Game, forPlayer: Player) : Game {
+        // Randomly permute all cards in the game whose identity forPlayer can
+        // not determine.  This includes all cards in the draw pile together
+        // with all cards in the hands of other players that were
+        // not drawn from the discard pile.
+        const game = new Game();
+        game.discardPile = [...original.discardPile];
+        game.undiscards = new Set(original.undiscards);
+        game.numPlayers = original.numPlayers;
+        game.players = Array.from({length:game.numPlayers}).map(() => new Player(game));
+        for (const player of game.players) {
+            let originalPlayer = original.players[player.index];
+            player.points = originalPlayer.points;
+        }
+        game.melds = new Set(original.melds);
+
+        // Build a list of all cards whose identity forPlayer can not determine
+        let mysteryCards: Card[] = [...original.drawPile];
+        for (const player of original.players) {
+            if (player.index !== forPlayer.index) {
+                for (const card of player.hand.cards) {
+                    if (!game.undiscards.has(card)) {
+                        mysteryCards.push(card);
+                    }
                 }
             }
         }
 
-        let discard = this.deck.pop();
-        if (discard !== undefined) {
-            this.discardPile.push(discard);
-        } else {
-            throw new Error("Ran out of cards when creating discard pile.");
-        }
-        this.unseenCards.delete(discard)
+        // Shuffle the mysterious cards
+        Card.shuffleDeck(mysteryCards);
 
-        this.table = new Table();
+        // Replace the cards in the draw pile with an equal number of random
+        // cards removed from then end of mysteryCards.
+        game.drawPile = mysteryCards.splice(-game.drawPile.length);
+
+        // Each player's hand retains undiscarded cards from the original hand.
+        // The remaining cards from the original hand are replaced by random cards
+        // drawn from the mystery cards.
+        for (const player of game.players) {
+            let originalPlayer = original.players[player.index];
+            for (let card of originalPlayer.hand.cards) {
+                if (player.index == forPlayer.index || game.undiscards.has(card)) {
+                    player.hand.cards.add(card);
+                } else {
+                    player.hand.cards.add(mysteryCards.pop()!);
+                }
+            }
+        }
+
+        return game;
     }
 
-    next() {
+    nextTurn() {
         this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
     }
 
@@ -61,18 +110,16 @@ export class Game {
         this.discardPile.push(card);
     }
 
-    removeFromDiscard(numCards: number): Card[] {
+    takeFromDiscard(numCards: number): Card[] {
+        // TODO:  Shouldn't these cards become undiscarded?
+        // Check the callers...
         return this.discardPile.splice(-numCards);
-    }
-
-    returnToDiscard(cards: Card[]) {
-        this.discardPile.push(...cards);
     }
 
     toString() : string {
         let playersString = this.players.map(player => String(player)).join("");
         let discardString = `discard: ${Card.cardsToString(this.discardPile)}\n`;
-        let tableString = `table: ${this.table.toString()}\n`;
-        return playersString + discardString + tableString;
+        // display Melds also
+        return playersString + discardString;
     }
 }

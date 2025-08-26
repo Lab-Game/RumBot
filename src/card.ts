@@ -82,6 +82,13 @@ export namespace Card {
     export enum Value {
         Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King, Ace
     }
+
+    export function shuffleDeck(deck : Card[]) {
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+    }
 }
 
 export class Meld {

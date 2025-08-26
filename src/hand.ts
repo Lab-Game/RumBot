@@ -2,7 +2,6 @@ import { Card } from './card';
 
 export class Hand {
     cards: Set<Card> = new Set<Card>();
-    publicCards: Set<Card> = new Set<Card>();
 
     constructor(...cardNames: string[]) {
         this.addCards(cardNames.map(cardName => Card.fromString(cardName)));
@@ -30,24 +29,8 @@ export class Hand {
         }
     }
 
-    addPublicCard(card: Card) {
-        this.cards.add(card);
-        this.publicCards.add(card);
-    }
-
-    addPublicCards(cards: Card[]) {
-        for (const card of cards) {
-            this.addPublicCard(card);
-        }
-    }
-
     removeCard(card: Card) {
-        if (this.cards.has(card)) {
-            this.cards.delete(card);
-            this.publicCards.delete(card);
-        } else {
-            throw new Error(`Card ${card} not in hand`);
-        }
+        this.cards.delete(card);
     }
 
     removeCards(cards: Card[]) {
