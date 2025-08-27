@@ -5,22 +5,17 @@ import { Table } from "./table";
 export class Game {
     drawPile : Card[];
     discardPile : Card[];
-    undiscards : Set<Card>;  // Discards taken into a player's hand
+    undiscards : Set<Card>;
     numPlayers : number;
     currentPlayerIndex : number;
     players : Player[];
     melds : Set<Meld>;
 
-    private constructor() {
-        // Constructor is empty, because object creation is handled
-        // by static functions.  We can either create a game from
-        // scratch or create a variant where cards whose location is
-        // unknown to a specified player are randomly reordered.
-    }
+    private constructor() {}
 
     // Set up a new game with deck shuffled and cards dealt for a
     // specified number of players.
-    static newGame(numPlayers : number) : Game {
+    static create(numPlayers : number) : Game {
         const game = new Game();
 
         // Create the draw pile
@@ -46,7 +41,7 @@ export class Game {
         return game;
     }
 
-    static variantGame(original: Game, forPlayer: Player) : Game {
+    static variant(original: Game, forPlayer: Player) : Game {
         // Randomly permute all cards in the game whose identity forPlayer can
         // not determine.  This includes all cards in the draw pile together
         // with all cards in the hands of other players that were
@@ -98,22 +93,23 @@ export class Game {
         return game;
     }
 
+    clone() {
+        const game = new Game();
+        game.drawPile = [...this.drawPile];
+        game.discardPile = [...this.discardPile];
+        game.undiscards = new Set(this.undiscards);
+        game.numPlayers = this.numPlayers;
+        game.players = this.players.map(player => player.clone());
+        game.melds = new Set(this.melds);
+        return game;
+    }
+
     nextTurn() {
         this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
     }
 
     currentPlayer() : Player {
         return this.players[this.currentPlayerIndex];
-    }
-
-    addToDiscard(card: Card) {
-        this.discardPile.push(card);
-    }
-
-    takeFromDiscard(numCards: number): Card[] {
-        // TODO:  Shouldn't these cards become undiscarded?
-        // Check the callers...
-        return this.discardPile.splice(-numCards);
     }
 
     toString() : string {
