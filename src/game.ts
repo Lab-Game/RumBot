@@ -5,7 +5,7 @@ import { Table } from "./table";
 export class Game {
     drawPile : Card[];
     discardPile : Card[];
-    undiscards : Set<Card>;
+    discarded : Set<Card>;  // Was the card *ever* discarded?
     numPlayers : number;
     currentPlayerIndex : number;
     players : Player[];
@@ -24,7 +24,10 @@ export class Game {
 
         // Create players and deal hands
         game.numPlayers = numPlayers;
-        game.players = Array.from({length:game.numPlayers}).map(() => new Player(game));
+        game.players = [];
+        for (let i = 0; i < game.numPlayers; i++) {
+            game.players.push(Player.create(game));
+        }
         game.currentPlayerIndex = 0;
         for (let i = 0; i < 7; ++i) {
             for (const player of game.players) {
@@ -34,6 +37,7 @@ export class Game {
 
         // Create discard pile with one card
         game.discardPile = [ game.drawPile.pop()! ];
+        game.discarded = new Set<Card>(game.discardPile);
 
         // Create melds set, initially empty
         game.melds = new Set<Meld>();
@@ -48,9 +52,12 @@ export class Game {
         // not drawn from the discard pile.
         const game = new Game();
         game.discardPile = [...original.discardPile];
-        game.undiscards = new Set(original.undiscards);
+        game.discarded = new Set(original.discarded);
         game.numPlayers = original.numPlayers;
-        game.players = Array.from({length:game.numPlayers}).map(() => new Player(game));
+        game.players = [];
+        for (const player of original.players) {
+            game.players.push(player.clone(game));
+        }
         for (const player of game.players) {
             let originalPlayer = original.players[player.index];
             player.points = originalPlayer.points;
@@ -62,7 +69,7 @@ export class Game {
         for (const player of original.players) {
             if (player.index !== forPlayer.index) {
                 for (const card of player.hand.cards) {
-                    if (!game.undiscards.has(card)) {
+                    if (!game.discarded.has(card)) {
                         mysteryCards.push(card);
                     }
                 }
@@ -74,15 +81,15 @@ export class Game {
 
         // Replace the cards in the draw pile with an equal number of random
         // cards removed from then end of mysteryCards.
-        game.drawPile = mysteryCards.splice(-game.drawPile.length);
+        game.drawPile = mysteryCards.splice(- original.drawPile.length);
 
-        // Each player's hand retains undiscarded cards from the original hand.
+        // Each player's hand retains previously-discarded cards.
         // The remaining cards from the original hand are replaced by random cards
         // drawn from the mystery cards.
         for (const player of game.players) {
             let originalPlayer = original.players[player.index];
             for (let card of originalPlayer.hand.cards) {
-                if (player.index == forPlayer.index || game.undiscards.has(card)) {
+                if (player.index == forPlayer.index || game.discarded.has(card)) {
                     player.hand.cards.add(card);
                 } else {
                     player.hand.cards.add(mysteryCards.pop()!);
@@ -97,9 +104,9 @@ export class Game {
         const game = new Game();
         game.drawPile = [...this.drawPile];
         game.discardPile = [...this.discardPile];
-        game.undiscards = new Set(this.undiscards);
+        game.discarded = new Set(this.discarded);
         game.numPlayers = this.numPlayers;
-        game.players = this.players.map(player => player.clone());
+        game.players = this.players.map(player => player.clone(game));
         game.melds = new Set(this.melds);
         return game;
     }
@@ -113,9 +120,10 @@ export class Game {
     }
 
     toString() : string {
+        let drawPileString = `drawPile: ${Card.cardsToString(this.drawPile)}\n`;
+        let discardPileString = `discardPile: ${Card.cardsToString(this.discardPile)}\n`;
         let playersString = this.players.map(player => String(player)).join("");
-        let discardString = `discard: ${Card.cardsToString(this.discardPile)}\n`;
-        // display Melds also
-        return playersString + discardString;
+        let meldString = [...this.melds].map(meld => String(meld)).join(" ");
+        return drawPileString + discardPileString + playersString + meldString;
     }
 }

@@ -40,7 +40,7 @@ export class Hand {
     }
 
     points() : number {
-        return 0;
+        return 0;  // TODO
     }
 
     clone() {

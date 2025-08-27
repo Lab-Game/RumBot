@@ -104,7 +104,7 @@ export class Meld {
     }
 
     toString(): string {
-        return `[${Card.cardsToString(this.cards)}: ${this.points} pts]`;
+        return `[${Card.cardsToString(this.cards)} <${this.points}>]`;
     }
 
     toLongString(): string {

@@ -7,4 +7,3 @@ const arena = new Arena(bots);
 arena.runGame();
 
 
-

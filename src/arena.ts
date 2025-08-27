@@ -14,6 +14,7 @@ export class Arena {
 
     runGame() {
         const game = Game.create(this.bots.length);
+        console.log(game.toString());
 
         while (true) {
             this.bots[game.currentPlayerIndex].takeTurn(game);

@@ -4,44 +4,15 @@ import { Player } from "./player";
 import {  Hand } from "./hand";
 
 class Play {
-    taken: Card[];
-    drawn: Card | null;
-    melds: Meld[];
-    noMelds: Set<Card>;
-    discard: Card | null;
-    game: Game | null;
+    game: Game;
+    numTaken: number = 0;
+    taken: Card[] = [];
+    melds: Meld[] = [];
+    nonMelds: Set<Meld> = new Set<Meld>();
+    discard: Card | undefined;
 
-    private constructor() {}
-
-    static create(): Play {
-        const play = new Play();
-        play.taken = [];
-        play.drawn = null;
-        play.melds = [];
-        play.noMelds = new Set();
-        play.discard = null;
-        play.game = null;
-        return play;
-    }
-
-    static clone(other: Play): Play {
-        const play = new Play();
-        play.taken = [...other.taken];
-        play.drawn = other.drawn;
-        play.melds = [...other.melds];
-        play.noMelds = new Set(other.noMelds);
-        play.discard = other.discard;
-        play.game = other.game;
-        return play;
-    }
-
-    reset() {
-        this.taken.length = 0;
-        this.drawn = null;
-        this.melds.length = 0;
-        this.noMelds.clear();
-        this.discard = null;
-        this.game = null;
+    constructor(game: Game) {
+        this.game = game;
     }
 }
 
@@ -49,82 +20,75 @@ export class Bot {
 
     game: Game;
     player: Player;
-    play: Play = Play.create();
-    // plays: Play[] = [];
 
     takeTurn(game: Game) {
         this.game = game;
         this.player = game.currentPlayer();
 
-        // Get a variant for the current game
+        // Find all available plays
         const variant = Game.variant(this.game, this.player);
-
-        // Generate all possible Plays and resulting Games,
-        // with games involving a draw grouped.
-        let takePlays = this.generateTakePlays();
-        // let drawPlays = this.generateDrawPlays();
+        let play = new Play(this.game);
+        let plays = this.generatePlays(play);
+        console.log(plays);
     }
 
-    generateTakePlays() {
+    generatePlays(play: Play) : Play[] {
+        console.log("generating plays");
+        this.generateTakePlays(play);
+        return [];
+    }
+
+    generateTakePlays(play: Play) : Play[] {
         let plays: Play[] = [];
-        this.play.reset();
-        for (let numFromDiscard = 1;
-            numFromDiscard < this.game.discardPile.length;
-            numFromDiscard++) {
-
-            // Could have the Player take from the discard pile as
-            // a single operation.
-            this.play.taken = this.game.takeFromDiscard(numFromDiscard);
-            this.player.hand.addCards(this.play.taken);
-
-            this.play.game = this.game.clone();
-
-            this.generateMelds();
-
-            // ...and have the player return to the discard pile.
-            this.player.hand.removeCards(this.play.taken);
-            this.play.game.returnToDiscard(this.play.taken);
+        for (play.numTaken = 1; play.numTaken <= this.game.discardPile.length; play.numTaken++) {
+            console.log("num taken = ", play.numTaken);
+            play.taken =this.player.takeCards(play.numTaken);
+            this.generateMelds(play);
+            this.player.untakeCards(play.taken);
         }
+        return plays;
     }
 
-    generateMelds() {
-        let melds = this.game.findMelds(this.player.hand).filter(meld => !this.play.noMelds.has(meld));
+    generateMelds(play: Play) : Play[] {
+        let plays: Play[] = [];
+        let melds = this.player.melds().filter(meld => !play.nonMelds.has(meld));
         if (melds.length == 0) {
-            this.generateDiscard();
+            /*
+            if (play.taken[0] && this.player.hand.hasCard(play.taken[0])) {
+                return [];  // Invalid play.  The deepest card taken must be melded.
+            }
+                */
+            this.generateDiscard(play);
         } else {
             for (const meld of melds) {
-                // Consider two cases.  First case: play the meld.
-                this.player.hand.removeCards(meld.cards);
-                this.game.playMeld(meld);
-                this.play.melds.push(meld);
+                // Consider two cases.  First case: put the meld.
+                play.melds.push(meld);
+                this.player.putMeld(meld);
+                this.generateMelds(play);
+                this.player.unputMeld(meld);
+                play.melds.pop();
 
-                this.generateeMelds();
-
-                this.play.melds.pop();
-                this.game.unplayMeld(meld);
-                this.player.hand.addCards(meld.cards);
-
-                // Second case:  do not play the meld.
-                this.play.noMelds.add(meld);
-                this.generateMelds();
-                this.play.noMelds.delete(meld);
+                // Second case:  do not put the meld.
+                play.nonMelds.add(meld);
+                this.generateMelds(play);
+                play.nonMelds.delete(meld);
             }
         }
+        return plays;
     }
 
-    generateDiscard() {
-        let choices = [...this.player.hand.cards];
-        for (const card of choices) {
-            this.player.hand.removeCard(card);
-            this.game.discardPile.push(card);
-            this.build.discard = card;
+    generateDiscard(play: Play) : Play[] {
+        let plays: Play[] = [];
 
-            this.build.hand = this.player.hand;
-            console.log(this.build.toString());
-            this.plays.push(this.build.clone());
-            
-            this.game.discardPile.pop();
-            this.player.hand.addCard(card);
+        let discardChoices = [...this.player.hand.cards];
+        for (const card of discardChoices) {
+            play.discard = card;
+            let previouslyDiscarded = this.player.discard(card);
+            console.log(play.game.toString(), "\n");
+            this.player.undiscard(previouslyDiscarded);
+            play.discard = undefined;
         }
+
+        return plays;
     }
 };
