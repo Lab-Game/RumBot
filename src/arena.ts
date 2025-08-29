@@ -14,17 +14,22 @@ export class Arena {
 
     runGame() {
         const game = Game.create(this.bots.length);
-        console.log(game.toString());
+        console.log("initial game", game.toString());
 
         while (true) {
+            console.log("-----");
             this.bots[game.currentPlayerIndex].takeTurn(game);
-            if (game.currentPlayer().hand.numCards() == 0) {
+            console.log("game after turn", game.toString());
+            if (game.currentPlayer().hand.size() == 0 || game.drawPile.length == 0) {
                 break;
             } else {
                 game.nextTurn();
             }
+        }
 
-            break; // for safety during testing
+        for (const player of game.players) {
+            console.log(`Player ${player.index} got ${player.points} points -> ${this.bots[player.index].totalPoints + player.points}`);
+            this.bots[player.index].totalPoints += player.points;
         }
     }
 }

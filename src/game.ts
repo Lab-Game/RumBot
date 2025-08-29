@@ -51,49 +51,37 @@ export class Game {
         // with all cards in the hands of other players that were
         // not drawn from the discard pile.
         const game = new Game();
+        game.drawPile = [...original.drawPile];
         game.discardPile = [...original.discardPile];
         game.discarded = new Set(original.discarded);
         game.numPlayers = original.numPlayers;
+        game.currentPlayerIndex = original.currentPlayerIndex;
         game.players = [];
         for (const player of original.players) {
             game.players.push(player.clone(game));
         }
-        for (const player of game.players) {
-            let originalPlayer = original.players[player.index];
-            player.points = originalPlayer.points;
-        }
         game.melds = new Set(original.melds);
 
-        // Build a list of all cards whose identity forPlayer can not determine
-        let mysteryCards: Card[] = [...original.drawPile];
-        for (const player of original.players) {
+        // Put all cards in opponent hands back into the draw pile,
+        // except for those that were drawn from the discard pile.
+        for (const player of game.players) {
             if (player.index !== forPlayer.index) {
                 for (const card of player.hand.cards) {
                     if (!game.discarded.has(card)) {
-                        mysteryCards.push(card);
+                        player.undrawCard(card);
                     }
                 }
             }
         }
 
-        // Shuffle the mysterious cards
-        Card.shuffleDeck(mysteryCards);
+        // Shuffle the draw pile
+        Card.shuffleDeck(game.drawPile);
 
-        // Replace the cards in the draw pile with an equal number of random
-        // cards removed from then end of mysteryCards.
-        game.drawPile = mysteryCards.splice(- original.drawPile.length);
-
-        // Each player's hand retains previously-discarded cards.
-        // The remaining cards from the original hand are replaced by random cards
-        // drawn from the mystery cards.
+        // Each player now draws enough cards to replace those they lost
         for (const player of game.players) {
             let originalPlayer = original.players[player.index];
-            for (let card of originalPlayer.hand.cards) {
-                if (player.index == forPlayer.index || game.discarded.has(card)) {
-                    player.hand.cards.add(card);
-                } else {
-                    player.hand.cards.add(mysteryCards.pop()!);
-                }
+            while (player.hand.size() < originalPlayer.hand.size()) {
+                player.drawCard();
             }
         }
 
@@ -106,6 +94,7 @@ export class Game {
         game.discardPile = [...this.discardPile];
         game.discarded = new Set(this.discarded);
         game.numPlayers = this.numPlayers;
+        game.currentPlayerIndex = this.currentPlayerIndex;
         game.players = this.players.map(player => player.clone(game));
         game.melds = new Set(this.melds);
         return game;
@@ -123,7 +112,8 @@ export class Game {
         let drawPileString = `drawPile: ${Card.cardsToString(this.drawPile)}\n`;
         let discardPileString = `discardPile: ${Card.cardsToString(this.discardPile)}\n`;
         let playersString = this.players.map(player => String(player)).join("");
-        let meldString = [...this.melds].map(meld => String(meld)).join(" ");
-        return drawPileString + discardPileString + playersString + meldString;
+        let meldString = `melds: ${[...this.melds].map(meld => String(meld)).join(" ")}\n`;
+        let toPlayString = `player ${this.currentPlayerIndex} is playing\n`;
+        return drawPileString + discardPileString + playersString + meldString + toPlayString;
     }
 }

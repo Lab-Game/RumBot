@@ -77,23 +77,16 @@ export class Player {
     putMeld(meld: Meld) {
         this.hand.removeCards(meld.cards);
         this.game.melds.add(meld);
+        this.points += meld.points;
     }
 
     unputMeld(meld: Meld) {
         this.hand.addCards(meld.cards);
         this.game.melds.delete(meld);
+        this.points -= meld.points;
     }
 
     discard(card: Card) : boolean {
-        // Discarding a card exposes it to public view.  For the remainder of the game,
-        // everyone will know where this card is.  This matters, because when we
-        // consider possible locations of cards, these are no longer "mystery" cards.
-        // A challenge is that, when exploring possible moves, we might discard a
-        // card (which may or may not have been previously discarded!) and then take
-        // it back into the hand.  When we make a temporary discard, the card
-        // temporarily becomes non-mysterious.  But if we undo the discard, should
-        // the card regain its mysterious status?  So we return this bit and give
-        // the caller responsibility for remembering this bit of state.
         this.hand.removeCard(card);
         this.game.discardPile.push(card);
         let previouslyDiscarded = this.game.discarded.has(card);

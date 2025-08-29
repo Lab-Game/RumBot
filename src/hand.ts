@@ -7,7 +7,7 @@ export class Hand {
         this.addCards(cardNames.map(cardName => Card.fromString(cardName)));
     }
 
-    numCards(): number {
+    size(): number {
         return this.cards.size;
     }
 
@@ -40,7 +40,11 @@ export class Hand {
     }
 
     points() : number {
-        return 0;  // TODO
+        let points = 0;
+        for (const card of this.cards) {
+            points += card.points();
+        }
+        return points;
     }
 
     clone() {
