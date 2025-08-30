@@ -20,7 +20,7 @@ export class Arena {
             console.log("-----");
             this.bots[game.currentPlayerIndex].takeTurn(game);
             console.log("game after turn", game.toString());
-            if (game.currentPlayer().hand.size() == 0 || game.drawPile.length == 0) {
+            if (game.player().hand.size() == 0 || game.drawPile.length == 0) {
                 break;
             } else {
                 game.nextTurn();

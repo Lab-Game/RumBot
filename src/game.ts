@@ -104,7 +104,7 @@ export class Game {
         this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
     }
 
-    currentPlayer() : Player {
+    player() : Player {
         return this.players[this.currentPlayerIndex];
     }
 
