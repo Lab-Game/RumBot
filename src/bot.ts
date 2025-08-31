@@ -70,9 +70,9 @@ class Play {
 export class Bot {
 
     strategy: number;
+    finalScore: number = 0;
     totalPoints: number = 0;
     wins: number = 0;
-    gamePoints: number = 0;
     rollBot: Bot | undefined;
 
     constructor(strategy: number) {
@@ -84,6 +84,11 @@ export class Bot {
     }
 
     takeTurn(game: Game) {
+        if (game.verbose) {
+            let index = game.currentPlayerIndex;
+            console.log(`\n--- Player ${index}, Strategy = ${this.strategy} ---`);
+            console.log(game.toString());
+        }
         let variant = Game.variant(game, game.player());
         let bestTake = this.bestTake(variant);
         let bestDraws = this.bestDraws(variant);
@@ -245,6 +250,9 @@ export class Bot {
         let avgPoints = game.players.filter(p => p !== player).reduce((sum, p) => sum + p.hand.points(), 0) / (game.players.length - 1);
         let exitBonus = player.hand.size() == 0 ? avgPoints : 0;
         
+        let avgPoints2 = game.players.filter(p => p !== player).map(p => p.hand.size() * 7).reduce((sum, p) => sum + p, 0) / (game.players.length - 1);
+        let exitBonus2 = player.hand.size() == 0 ? avgPoints2 : 0;
+
         if (this.strategy == 1) {
             return player.points;
         }
@@ -271,11 +279,28 @@ export class Bot {
 
         if (this.strategy == 5) {
             let totalVictoryMargin = 0;
-            for (let i = 0; i < 2; ++i) {
-                totalVictoryMargin += this.rollOut(game);
+            for (let i = 0; i < 10; ++i) {
+                let victoryMargin = this.rollOut(game);
+                totalVictoryMargin += victoryMargin;
             }
-            process.exit();
-            return totalVictoryMargin / 10.0;
+            let averageVictoryMargin = totalVictoryMargin / 10.0;
+            return averageVictoryMargin;
+        }
+
+        if (this.strategy == 6) {
+            if (minHand > 3) {
+                return player.points + player.hand.points() * 0.6 + exitBonus;
+            } else {
+                return player.points + player.hand.points() * 0.2 + exitBonus;
+            }
+        }
+
+        if (this.strategy == 7) {
+            if (minHand > 3) {
+                return player.points + player.hand.points() * 0.6 + exitBonus2;
+            } else {
+                return player.points + player.hand.points() * 0.2 + exitBonus2;
+            }
         }
 
         return player.points - player.hand.points();
@@ -286,13 +311,10 @@ export class Bot {
         // We'll spin up a variant on this variant where we can play out
         // the rest of the game and compute the margin of victory, which is
         // the return value.
-
-        console.log("---- Rollout started ----")
         let playerIndex = game.currentPlayerIndex;
-        console.log("Current player index:", playerIndex);
         let roll = Game.variant(game, game.player());
-        console.log(roll.toString());
 
+        roll.verbose = false;
         while (roll.nextTurn()) {
             let bot = this.rollBot!;
             bot.takeTurn(roll);
@@ -302,12 +324,6 @@ export class Bot {
         let rollRivals = roll.players.filter(p => p !== rollPlayer);
         let avgFinalScore = rollRivals.reduce((sum, p) => sum + p.finalScore, 0) / rollRivals.length;
         let victoryMargin = rollPlayer.finalScore - avgFinalScore;
-
-        console.log("Rollout complete!");
-        console.log(roll.toString());
-        console.log("Victory margin for player", playerIndex, "=", victoryMargin);
-
-        console.log("---- Rollout complete ----")
 
         return victoryMargin;
     }

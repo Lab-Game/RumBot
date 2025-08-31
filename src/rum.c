@@ -1,33 +1,51 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 //////////////////////////////////////////////////////////////////////
 //
 //    Card
 //
 
+// Cards can be represented as integers (stored in a uint8_t (type Card)
+// or as a bit mask (type CardSet).  Clubs are in the range 0-15, diamonds 16-31,
+// hearts 32-47, and spades 48-63, though the upper two values are illegal,
+// e.g. 14 and 15 of clubs.  Typically, a card represented by integer k is
+// also represented by bit mask 1 << k.
+//
+// Lots of complexity arises from the fact that an ace can be either low or high.
+// For an ace in a player's hand, the bit mask representation has BOTH the
+// low and high bits set.  When the ace is played in a meld, one of these bits
+// is dropped, because the ace is then resolved as either high or low.
+// As an integer, an ace can be represented as either the low value (such as 0)
+// or the high value (such as 13).
+//
+// Textually, a "low" ace has a lowercase a, while a "high" ace has an uppercase A.
+
 typedef uint8_t Card;
 
-char *CardName[52] = {
-    "2C", "3C", "4C", "5C", "6C", "7C", "8C", "9C", "TC", "JC", "QC", "KC", "AC", 
-    "2D", "3D", "4D", "5D", "6D", "7D", "8D", "9D", "TD", "JD", "QD", "KD", "AD",
-    "2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "TH", "JH", "QH", "KH", "AH",
-    "2S", "3S", "4S", "5S", "6S", "7S", "8S", "9S", "TS", "JS", "QS", "KS", "AS",
+const char *Card_name_table[64] = {
+    "a♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣", "A♣", "14", "15",
+    "a♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦", "A♦", "30", "31",
+    "a♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥", "K♥", "A♥", "46", "47",
+    "a♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠", "A♠", "62", "63"
 };
 
-int Points[14] = { 5, 5, 5, 5, 5, 5, 5, 5, 10, 10, 10, 10, 15 };
+const int Card_points_table[16] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, -1, -1 };
 
 typedef enum {
     SUIT_CLUBS = 0,
-    SUIT_DIAMONDS = 13,
-    SUIT_HEARTS = 26,
-    SUIT_SPADES = 39
+    SUIT_DIAMONDS = 16,
+    SUIT_HEARTS = 32,
+    SUIT_SPADES = 48
 } Suit_t;
 
 typedef enum {
-    VALUE_2 = 0,
+    VALUE_LOW_ACE = 0,
+    VALUE_2,
     VALUE_3,
     VALUE_4,
     VALUE_5,
@@ -42,40 +60,80 @@ typedef enum {
     VALUE_ACE
 } Value_t;
 
+const char *Card_name(Card card) {
+    return Card_name_table[card];
+}   
+
 Suit_t Card_suit(Card card) {
-    return card / 13 * 13;
+    return card & 0x30;
 }
 
 Value_t Card_value(Card card) {
-    return card % 13;
-}
-
-bool Card_isAce(Card card) {
-    return Card_value(card) == VALUE_ACE;
+    return card & 0x0F;
 }
 
 int Card_points(Card card) {
-    return Points[Card_value(card)];
+    return Card_points_table[Card_value(card)];
+}
+
+bool Card_isLegal(Card card) {
+    return Card_value(card) <= VALUE_ACE && Card_suit(card) <= SUIT_SPADES;
+}
+
+bool Card_isAce(Card card) {
+    Value_t value = Card_value(card);
+    return value == VALUE_LOW_ACE || value == VALUE_ACE;
 }
 
 Card Card_prevInSuit(Card card) {
-    return (Card) ((Card_value(card) + 12) % 13 + Card_suit(card));
+    return (Card) (((Card_value(card) + 15) & 0x0F) + Card_suit(card));
 }
 
 Card Card_nextInSuit(Card card) {
-    return (Card) ((Card_value(card) + 1) % 13 + Card_suit(card));
-}   
+    return (Card) (((Card_value(card) + 1) & 0x0F) + Card_suit(card));
+}
 
 Card Card_prevOfValue(Card card) {
-    return (Card) ((Card_value(card) + 39) % 52);
+    return (Card) ((card + 48) & 0x3F);
 }
 
 Card Card_nextOfValue(Card card) {
-    return (Card) ((Card_value(card) + 13) % 52);
+    return (Card) ((card + 16) & 0x3F);
 }
 
-Card Card_oppositeColor(Card card) {
-    return (Card) ((card + 26) % 52);
+Card Card_oppositeOfValue(Card card) {
+    return (Card) ((card + 32) & 0x3F);
+}
+
+void Card_test() {
+
+    Card twoOfClubs = SUIT_CLUBS + VALUE_2;
+    assert(strcmp(Card_name(twoOfClubs), "2♣") == 0);
+    assert(strcmp(Card_name(twoOfClubs), "a♥") != 0);
+    assert(Card_points(twoOfClubs) == 1);
+    assert(Card_suit(twoOfClubs) == SUIT_CLUBS);
+    assert(Card_value(twoOfClubs) == VALUE_2);
+    assert(Card_isLegal(twoOfClubs));
+    assert(!Card_isAce(twoOfClubs));
+    assert(Card_prevInSuit(twoOfClubs) == (Card) (SUIT_CLUBS + VALUE_LOW_ACE));
+    assert(Card_nextInSuit(twoOfClubs) == (Card) (SUIT_CLUBS + VALUE_3));
+    assert(Card_prevOfValue(twoOfClubs) == (Card) (SUIT_SPADES + VALUE_2));
+    assert(Card_nextOfValue(twoOfClubs) == (Card) (SUIT_DIAMONDS + VALUE_2));
+    assert(Card_oppositeOfValue(twoOfClubs) == (Card) (SUIT_HEARTS + VALUE_2));
+
+    Card lowAceOfHearts = SUIT_HEARTS + VALUE_LOW_ACE;
+    assert(strcmp(Card_name(lowAceOfHearts), "a♥") == 0);
+    assert(strcmp(Card_name(twoOfClubs), "a♥") != 0);
+    assert(Card_points(lowAceOfHearts) == 1);
+    assert(Card_suit(lowAceOfHearts) == SUIT_HEARTS);
+    assert(Card_value(lowAceOfHearts) == VALUE_LOW_ACE);
+    assert(Card_isLegal(lowAceOfHearts));
+    assert(Card_isAce(lowAceOfHearts));
+    assert(!Card_isLegal(Card_prevInSuit(lowAceOfHearts)));
+    assert(Card_nextInSuit(lowAceOfHearts) == (Card) (SUIT_HEARTS + VALUE_2));
+    assert(Card_prevOfValue(lowAceOfHearts) == (Card) (SUIT_DIAMONDS + VALUE_LOW_ACE));
+    assert(Card_nextOfValue(lowAceOfHearts) == (Card) (SUIT_SPADES + VALUE_LOW_ACE));
+    assert(Card_oppositeOfValue(lowAceOfHearts) == (Card) (SUIT_CLUBS + VALUE_LOW_ACE));
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -146,7 +204,7 @@ void CardList_shuffle(CardList *cardList) {
 
 void CardList_print(CardList *cardList) {
     for (int i = 0; i < cardList->size; ++i) {
-        printf("%s ", CardName[cardList->cards[i]]);
+        printf("%s ", Card_name(cardList->cards[i]));
     }
 }
 
@@ -155,77 +213,6 @@ void CardList_print(CardList *cardList) {
 //    Meld
 //
 
-// A Meld is a set of cards that can be played together or appended
-// to a previously-played meld.  Here are the operations I need:
-//
-//    - Give a hand and melds on the table, what new melds can
-//      be formed?
-//      - What triple runs and set can be formed from the hand?
-//      - How can played runs and sets be extended with cards
-//        in the hand?
-//    - Answer in a form that makes iteration over the new
-//      melds easy.
-//    - Should be able to readily determine the point values
-//      of these melds.
-//    - Should be able to move the cards in a meld from the
-//      hand to the table and reverse the operation.
-//    - Must deal with Ace weirdness: can be high or low with
-//      different point values.
-//
-// I'm interested in representing Aces *twice* in a CardSet.
-// When in the drawPile, discardPile, or Hand, and ace has
-// TWO bits set:  one high, one low.  When the Ace is played
-// as part of a Meld... actually, do I even care how cards
-// are represented?  So I should do the low/high thing only
-// if it helps when finding playable melds, particularly in
-// scoring them.
-//
-// Option #1:  Represent a Meld as a cardset
-//
-// Table has two CardSets, one for cards played in runs and
-// one for cards played in sets.  By bit twiddling, I find
-// all cards playable as extensions.  For runs, this means
-// that I shift down a bit and up a bit with some masking.
-// (I might get that a low ace is playable, but a high ace
-// is not or vice versa.  But I'll remove low-ace places if
-// there is a high ace play.)  Then I "and" with the players
-// hand to find all cards that are playable as extensions.
-// I still need to iterate over this small set, which could
-// take a while.
-//
-//
-//
-//
-//
-// In general, there are triple-Melds (both runs and sets), which
-// can always be played if the cards are in-hand.
-// And there are single-Melds (again, both run and set), which
-// depend on some already-played cards.
-//
-// A basic question is:  what is a Meld?  For example, is it an
-// integer or a CardSet?  I think I might use integers, because
-// I can then associate a lot of values via an array.  Values of
-// interest include:
-//
-//    - A CardSet of meld members
-//    - The point value
-//    - Meld # of LeftExtension (for a run)
-//    - Meld # of RightExtension (for a run)
-//    - Meld # of SetCompletion (for a set)
-//
-// There are sort of two parts for finding playable Melds:
-//    - Given a hand, find the triple-melds with all required cards.
-//    - Given a table of already-played meld, find the single-card
-//      melds that can be added.
-//
-// Aces and wraparound are always the hard part!
-//
-// With bit-twiddling, I guess I can compute:
-//    - All single-card set completions.  Values are simple.
-//    - All single-card upward run extensions (ace = 15 pts)
-//    - All single-card downward run extensions (ace = 5 pts)
-//    - All three-card runs (is value tricky?)
-//    - All three-cards sets
 
 typedef struct PlayerStruct Player;
 typedef struct GameStruct Game;
@@ -252,6 +239,10 @@ Game *newGame(int numPlayers) {
 }
 
 int main(int argc, char **argv) {
+    Card_test();
+
+
+    /*
     CardList *cl = new_CardList();
     for (int i = 0; i < 52; ++i) {
         CardList_push(cl, i);
@@ -263,4 +254,5 @@ int main(int argc, char **argv) {
 
     CardList_free(cl);
     return 0;
+    */
 }

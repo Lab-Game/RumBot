@@ -25,17 +25,18 @@ export class Arena {
 
         do {
             let bot = this.bots[game.currentPlayerIndex];
-            if (this.verbose) {
-                let index = game.currentPlayerIndex;
-                console.log(`\n--- Player ${index}, Strategy = ${this.bots[index].strategy} ---`);
-                console.log(game.toString());
-            }
             bot.takeTurn(game);
         } while (game.nextTurn());
 
+        for (let i = 0; i < this.bots.length; ++i) {
+            let bot = this.bots[i];
+            bot.finalScore = game.players[i].finalScore;
+            bot.totalPoints += bot.finalScore;
+        }
+
         // Determine the winner(s)
-        let maxPoints = Math.max(...this.bots.map(bot => bot.gamePoints));
-        let winners = this.bots.filter(bot => bot.gamePoints === maxPoints);
+        let maxPoints = Math.max(...this.bots.map(bot => bot.finalScore));
+        let winners = this.bots.filter(bot => bot.finalScore === maxPoints);
         for (const winner of winners) {
             winner.wins += 1.0 / winners.length;
         }

@@ -105,7 +105,7 @@ export class Game {
     }
 
     nextTurn() : boolean {
-        if (this.player().hand.size() == 0 || this.discardPile.length == 0) {
+        if (this.player().hand.size() == 0 || this.drawPile.length == 0) {
             for (const player of this.players) {
                 player.finalScore = player.points - player.hand.points();
             }
