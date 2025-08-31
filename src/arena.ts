@@ -23,6 +23,8 @@ export class Arena {
 
         const game = Game.create(this.bots.length, this.verbose);
 
+        console.log(game.toString());
+
         while (true) {
             if (this.verbose) {
                 let index = game.currentPlayerIndex;

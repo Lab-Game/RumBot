@@ -59,7 +59,7 @@ class Play {
 
     toString() {
         const intakeString = this.draw ? `draw:${this.draw.toString()}` : `take:${this.taken}`;
-        const meldString = `melds: ${this.melds.map(meld => meld.toString()).join(" ")}`;
+        const meldString = this.melds.map(meld => meld.toString()).join(" ");
         const discardString = this.discard ? `discard: ${this.discard.toString()}` : "<none>";
         const evalString = `${this.eval} pts`;
         return `${intakeString} -> ${meldString} -> ${discardString} -> ${evalString}`;
