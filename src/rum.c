@@ -34,7 +34,7 @@ const char *Card_name_table[64] = {
     "a♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠", "A♠", "62", "63"
 };
 
-const int Card_points_table[16] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, -1, -1 };
+const int Card_points_table[16] = { 5, 5, 5, 5, 5, 5, 5, 5, 5, 10, 10, 10, 10, 15, -1, -1 };
 
 typedef enum {
     SUIT_CLUBS = 0,
@@ -106,11 +106,10 @@ Card Card_oppositeOfValue(Card card) {
 }
 
 void Card_test() {
-
-    Card twoOfClubs = SUIT_CLUBS + VALUE_2;
+    Card twoOfClubs = VALUE_2 + SUIT_CLUBS;
     assert(strcmp(Card_name(twoOfClubs), "2♣") == 0);
     assert(strcmp(Card_name(twoOfClubs), "a♥") != 0);
-    assert(Card_points(twoOfClubs) == 1);
+    assert(Card_points(twoOfClubs) == 5);
     assert(Card_suit(twoOfClubs) == SUIT_CLUBS);
     assert(Card_value(twoOfClubs) == VALUE_2);
     assert(Card_isLegal(twoOfClubs));
@@ -121,10 +120,10 @@ void Card_test() {
     assert(Card_nextOfValue(twoOfClubs) == (Card) (SUIT_DIAMONDS + VALUE_2));
     assert(Card_oppositeOfValue(twoOfClubs) == (Card) (SUIT_HEARTS + VALUE_2));
 
-    Card lowAceOfHearts = SUIT_HEARTS + VALUE_LOW_ACE;
+    Card lowAceOfHearts = VALUE_LOW_ACE + SUIT_HEARTS;
     assert(strcmp(Card_name(lowAceOfHearts), "a♥") == 0);
     assert(strcmp(Card_name(twoOfClubs), "a♥") != 0);
-    assert(Card_points(lowAceOfHearts) == 1);
+    assert(Card_points(lowAceOfHearts) == 5);
     assert(Card_suit(lowAceOfHearts) == SUIT_HEARTS);
     assert(Card_value(lowAceOfHearts) == VALUE_LOW_ACE);
     assert(Card_isLegal(lowAceOfHearts));
@@ -143,8 +142,8 @@ void Card_test() {
 
 typedef uint64_t CardSet;
 
-bool CardSet_has(CardSet *set, Card card) {
-    return (*set & (1ULL << card)) != 0;
+bool CardSet_has(CardSet set, Card card) {
+    return (set & (1ULL << card)) != 0;
 }
 
 void CardSet_add(CardSet *set, Card card) {
@@ -155,14 +154,56 @@ void CardSet_remove(CardSet *set, Card card) {
     *set &= ~(1ULL << card);
 }
 
-int CardSet_points(CardSet *set) {
-    int points = 0;
-    for (Card card = 0; card < 52; ++card) {
-        if (CardSet_has(set, card)) {
-            points += Card_points(card);
+int CardSet_handPoints(CardSet set) {
+    uint64_t addFive = set & 0x21FF21FF21FF21FFULL;
+    uint64_t addTen = set & 0x3E003E003E003E00ULL;
+
+    return 5 * (__builtin_popcountll(addFive) + (__builtin_popcountll(addTen) << 1));
+}
+
+void CardSet_print(CardSet set) {
+    bool first = true;
+    for (int i = 0; i < 64; ++i) {
+        if (CardSet_has(set, i)) {
+            if (first) {
+                printf("%s", Card_name(i));
+                first = false;
+            } else {
+                printf(" %s", Card_name(i));
+            }
         }
     }
-    return points;
+}
+
+void CardSet_test() {
+    Card sevenOfClubs = VALUE_7 + SUIT_CLUBS;
+    Card aceOfSpades = VALUE_ACE + SUIT_SPADES;
+    Card tenOfDiamonds = VALUE_10 + SUIT_DIAMONDS;
+
+    CardSet set = 0;
+
+        // Test hand points
+    assert(CardSet_handPoints(set) == 0);
+
+    // Test adding cards
+    CardSet_add(&set, sevenOfClubs);
+    CardSet_add(&set, aceOfSpades);
+    assert(CardSet_has(set, sevenOfClubs));
+    assert(CardSet_has(set, aceOfSpades));
+    assert(!CardSet_has(set, tenOfDiamonds));
+    assert(CardSet_handPoints(set) == 20);
+
+    CardSet_add(&set, tenOfDiamonds);
+    assert(CardSet_has(set, tenOfDiamonds));
+    assert(CardSet_handPoints(set) == 30);
+
+    // Test removing cards
+    CardSet_remove(&set, sevenOfClubs);
+    CardSet_remove(&set, aceOfSpades);
+    assert(!CardSet_has(set, sevenOfClubs));
+    assert(!CardSet_has(set, aceOfSpades));
+    assert(CardSet_has(set, tenOfDiamonds));
+    assert(CardSet_handPoints(set) == 10);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -203,16 +244,79 @@ void CardList_shuffle(CardList *cardList) {
 }
 
 void CardList_print(CardList *cardList) {
+    bool first = true;
     for (int i = 0; i < cardList->size; ++i) {
-        printf("%s ", Card_name(cardList->cards[i]));
+        if (first) {
+            printf("%s", Card_name(cardList->cards[i]));
+            first = false;
+        } else {
+            printf(" %s", Card_name(cardList->cards[i]));
+        }
     }
+}
+
+void CardList_test() {
+    // This is kinda random and wrong, but enough for starters.
+    CardList *cl = CardList_new();
+    for (int i = 0; i < 52; ++i) {
+        CardList_push(cl, i);
+    }
+    CardList_shuffle(cl);
+    CardList_print(cl);
+    printf("\n");
+    CardList_free(cl);
 }
 
 //////////////////////////////////////////////////////////////////////
 //
-//    Meld
+//    MeldSet
 //
 
+typedef struct MeldSetStruct MeldSet;
+
+struct MeldSetStruct {
+    CardSet runs;
+    CardSet sets;
+};
+
+void MeldSet_addRun(MeldSet *meldSet, CardSet meld) {
+    meldSet->runs |= meld;
+}
+
+void MeldSet_removeRun(MeldSet *meldSet, CardSet meld) {
+    meldSet->runs &= ~meld;
+}
+
+void MeldSet_addSet(MeldSet *meldSet, CardSet meld) {
+    meldSet->sets |= meld;
+}
+
+void MeldSet_removeSet(MeldSet *meldSet, CardSet meld) {
+    meldSet->sets &= ~meld;
+}
+
+CardSet MeldSet_setAdds(MeldSet meldSet) {
+    CardSet sets = meldSet.sets;
+    CardSet adds = ((sets >> 16) | (sets << 16)) & ~sets;
+    return adds;
+}
+
+void MeldSet_print(MeldSet *meldSet) {
+    printf("  a23456789TJQKA\n");
+    for (int suit = SUIT_CLUBS; suit <= SUIT_SPADES; suit += 16) {
+        printf("%c", "♣♦♥♠"[suit / 16]);
+        for (int value = VALUE_LOW_ACE; value <= VALUE_ACE; ++value) {
+            uint64_t bit = 1ULL << (suit + value);
+            if (CardSet_has(meldSet->runs, bit)) {
+                printf("-");
+            } else if (CardSet_has(meldSet->sets, bit)) {
+                printf("|");
+            } else {
+                printf(" ");
+            }
+        }
+    }
+}
 
 typedef struct PlayerStruct Player;
 typedef struct GameStruct Game;
@@ -238,8 +342,24 @@ Game *newGame(int numPlayers) {
     return NULL;
 }
 
+//////////////////////////////////////////////////////////////////////
+//
+//    Evaluator
+//
+
+void Evaluate(Game *game) {
+    // Do something like:
+    //   Compute points in hand
+    //   Check points for this player
+    //   Estimate points in opposing hand
+    //   Look at card counts
+
+}
+
 int main(int argc, char **argv) {
     Card_test();
+    CardSet_test();
+    CardList_test();
 
 
     /*
