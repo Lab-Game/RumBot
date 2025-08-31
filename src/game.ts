@@ -10,13 +10,16 @@ export class Game {
     currentPlayerIndex : number;
     players : Player[];
     melds : Set<Meld>;
+    verbose: boolean;
 
-    private constructor() {}
+    private constructor(verbose?: boolean) {
+        this.verbose = verbose ?? false;
+    }
 
     // Set up a new game with deck shuffled and cards dealt for a
     // specified number of players.
-    static create(numPlayers : number) : Game {
-        const game = new Game();
+    static create(numPlayers : number, verbose?: boolean) : Game {
+        const game = new Game(verbose);
 
         // Create the draw pile
         game.drawPile = [...Card.deck];
@@ -61,6 +64,7 @@ export class Game {
             game.players.push(player.clone(game));
         }
         game.melds = new Set(original.melds);
+        game.verbose = original.verbose;
 
         // Put all cards in opponent hands back into the draw pile,
         // except for those that were drawn from the discard pile.
@@ -109,11 +113,10 @@ export class Game {
     }
 
     toString() : string {
+        let playersString = this.players.map(player => String(player)).join("");
         let drawPileString = `drawPile: ${Card.cardsToString(this.drawPile)}\n`;
         let discardPileString = `discardPile: ${Card.cardsToString(this.discardPile)}\n`;
-        let playersString = this.players.map(player => String(player)).join("");
-        let meldString = `melds: ${[...this.melds].map(meld => String(meld)).join(" ")}\n`;
-        let toPlayString = `player ${this.currentPlayerIndex} is playing\n`;
-        return drawPileString + discardPileString + playersString + meldString + toPlayString;
+        let meldString = `meld: ${[...this.melds].map(meld => String(meld)).join(" ")}`;
+        return playersString + drawPileString + discardPileString + meldString;
     }
 }

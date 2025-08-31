@@ -1,9 +1,15 @@
 import { Arena } from "./arena";
 import { Bot } from "./bot";
-import { Card } from "./card.ts";
 
-const bots = [ new Bot(0), new Bot(1), new Bot(0) ];
-const arena = new Arena(bots);
-for (let i = 0; i < 1000; i++) {
-    arena.runGame();
+for (let j = 0; j < 10; ++j) {
+    const bots = [ new Bot(0), new Bot(0), new Bot(1) ];
+    for (let i = 0; i < 1000; i++) {
+        const arena = new Arena(bots, false);
+        arena.runGame();
+    }
+    console.log("-----");
+    let sortedBots = [...bots].sort((a, b) => b.totalPoints - a.totalPoints);
+    for (const bot of sortedBots) {
+        console.log(bot.strategy, bot.totalPoints, bot.wins);
+    }
 }
