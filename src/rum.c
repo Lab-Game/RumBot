@@ -158,12 +158,44 @@ void CardList_print(CardList *cardList) {
 // A Meld is a set of cards that can be played together or appended
 // to a previously-played meld.  Here are the operations I need:
 //
-//    - Given a hand of cards (a CardSet) and a set of melds that
-//      have already been played, what melds can be played from
-//      this hand?
-//    - Remove cards from the hand when I play the Meld, and add
-//      cards back to the hand when I take them back.
-//    - What is the point value of the meld?
+//    - Give a hand and melds on the table, what new melds can
+//      be formed?
+//      - What triple runs and set can be formed from the hand?
+//      - How can played runs and sets be extended with cards
+//        in the hand?
+//    - Answer in a form that makes iteration over the new
+//      melds easy.
+//    - Should be able to readily determine the point values
+//      of these melds.
+//    - Should be able to move the cards in a meld from the
+//      hand to the table and reverse the operation.
+//    - Must deal with Ace weirdness: can be high or low with
+//      different point values.
+//
+// I'm interested in representing Aces *twice* in a CardSet.
+// When in the drawPile, discardPile, or Hand, and ace has
+// TWO bits set:  one high, one low.  When the Ace is played
+// as part of a Meld... actually, do I even care how cards
+// are represented?  So I should do the low/high thing only
+// if it helps when finding playable melds, particularly in
+// scoring them.
+//
+// Option #1:  Represent a Meld as a cardset
+//
+// Table has two CardSets, one for cards played in runs and
+// one for cards played in sets.  By bit twiddling, I find
+// all cards playable as extensions.  For runs, this means
+// that I shift down a bit and up a bit with some masking.
+// (I might get that a low ace is playable, but a high ace
+// is not or vice versa.  But I'll remove low-ace places if
+// there is a high ace play.)  Then I "and" with the players
+// hand to find all cards that are playable as extensions.
+// I still need to iterate over this small set, which could
+// take a while.
+//
+//
+//
+//
 //
 // In general, there are triple-Melds (both runs and sets), which
 // can always be played if the cards are in-hand.
