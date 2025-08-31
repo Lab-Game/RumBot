@@ -2,6 +2,7 @@ import { Card, Meld } from "./card";
 import { Game } from "./game";
 import { Player } from "./player";
 import {  Hand } from "./hand";
+import { exit } from "process";
 
 // Is including the Game in the play a mistake?
 // I think including the score is pretty handy.
@@ -68,14 +69,18 @@ class Play {
 
 export class Bot {
 
-    game: Game;
     strategy: number;
     totalPoints: number = 0;
     wins: number = 0;
+    gamePoints: number = 0;
+    rollBot: Bot | undefined;
 
     constructor(strategy: number) {
         this.strategy = strategy;
         this.totalPoints = 0;
+        if (this.strategy == 5) {
+            this.rollBot = new Bot(4);
+        }
     }
 
     takeTurn(game: Game) {
@@ -94,28 +99,28 @@ export class Bot {
         }
         if (averageDrawEval >= bestTake.eval) {
             let draw = game.player().drawCard();
-            if (game.verbose) console.log(`-> Draw ${draw}`);
+            if (game.verbose) console.log(`Player ${game.player().index} -> Draw ${draw}`);
             let bestDraw = bestDraws.get(draw)!;
             for (const meld of bestDraw.melds) {
-                if (game.verbose) console.log(`-> Meld: ${meld.toString()}`);
+                if (game.verbose) console.log(`Player ${game.player().index} -> Meld: ${meld.toString()}`);
                 game.player().putMeld(meld);
             }
             if (bestDraw.discard) {
-                if (game.verbose) console.log(`-> Discard: ${bestDraw.discard.toString()}`);
+                if (game.verbose) console.log(`Player ${game.player().index} -> Discard: ${bestDraw.discard.toString()}`);
                 game.player().discard(bestDraw.discard);
             }
         } else {
             // The player takes bestTake.taken cards from the discard pile.
             // Print these as a string to the console.
-            if (game.verbose) console.log(`-> Take ${game.discardPile.slice(-bestTake.taken).map(card => card.toString()).join(" ")}`);
+            if (game.verbose) console.log(`Player ${game.player().index} -> Take ${game.discardPile.slice(-bestTake.taken).map(card => card.toString()).join(" ")}`);
             game.player().takeCards(bestTake.taken);
             for (const meld of bestTake.melds) {
-                if (game.verbose) console.log(`-> Meld: ${meld.toString()}`);
+                if (game.verbose) console.log(`Player ${game.player().index} -> Meld: ${meld.toString()}`);
                 game.player().putMeld(meld);
             }
             if (bestTake.discard) {
                 game.player().discard(bestTake.discard);
-                if (game.verbose) console.log(`-> Discard: ${bestTake.discard.toString()}`);
+                if (game.verbose) console.log(`Player ${game.player().index} -> Discard: ${bestTake.discard.toString()}`);
             }
         }
     }
@@ -232,27 +237,79 @@ export class Bot {
 
     evaluate(game: Game) : number {
         let player = game.player();
-            
+
+        // Find number of cards in hand of opponent with the fewest cards.
+        let minHand = Math.min(...game.players.filter(p => p !== player).map(p => p.hand.size()));
+
+        // Find average points in hands of opponents.
+        let avgPoints = game.players.filter(p => p !== player).reduce((sum, p) => sum + p.hand.points(), 0) / (game.players.length - 1);
+        let exitBonus = player.hand.size() == 0 ? avgPoints : 0;
+        
         if (this.strategy == 1) {
             return player.points;
         }
 
-        return player.points - player.hand.points();
+        if (this.strategy == 2) {
+            return player.points + player.hand.points() * 0.5;
+        }
 
-        /*
-        if (this.strategy == 1) {
-            // If the player has gone out, award average points in other player's hands.
-            if (player.hand.size() == 0) {
-                let totalPoints = 0;
-                for (const rival of game.players) {
-                    if (rival !== player) {
-                        totalPoints += rival.hand.points();
-                    }
-                }
-                return player.points + (totalPoints / (game.players.length - 1));
+        if (this.strategy == 3) {
+            if (minHand > 3) {
+                return player.points + player.hand.points() * 0.5;
             } else {
-                return player.points - player.hand.points();
+                return player.points;
             }
-        */
+        }
+
+        if (this.strategy == 4) {
+            if (minHand > 3) {
+                return player.points + player.hand.points() * 0.5 + exitBonus;
+            } else {
+                return player.points + exitBonus;
+            }
+        }
+
+        if (this.strategy == 5) {
+            let totalVictoryMargin = 0;
+            for (let i = 0; i < 2; ++i) {
+                totalVictoryMargin += this.rollOut(game);
+            }
+            process.exit();
+            return totalVictoryMargin / 10.0;
+        }
+
+        return player.points - player.hand.points();
     }
+
+    rollOut(game: Game) : number {
+        // The current player is just finishing up a turn in the variant game.
+        // We'll spin up a variant on this variant where we can play out
+        // the rest of the game and compute the margin of victory, which is
+        // the return value.
+
+        console.log("---- Rollout started ----")
+        let playerIndex = game.currentPlayerIndex;
+        console.log("Current player index:", playerIndex);
+        let roll = Game.variant(game, game.player());
+        console.log(roll.toString());
+
+        while (roll.nextTurn()) {
+            let bot = this.rollBot!;
+            bot.takeTurn(roll);
+        }
+
+        let rollPlayer = roll.players[playerIndex];
+        let rollRivals = roll.players.filter(p => p !== rollPlayer);
+        let avgFinalScore = rollRivals.reduce((sum, p) => sum + p.finalScore, 0) / rollRivals.length;
+        let victoryMargin = rollPlayer.finalScore - avgFinalScore;
+
+        console.log("Rollout complete!");
+        console.log(roll.toString());
+        console.log("Victory margin for player", playerIndex, "=", victoryMargin);
+
+        console.log("---- Rollout complete ----")
+
+        return victoryMargin;
+    }
+
 };

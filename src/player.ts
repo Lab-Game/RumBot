@@ -8,6 +8,7 @@ export class Player {
     index : number;
     hand : Hand;
     points : number;
+    finalScore : number;
 
     static create(game : Game) : Player {
         let player = new Player();

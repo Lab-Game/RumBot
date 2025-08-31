@@ -104,8 +104,16 @@ export class Game {
         return game;
     }
 
-    nextTurn() {
-        this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+    nextTurn() : boolean {
+        if (this.player().hand.size() == 0 || this.discardPile.length == 0) {
+            for (const player of this.players) {
+                player.finalScore = player.points - player.hand.points();
+            }
+            return false;
+        } else {
+            this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+            return true;
+        }
     }
 
     player() : Player {
