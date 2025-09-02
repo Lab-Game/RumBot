@@ -145,6 +145,15 @@ typedef uint64_t CardSet;
 
 const CardSet CardSet_legal = 0x1FFF1FFF1FFF1FFFULL;
 
+CardSet CardSet_lowestCard(CardSet set) {
+    return set & -set;
+}
+
+CardSet CardSet_nextCard(CardSet set, CardSet card) {
+    set &= ~(((card << 1) - 1));
+    return set & -set;
+}
+
 bool CardSet_has(CardSet set, Card card) {
     return (set & (1ULL << card)) != 0;
 }
@@ -161,6 +170,11 @@ int CardSet_size(CardSet set) {
     return __builtin_popcountll(set);
 }
 
+Card CardSet_toCard(CardSet cardSet) {
+    assert(cardSet != 0);
+    return __builtin_ctzll(cardSet);   // Count trailing zeros to get card index
+}
+
 int CardSet_points(CardSet set) {
     uint64_t addFive = set & 0x21FF21FF21FF21FFULL;
     uint64_t addTen = set & 0x3E003E003E003E00ULL;
@@ -175,15 +189,6 @@ CardSet CardSet_sets(CardSet set) {
 CardSet CardSet_runs(CardSet set) {
     set &= 0x1FFE;  // mask out aces
     return set & ((set >> 1) & (set << 1));
-}
-
-// Iteration
-// I'll need to find the lowest bit, which I could then convert into
-// a Card (by taking log) or leave as a CardSet.  I'll maintain an
-// already-considered set to avoid duplicates.
-
-void iterate(CardSet cs) {
-    uint64_t b = cs & -cs;  // Get lowest bit
 }
 
 void CardSet_print(CardSet set) {
@@ -217,6 +222,12 @@ void CardSet_test() {
     assert(CardSet_has(set, aceOfSpades));
     assert(!CardSet_has(set, tenOfDiamonds));
     assert(CardSet_points(set) == 20);
+
+    // Test iteration over a CardSet
+    for (CardSet cs = CardSet_lowestCard(set); cs != 0; cs = CardSet_nextCard(set, cs)) {
+        const char *name = Card_name(CardSet_toCard(cs));
+        assert(strcmp(name, "7♣") == 0 || strcmp(name, "A♠") == 0);
+    }
 
     CardSet_add(&set, tenOfDiamonds);
     assert(CardSet_has(set, tenOfDiamonds));
@@ -575,13 +586,29 @@ void Evaluate_test() {
 typedef struct PlayStruct Play;
 
 struct PlayStruct {
-    CardList cardsTaken;
+    CardList cardsTaken;  // I especially care about the deepest card taken.  Can I avoid a list?
     Card cardDrawn;
     MeldSet melds;
-    MeldSet rejectedMelds;
+    MeldSet rejectedMelds;  // for bookkeeping during search
     Card discard;
     int score;
 };
+
+int Play_improve(Play *best, Play *scratch) {
+    if (scratch->score > best->score) {
+        // Copy the cardsTaken list
+        best->cardsTaken.size = scratch->cardsTaken.size;
+        for (int i = 0; i < scratch->cardsTaken.size; ++i) {
+            best->cardsTaken.cards[i] = scratch->cardsTaken.cards[i];
+        }
+        best->cardDrawn = scratch->cardDrawn;
+        best->melds = scratch->melds;
+        best->rejectedMelds = scratch->rejectedMelds;
+        best->discard = scratch->discard;
+        best->score = scratch->score;
+    }
+    return best->score;
+}
 
 //////////////////////////////////////////////////////////////////////
 //
@@ -595,13 +622,25 @@ struct PlayStruct {
 
 int searchDiscard(Game *game, Play *scratch, Play *best) {
     Player *player = Game_currentPlayer(game);
+    CardSet hand = player->hand;
+
+    if (hand == 0) {
+        // Hand is empty.  Discard nothing.
+        scratch->discard = 0;
+        scratch->score = Evaluate(game);
+        return Play_improve(best, scratch);
+    }
 
     // Iterate over cards in the hand
-
-
-    // Try discarding each card in hand
-    int bestScore = -1;
-    Card bestDiscard = 0;
+    for (CardSet cs = CardSet_lowestCard(hand); cs != 0; cs = CardSet_nextCard(hand, cs)) {
+        scratch->discard = cs;
+    
+        Player_discard(cs);  // TODO:  track whether this was previously discarded
+        scratch->score = Evaluate(game);
+        Play_improve(best, scratch);
+        Player_undoDiscard(cs);
+        player->hand = hand | cs;  // put the card back
+    }
 
     return 0;
 }
