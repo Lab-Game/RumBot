@@ -5,37 +5,46 @@
 #include <stdbool.h>
 #include <string.h>
 
-//////////////////////////////////////////////////////////////////////
+// This is an automatic player for the card game Rummy.
 //
-//    Card
+// Representations of cards, sets of cards, and lists of cards are central.
+//
+// One representation of a card is as a uint8_t (typedef'ed to Index),
+// where all clubs have the bit pattern 0000xxxx, diamonds 0001xxxx,
+// hearts 0010xxxx, and spades 0011xxxx.  The lower four bits (xxxx)
+// represent the rank of the card, with 0000 representing a low ace,
+// 1100 representing the king, and 1101 representing a high ace.  Bit
+// patterns xxxx1110 and xxxx1111 are illegal.  Aces are considered high
+// unless played in an ace-two-three meld, in which case they are low.
+//
+// More commonly, cards are represented by uint64_t's (typedef'ed to
+// Heap).  A card with Index = b is encoded as (1ULL << b).  This takes
+// more memory than an index and the name is odd, but the Heap type
+// is convenient for working with both individual cards and sets
+// of cards.  In particular, a set of cards is the bitwise OR of the
+// individual card representations.
+//
+// To represent the draw and discard stacks, we need ordered lists of cards.
+// These are structs consisting of an array of 52 cards and a count of the
+// actual number in the stack.  Again, this is memory inefficient (unless
+// the stack actually contains 52 cards), but avoids dynamic memory
+// allocation.
+
+///////////////////////////////////////////////////////////////////////////////
+//
+//    Index
 //
 
-// Cards can be represented as integers (stored in a uint8_t (type Card)
-// or as a bit mask (type CardSet).  Clubs are in the range 0-15, diamonds 16-31,
-// hearts 32-47, and spades 48-63, though the upper two values are illegal,
-// e.g. 14 and 15 of clubs.  Typically, a card represented by integer k is
-// also represented by bit mask 1 << k.
-//
-// Lots of complexity arises from the fact that an ace can be either low or high.
-// For an ace in a player's hand, the bit mask representation has BOTH the
-// low and high bits set.  When the ace is played in a meld, one of these bits
-// As an integer, an ace can be represented as either the low value (such as 0)
-// or the high value (such as 13).
-//
-// Textually, a "low" ace has a lowercase a, while a "high" ace has an uppercase A.
+typedef uint8_t Index;
 
-typedef uint8_t Card;
+const char *kSuitSymbol[4] = { "♣", "♦", "♥", "♠" };
 
-const char *Card_nameTable[64] = {
+const char *kIndexName[64] = {
     "a♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣", "A♣", "14", "15",
     "a♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦", "A♦", "30", "31",
     "a♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥", "K♥", "A♥", "46", "47",
     "a♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠", "A♠", "62", "63"
 };
-
-const int Card_pointsTable[16] = { 5, 5, 5, 5, 5, 5, 5, 5, 5, 10, 10, 10, 10, 15, -1, -1 };
-
-const char *Card_suitSymbol[4] = { "♣", "♦", "♥", "♠" };
 
 typedef enum {
     SUIT_CLUBS = 0,
@@ -61,253 +70,224 @@ typedef enum {
     VALUE_ACE
 } Value_t;
 
-const char *Card_name(Card card) {
-    return Card_nameTable[card];
-}   
-
-Suit_t Card_suit(Card card) {
-    return card & 0x30;
+Suit_t indexSuit(Index i) {
+    return i & 0xF0;
 }
 
-Value_t Card_value(Card card) {
-    return card & 0x0F;
+Value_t indexValue(Index i) {
+    return i & 0x0F;
 }
 
-int Card_points(Card card) {
-    return Card_pointsTable[Card_value(card)];
+bool indexIsLegal(Index i) {
+    return (i & 0x0F) <= VALUE_ACE && (i & 0xF0) <= SUIT_SPADES;
 }
 
-bool Card_isLegal(Card card) {
-    return Card_value(card) <= VALUE_ACE && Card_suit(card) <= SUIT_SPADES;
+const char *indexName(Index i) {
+    assert(indexIsLegal(i));
+    return kIndexName[i];
 }
 
-bool Card_isAce(Card card) {
-    Value_t value = Card_value(card);
-    return value == VALUE_LOW_ACE || value == VALUE_ACE;
+void indexTest(void) {
+    Index twoOfClubs = VALUE_2 + SUIT_CLUBS;
+    Index lowAceOfHearts = VALUE_LOW_ACE + SUIT_HEARTS;
+
+    assert(indexSuit(twoOfClubs) == SUIT_CLUBS);
+    assert(indexValue(twoOfClubs) == VALUE_2);
+    assert(strcmp(indexName(twoOfClubs), "2♣") == 0);
+    assert(strcmp(indexName(lowAceOfHearts), "a♥") == 0);
+    assert(indexIsLegal(twoOfClubs));
+    assert(!indexIsLegal(15));
+    assert(!indexIsLegal(200));
 }
 
-Card Card_prevInSuit(Card card) {
-    return (Card) (((Card_value(card) + 15) & 0x0F) + Card_suit(card));
-}
-
-Card Card_nextInSuit(Card card) {
-    return (Card) (((Card_value(card) + 1) & 0x0F) + Card_suit(card));
-}
-
-Card Card_prevOfValue(Card card) {
-    return (Card) ((card + 48) & 0x3F);
-}
-
-Card Card_nextOfValue(Card card) {
-    return (Card) ((card + 16) & 0x3F);
-}
-
-Card Card_oppositeOfValue(Card card) {
-    return (Card) ((card + 32) & 0x3F);
-}
-
-void Card_test() {
-    Card twoOfClubs = VALUE_2 + SUIT_CLUBS;
-    assert(strcmp(Card_name(twoOfClubs), "2♣") == 0);
-    assert(strcmp(Card_name(twoOfClubs), "a♥") != 0);
-    assert(Card_points(twoOfClubs) == 5);
-    assert(Card_suit(twoOfClubs) == SUIT_CLUBS);
-    assert(Card_value(twoOfClubs) == VALUE_2);
-    assert(Card_isLegal(twoOfClubs));
-    assert(!Card_isAce(twoOfClubs));
-    assert(Card_prevInSuit(twoOfClubs) == (Card) (SUIT_CLUBS + VALUE_LOW_ACE));
-    assert(Card_nextInSuit(twoOfClubs) == (Card) (SUIT_CLUBS + VALUE_3));
-    assert(Card_prevOfValue(twoOfClubs) == (Card) (SUIT_SPADES + VALUE_2));
-    assert(Card_nextOfValue(twoOfClubs) == (Card) (SUIT_DIAMONDS + VALUE_2));
-    assert(Card_oppositeOfValue(twoOfClubs) == (Card) (SUIT_HEARTS + VALUE_2));
-
-    Card lowAceOfHearts = VALUE_LOW_ACE + SUIT_HEARTS;
-    assert(strcmp(Card_name(lowAceOfHearts), "a♥") == 0);
-    assert(strcmp(Card_name(twoOfClubs), "a♥") != 0);
-    assert(Card_points(lowAceOfHearts) == 5);
-    assert(Card_suit(lowAceOfHearts) == SUIT_HEARTS);
-    assert(Card_value(lowAceOfHearts) == VALUE_LOW_ACE);
-    assert(Card_isLegal(lowAceOfHearts));
-    assert(Card_isAce(lowAceOfHearts));
-    assert(!Card_isLegal(Card_prevInSuit(lowAceOfHearts)));
-    assert(Card_nextInSuit(lowAceOfHearts) == (Card) (SUIT_HEARTS + VALUE_2));
-    assert(Card_prevOfValue(lowAceOfHearts) == (Card) (SUIT_DIAMONDS + VALUE_LOW_ACE));
-    assert(Card_nextOfValue(lowAceOfHearts) == (Card) (SUIT_SPADES + VALUE_LOW_ACE));
-    assert(Card_oppositeOfValue(lowAceOfHearts) == (Card) (SUIT_CLUBS + VALUE_LOW_ACE));
-}
-
-//////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 //
-//    CardSet
+//    Heap 
 //
 
-typedef uint64_t CardSet;
+typedef uint64_t Heap;
 
-const CardSet CardSet_legal = 0x1FFF1FFF1FFF1FFFULL;
+const Heap kFullDeck = 0x3FFE3FFE3FFE3FFEULL;
 
-CardSet CardSet_lowestCard(CardSet set) {
-    return set & -set;
+bool heapIsLegal(Heap heap) {
+    return (heap & ~kFullDeck) == 0;
 }
 
-CardSet CardSet_nextCard(CardSet set, CardSet card) {
-    set &= ~(((card << 1) - 1));
-    return set & -set;
+bool heapHas(Heap heap, Heap card) {
+    return (heap & card) != 0;
 }
 
-bool CardSet_has(CardSet set, Card card) {
-    return (set & (1ULL << card)) != 0;
+void heapAdd(Heap *heap, Heap card) {
+    *heap |= card;
 }
 
-void CardSet_add(CardSet *set, Card card) {
-    *set |= (1ULL << card);
+void heapRemove(Heap *heap, Heap card) {
+    *heap &= ~card;
 }
 
-void CardSet_remove(CardSet *set, Card card) {
-    *set &= ~(1ULL << card);
+int heapSize(Heap heap) {
+    return __builtin_popcountll(heap);
 }
 
-int CardSet_size(CardSet set) {
-    return __builtin_popcountll(set);
-}
-
-Card CardSet_toCard(CardSet cardSet) {
-    assert(cardSet != 0);
-    return __builtin_ctzll(cardSet);   // Count trailing zeros to get card index
-}
-
-int CardSet_points(CardSet set) {
-    uint64_t addFive = set & 0x21FF21FF21FF21FFULL;
-    uint64_t addTen = set & 0x3E003E003E003E00ULL;
-
+int heapPoints(Heap heap) {
+    uint64_t addFive = heap & 0x21FF21FF21FF21FFULL;
+    uint64_t addTen = heap & 0x3E003E003E003E00ULL;
     return 5 * (__builtin_popcountll(addFive) + (__builtin_popcountll(addTen) << 1));
 }
 
-CardSet CardSet_sets(CardSet set) {
-    return set & (((set >> 16) | (set << 48)) & ((set << 16) | (set >> 48)));
+// These functions are used to iterate over the cards in a heap:
+//
+// Heap cards = ...;
+// for (Card c = heapLowCard(cards); c != 0; c = heapNextCard(cards, c)) { ... }
+
+Heap heapLowCard(Heap heap) {
+    return heap & -heap;
 }
 
-CardSet CardSet_runs(CardSet set) {
-    set &= 0x1FFE;  // mask out aces
-    return set & ((set >> 1) & (set << 1));
+Heap heapNextCard(Heap heap, Heap card) {
+    heap &= ~(((card << 1) - 1));
+    return heap & -heap;
 }
 
-void CardSet_print(CardSet set) {
+// Heap <---> Index conversions
+
+Heap indexToHeap(Index i) {
+    return (Heap)(1ULL << i);
+}
+
+Index heapToIndex(Heap heap) {
+    assert(heap != 0);
+    return __builtin_ctzll(heap); // count trailing zeros
+}
+
+void heapPrint(Heap heap) {
     bool first = true;
-    for (int i = 0; i < 64; ++i) {
-        if (CardSet_has(set, i)) {
-            if (first) {
-                printf("%s", Card_name(i));
-                first = false;
-            } else {
-                printf(" %s", Card_name(i));
-            }
+    for (Heap c = heapLowCard(heap); c != 0; c = heapNextCard(heap, c)) {
+        if (first) {
+            printf("%s", indexName(heapToIndex(c)));
+            first = false;
+        } else {
+            printf(" %s", indexName(heapToIndex(c)));
         }
     }
 }
 
-void CardSet_test() {
-    Card sevenOfClubs = VALUE_7 + SUIT_CLUBS;
-    Card aceOfSpades = VALUE_ACE + SUIT_SPADES;
-    Card tenOfDiamonds = VALUE_10 + SUIT_DIAMONDS;
+void heapTest(void) {
+    Heap sevenOfClubs = indexToHeap(VALUE_7 + SUIT_CLUBS);
+    Heap aceOfSpades = indexToHeap(VALUE_ACE + SUIT_SPADES);
+    Heap tenOfDiamonds = indexToHeap(VALUE_10 + SUIT_DIAMONDS);
+    Heap heap = 0;
 
-    CardSet set = 0;
-
-        // Test hand points
-    assert(CardSet_points(set) == 0);
+    // Test hand points
+    assert(heapPoints(heap) == 0);
 
     // Test adding cards
-    CardSet_add(&set, sevenOfClubs);
-    CardSet_add(&set, aceOfSpades);
-    assert(CardSet_has(set, sevenOfClubs));
-    assert(CardSet_has(set, aceOfSpades));
-    assert(!CardSet_has(set, tenOfDiamonds));
-    assert(CardSet_points(set) == 20);
+    heapAdd(&heap, sevenOfClubs);
+    heapAdd(&heap, aceOfSpades);
+    assert(heapHas(heap, sevenOfClubs));
+    assert(heapHas(heap, aceOfSpades));
+    assert(!heapHas(heap, tenOfDiamonds));
+    assert(heapPoints(heap) == 20);
 
-    // Test iteration over a CardSet
-    for (CardSet cs = CardSet_lowestCard(set); cs != 0; cs = CardSet_nextCard(set, cs)) {
-        const char *name = Card_name(CardSet_toCard(cs));
+    // Test iteration over a heap of cards
+    for (Heap c = heapLowCard(heap); c != 0; c = heapNextCard(heap, c)) {
+        const char *name = indexName(heapToIndex(c));
         assert(strcmp(name, "7♣") == 0 || strcmp(name, "A♠") == 0);
     }
 
-    CardSet_add(&set, tenOfDiamonds);
-    assert(CardSet_has(set, tenOfDiamonds));
-    assert(CardSet_points(set) == 30);
+    heapAdd(&heap, tenOfDiamonds);
+    assert(heapHas(heap, tenOfDiamonds));
+    assert(heapPoints(heap) == 30);
 
     // Test removing cards
-    CardSet_remove(&set, sevenOfClubs);
-    CardSet_remove(&set, aceOfSpades);
-    assert(!CardSet_has(set, sevenOfClubs));
-    assert(!CardSet_has(set, aceOfSpades));
-    assert(CardSet_has(set, tenOfDiamonds));
-    assert(CardSet_points(set) == 10);
+    heapRemove(&heap, sevenOfClubs);
+    heapRemove(&heap, aceOfSpades);
+    assert(!heapHas(heap, sevenOfClubs));
+    assert(!heapHas(heap, aceOfSpades));
+    assert(heapHas(heap, tenOfDiamonds));
+    assert(heapPoints(heap) == 10);
 }
 
-//////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 //
-//    CardList
+//    Pile
 //
 
 typedef struct {
-    Card cards[52];
+    Heap cards[52];
     int size;
-} CardList;
+} Pile;
 
-CardList *CardList_init(CardList *cardList) {
-    cardList->size = 0;
-    return cardList;
+void pilePush(Pile *pile, Heap card) {
+    assert(pile->size < 52);
+    pile->cards[pile->size++] = card;
 }
 
-CardList *CardList_new() {
-    return CardList_init(malloc(sizeof(CardList)));
+Heap pilePop(Pile *pile) {
+    assert(pile->size >= 1);
+    return pile->cards[--pile->size];
 }
 
-void CardList_free(CardList *cardList) {
-    free(cardList);
+Pile *pileNewEmpty(void) {
+    Pile *new = malloc(sizeof(Pile));
+    new->size = 0;
+    return new;
 }
 
-void CardList_push(CardList *cardList, Card card) {
-    cardList->cards[cardList->size++] = card;
-}
-
-Card CardList_pop(CardList *cardList) {
-    assert(cardList->size >= 1);
-    return cardList->cards[--cardList->size];
-}
-
-void CardList_shuffle(CardList *cardList) {
-    for (int i = cardList->size - 1; i > 0; --i) {
-        int j = arc4random_uniform(i + 1);
-        Card temp = cardList->cards[i];
-        cardList->cards[i] = cardList->cards[j];
-        cardList->cards[j] = temp;
+Pile *pileNewFullDeck(void) {
+    Pile *new = pileNewEmpty();
+    for (Heap c = heapLowCard(kFullDeck); c != 0; c = heapNextCard(kFullDeck, c)) {
+        pilePush(new, c);
     }
+    return new;
 }
 
-void CardList_print(CardList *cardList) {
+void pileFree(Pile *pile) {
+    free(pile);
+}
+
+Pile *pileShuffle(Pile *pile) {
+    for (int i = pile->size - 1; i > 0; --i) {
+        int j = arc4random_uniform(i + 1);
+        Heap temp = pile->cards[i];
+        pile->cards[i] = pile->cards[j];
+        pile->cards[j] = temp;
+    }
+    return pile;
+}
+
+void pilePrint(Pile *pile) {
     bool first = true;
-    for (int i = 0; i < cardList->size; ++i) {
+    for (int i = 0; i < pile->size; ++i) {
+        Heap card = pile->cards[i];
+        assert(heapSize(card) == 1);
         if (first) {
-            printf("%s", Card_name(cardList->cards[i]));
+            printf("%s", indexName(heapToIndex(card)));
             first = false;
         } else {
-            printf(" %s", Card_name(cardList->cards[i]));
+            printf(" %s", indexName(heapToIndex(card)));
         }
     }
 }
 
-void CardList_test() {
-    // This is kinda random and wrong, but enough for starters.
-    CardList *cl = CardList_new();
-    for (int i = 0; i < 52; ++i) {
-        CardList_push(cl, i);
-    }
-    CardList_shuffle(cl);
-    CardList_print(cl);
-    printf("\n");
-    CardList_free(cl);
+void pileTest(void) {
+    Pile *emptyPile = pileNewEmpty();
+    assert(emptyPile->size == 0);
+    pilePush(emptyPile, indexToHeap(VALUE_7 + SUIT_CLUBS));
+    pilePush(emptyPile, indexToHeap(VALUE_JACK + SUIT_HEARTS));
+    assert(emptyPile->size == 2);
+    assert(pilePop(emptyPile) == indexToHeap(VALUE_JACK + SUIT_HEARTS));
+    assert(pilePop(emptyPile) == indexToHeap(VALUE_7 + SUIT_CLUBS));
+    pileFree(emptyPile);
+
+    Pile *deckPile = pileNewFullDeck();
+    assert(deckPile->size == 52);
+    pileShuffle(deckPile);
+    assert(deckPile->size == 52);
+    pileFree(deckPile);
 }
 
-//////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 //
 //    MeldSet
 //
@@ -315,53 +295,41 @@ void CardList_test() {
 typedef struct MeldSetStruct MeldSet;
 
 struct MeldSetStruct {
-    CardSet runs;
-    CardSet sets;
+    Heap runs;
+    Heap sets;
 };
 
-MeldSet *MeldSet_init(MeldSet *meldSet) {
+MeldSet *meldSetInit(MeldSet *meldSet) {
     meldSet->runs = 0;
     meldSet->sets = 0;
     return meldSet;
 }
 
-void MeldSet_addRun(MeldSet *meldSet, CardSet meld) {
+void meldSetAddRun(MeldSet *meldSet, Heap meld) {
     meldSet->runs |= meld;
 }
 
-void MeldSet_removeRun(MeldSet *meldSet, CardSet meld) {
+void meldSetRemoveRun(MeldSet *meldSet, Heap meld) {
     meldSet->runs &= ~meld;
 }
 
-void MeldSet_addSet(MeldSet *meldSet, CardSet meld) {
+void meldSetAddSet(MeldSet *meldSet, Heap meld) {
     meldSet->sets |= meld;
 }
 
-void MeldSet_removeSet(MeldSet *meldSet, CardSet meld) {
+void meldSetRemoveSet(MeldSet *meldSet, Heap meld) {
     meldSet->sets &= ~meld;
 }
 
-CardSet MeldSet_setAdds(MeldSet meldSet) {
-    CardSet sets = meldSet.sets;
-    CardSet adds = ((sets >> 16) | (sets << 16)) & ~sets & CardSet_legal;
-    return adds;
-}
-
-CardSet MeldSet_runAdds(MeldSet meldSet) {
-    CardSet runs = meldSet.runs;
-    CardSet adds = ((runs << 1) | (runs >> 1)) & ~runs & CardSet_legal;
-    return adds;
-}
-
-void MeldSet_print(MeldSet *meldSet) {
+void meldSetPrint(MeldSet *meldSet) {
     printf("  a23456789TJQKA\n");
     for (int suit = SUIT_CLUBS; suit <= SUIT_SPADES; suit += 16) {
-        printf("%s ", Card_suitSymbol[suit / 16]);
+        printf("%s ", kSuitSymbol[suit >> 16]);
         for (int value = VALUE_LOW_ACE; value <= VALUE_ACE; ++value) {
-            Card card = suit + value;
-            if (CardSet_has(meldSet->runs, card)) {
+            Heap card = indexToHeap(suit + value);
+            if (heapHas(meldSet->runs, card)) {
                 printf("-");
-            } else if (CardSet_has(meldSet->sets, card)) {
+            } else if (heapHas(meldSet->sets, card)) {
                 printf("|");
             } else {
                 printf(".");
@@ -371,31 +339,31 @@ void MeldSet_print(MeldSet *meldSet) {
     }
 }
 
-void MeldSet_test() {
+void meldSetTest(void) {
     // Construct some runs and sets, add them to the MeldSet
     MeldSet meldSet;
-    MeldSet_init(&meldSet);
+    meldSetInit(&meldSet);
 
-    // Construct a CardSet with three eights.
-    CardSet eightSet = 0;
-    CardSet_add(&eightSet, SUIT_CLUBS + VALUE_8);
-    CardSet_add(&eightSet, SUIT_DIAMONDS + VALUE_8);
-    CardSet_add(&eightSet, SUIT_HEARTS + VALUE_8);
-    MeldSet_addSet(&meldSet, eightSet);
+    // Construct  with three eights. eightSet = 0;
+    Heap eightSet = 0;
+    heapAdd(&eightSet, indexToHeap(SUIT_CLUBS + VALUE_8));
+    heapAdd(&eightSet, indexToHeap(SUIT_DIAMONDS + VALUE_8));
+    heapAdd(&eightSet, indexToHeap(SUIT_HEARTS + VALUE_8));
+    meldSetAddSet(&meldSet, eightSet);
 
-    // Construct a CardSet with a run of 4-5-6-7 of clubs.
-    CardSet clubRun = 0;
-    CardSet_add(&clubRun, SUIT_CLUBS + VALUE_4);
-    CardSet_add(&clubRun, SUIT_CLUBS + VALUE_5);
-    CardSet_add(&clubRun, SUIT_CLUBS + VALUE_6);
-    CardSet_add(&clubRun, SUIT_CLUBS + VALUE_7);
-    MeldSet_addRun(&meldSet, clubRun);
+    // Construct  with a run of 4-5-6-7 of clubs. clubRun = 0;
+    Heap clubRun = 0;
+    heapAdd(&clubRun, indexToHeap(SUIT_CLUBS + VALUE_4));
+    heapAdd(&clubRun, indexToHeap(SUIT_CLUBS + VALUE_5));
+    heapAdd(&clubRun, indexToHeap(SUIT_CLUBS + VALUE_6));
+    heapAdd(&clubRun, indexToHeap(SUIT_CLUBS + VALUE_7));
+    meldSetAddRun(&meldSet, clubRun);
 
     // Print the MeldSet
-    MeldSet_print(&meldSet);
+    meldSetPrint(&meldSet);
 }
 
-//////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 //
 //    Player and Game Structs
 //
@@ -406,7 +374,7 @@ typedef struct GameStruct Game;
 struct PlayerStruct {
     Game *game;
     int index;
-    CardSet hand;
+    Heap hand;
     int points;
 };
 
@@ -414,51 +382,58 @@ struct GameStruct {
     int numPlayers;
     int currentPlayer;
     Player *players;
-    CardList drawPile;
-    CardList discardPile;
-    CardSet discarded;
+    Pile drawPile;
+    Pile discardPile;
+    Heap discarded;
 };
 
-//////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 //
 //    Player Methods
 //
 
-void Player_init(Player *player, Game *game, int index) {
+void playerInit(Player *player, Game *game, int index) {
     player->game = game;
     player->index = index;
     player->hand = 0;
     player->points = 0;
 }
 
-Card Player_drawCard(Player *player) {
-    Card card = CardList_pop(&(player->game->drawPile));
-    CardSet_add(&(player->hand), card);
+Heap playerDraw(Player *player) {
+    Heap card = pilePop(&(player->game->drawPile));
+    heapAdd(&(player->hand), card);
     return card;
 }
 
-void Player_discardCard(Player *player, Card card) {
-    CardSet_remove(&(player->hand), card);
-    CardList_push(&(player->game->discardPile), card);
+void playerUndoDraw(Player *player, Heap card) {
+    pilePush(&(player->game->drawPile), card);
+    heapRemove(&(player->hand), card);
 }
 
-void Player_print(Player *player) {
+void playerDiscard(Player *player, Heap card) {
+    heapRemove(&(player->hand), card);
+    pilePush(&(player->game->discardPile), card);
+}
+
+void playerPrint(Player *player) {
     printf("Player %d: ", player->index);
-    CardSet_print(player->hand);
+    heapPrint(player->hand);
     printf(" (%d pts)\n", player->points);
 }
 
-void Player_test() {
+void playerTest(void) {
     Player player;
-    Player_init(&player, NULL, 0);
+    playerInit(&player, NULL, 0);
     player.index = 2;
-    CardSet_add(&player.hand, VALUE_5 + SUIT_DIAMONDS);
-    CardSet_add(&player.hand, VALUE_ACE + SUIT_HEARTS);
+    heapAdd(&player.hand, VALUE_5 + SUIT_DIAMONDS);
+    heapAdd(&player.hand, VALUE_ACE + SUIT_HEARTS);
     player.points = 15;
-    Player_print(&player);
+    playerPrint(&player);
 }
 
-//////////////////////////////////////////////////////////////////////
+#if 0
+
+///////////////////////////////////////////////////////////////////////////////
 //
 //    Game Methods
 //
@@ -531,7 +506,7 @@ void Game_test() {
     Game_free(game);
 }
 
-//////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 //
 //    Evaluate
 //
@@ -559,8 +534,7 @@ void Evaluate_test() {
     // Set up the hand of player 0.
     Player *player = Game_player(game, 0);
     player->points = 100;
-
-    CardSet *hand = &(player->hand);
+ *hand = &(player->hand);
     *hand = 0;
     CardSet_add(hand, VALUE_3 + SUIT_HEARTS);
     CardSet_add(hand, VALUE_QUEEN + SUIT_CLUBS);
@@ -578,7 +552,7 @@ void Evaluate_test() {
     Game_free(game);
 }
 
-//////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 //
 //    Play
 //
@@ -610,7 +584,7 @@ int Play_improve(Play *best, Play *scratch) {
     return best->score;
 }
 
-//////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 //
 //    Search
 //
@@ -621,8 +595,7 @@ int Play_improve(Play *best, Play *scratch) {
 // score.
 
 int searchDiscard(Game *game, Play *scratch, Play *best) {
-    Player *player = Game_currentPlayer(game);
-    CardSet hand = player->hand;
+    Player *player = Game_currentPlayer(game); hand = player->hand;
 
     if (hand == 0) {
         // Hand is empty.  Discard nothing.
@@ -632,7 +605,7 @@ int searchDiscard(Game *game, Play *scratch, Play *best) {
     }
 
     // Iterate over cards in the hand
-    for (CardSet cs = CardSet_lowestCard(hand); cs != 0; cs = CardSet_nextCard(hand, cs)) {
+    for cs = CardSet_lowestCard(hand); cs != 0; cs = CardSet_nextCard(hand, cs)) {
         scratch->discard = cs;
     
         Player_discard(cs);  // TODO:  track whether this was previously discarded
@@ -645,13 +618,20 @@ int searchDiscard(Game *game, Play *scratch, Play *best) {
     return 0;
 }
 
-//////////////////////////////////////////////////////////////////////
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
 //
 //    Main
 //
 
 int main(int argc, char **argv) {
-    Card_test();
+    indexTest();
+    heapTest();
+    pileTest();
+    meldSetTest();
+
+#if 0
     CardSet_test();
     CardList_test();
     MeldSet_test();
@@ -661,6 +641,7 @@ int main(int argc, char **argv) {
 
     uint64_t x = (1 << 13) | (1 << 21);
     printf("%llu\n", x & -x);
+#endif
 
     /*
     CardList *cl = new_CardList();
