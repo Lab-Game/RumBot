@@ -108,6 +108,18 @@ void indexTest(void) {
 typedef uint64_t Heap;
 
 const Heap kFullDeck = 0x3FFE3FFE3FFE3FFEULL;
+const Heap kHighAceMask = (
+    (1ULL << (VALUE_ACE + SUIT_CLUBS)) |
+    (1ULL << (VALUE_ACE + SUIT_DIAMONDS)) |
+    (1ULL << (VALUE_ACE + SUIT_HEARTS)) |
+    (1ULL << (VALUE_ACE + SUIT_SPADES))
+);
+const Heap kLowAceMask = (
+    (1ULL << (VALUE_LOW_ACE + SUIT_CLUBS)) |
+    (1ULL << (VALUE_LOW_ACE + SUIT_DIAMONDS)) |
+    (1ULL << (VALUE_LOW_ACE + SUIT_HEARTS)) |
+    (1ULL << (VALUE_LOW_ACE + SUIT_SPADES))
+);
 
 bool heapIsLegal(Heap heap) {
     return (heap & ~kFullDeck) == 0;
@@ -125,6 +137,10 @@ void heapRemove(Heap *heap, Heap card) {
     *heap &= ~card;
 }
 
+void heapAddLowAces(Heap *heap) {
+    *heap |= (*heap & kHighAceMask) >> (VALUE_ACE - VALUE_LOW_ACE);
+}
+
 int heapSize(Heap heap) {
     return __builtin_popcountll(heap);
 }
@@ -137,8 +153,8 @@ int heapPoints(Heap heap) {
 
 // These functions are used to iterate over the cards in a heap:
 //
-// Heap cards = ...;
-// for (Card c = heapLowCard(cards); c != 0; c = heapNextCard(cards, c)) { ... }
+//   Heap cards = ...;
+//   for (Heap c = heapLowCard(cards); c != 0; c = heapNextCard(cards, c)) { ... }
 
 Heap heapLowCard(Heap heap) {
     return heap & -heap;
@@ -147,6 +163,14 @@ Heap heapLowCard(Heap heap) {
 Heap heapNextCard(Heap heap, Heap card) {
     heap &= ~(((card << 1) - 1));
     return heap & -heap;
+}
+
+Heap heapExpand(Heap heap) {   // for each high ace, add the low ace
+    return heap | ((heap & kHighAceMask) >> (VALUE_ACE - VALUE_LOW_ACE));
+}
+
+Heap heapContract(Heap heap) {  // replace low aces with high aces
+    return (heap | ((heap & kLowAceMask) << (VALUE_ACE - VALUE_LOW_ACE))) & ~kLowAceMask;
 }
 
 // Heap <---> Index conversions
@@ -158,6 +182,35 @@ Heap indexToHeap(Index i) {
 Index heapToIndex(Heap heap) {
     assert(heap != 0);
     return __builtin_ctzll(heap); // count trailing zeros
+}
+
+Heap heapFromString(const char *str) {
+    const char *values = "a23456789TJQKA";
+    const char *suits = "CDHS";
+    Heap heap = 0;
+
+    if (!*str) {
+        return heap;
+    }
+
+    while (true) {
+        assert(*str);
+        assert(strchr(values, *str));
+        assert(*(str+1));
+        assert(strchr(suits, *(str + 1)));
+
+        int value = strchr(values, *(str++)) - values;
+        int suit = strchr(suits, *(str++)) - suits;
+
+        heapAdd(&heap, indexToHeap(value + (suit << 4)));
+
+        if (!*str) {
+            return heap;
+        } else {
+            assert(*str == ' ');
+            str++;
+        }
+    }
 }
 
 void heapPrint(Heap heap) {
@@ -206,6 +259,9 @@ void heapTest(void) {
     assert(!heapHas(heap, aceOfSpades));
     assert(heapHas(heap, tenOfDiamonds));
     assert(heapPoints(heap) == 10);
+
+    printf("Should print: KD QS 7H 9H 8C\n");
+    heapPrint(heapFromString("KD QS 7H 9H 8C"));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -228,22 +284,15 @@ Heap pilePop(Pile *pile) {
     return pile->cards[--pile->size];
 }
 
-Pile *pileNewEmpty(void) {
-    Pile *new = malloc(sizeof(Pile));
-    new->size = 0;
-    return new;
+void pileInitEmpty(Pile *pile) {
+    pile->size = 0;
 }
 
-Pile *pileNewFullDeck(void) {
-    Pile *new = pileNewEmpty();
+void pileInitFullDeck(Pile *pile) {
+    pile->size = 0;
     for (Heap c = heapLowCard(kFullDeck); c != 0; c = heapNextCard(kFullDeck, c)) {
-        pilePush(new, c);
+        pilePush(pile, c);
     }
-    return new;
-}
-
-void pileFree(Pile *pile) {
-    free(pile);
 }
 
 Pile *pileShuffle(Pile *pile) {
@@ -271,20 +320,20 @@ void pilePrint(Pile *pile) {
 }
 
 void pileTest(void) {
-    Pile *emptyPile = pileNewEmpty();
-    assert(emptyPile->size == 0);
-    pilePush(emptyPile, indexToHeap(VALUE_7 + SUIT_CLUBS));
-    pilePush(emptyPile, indexToHeap(VALUE_JACK + SUIT_HEARTS));
-    assert(emptyPile->size == 2);
-    assert(pilePop(emptyPile) == indexToHeap(VALUE_JACK + SUIT_HEARTS));
-    assert(pilePop(emptyPile) == indexToHeap(VALUE_7 + SUIT_CLUBS));
-    pileFree(emptyPile);
+    Pile emptyPile;
+    pileInitEmpty(&emptyPile);
+    assert(emptyPile.size == 0);
+    pilePush(&emptyPile, indexToHeap(VALUE_7 + SUIT_CLUBS));
+    pilePush(&emptyPile, indexToHeap(VALUE_JACK + SUIT_HEARTS));
+    assert(emptyPile.size == 2);
+    assert(pilePop(&emptyPile) == indexToHeap(VALUE_JACK + SUIT_HEARTS));
+    assert(pilePop(&emptyPile) == indexToHeap(VALUE_7 + SUIT_CLUBS));
 
-    Pile *deckPile = pileNewFullDeck();
-    assert(deckPile->size == 52);
-    pileShuffle(deckPile);
-    assert(deckPile->size == 52);
-    pileFree(deckPile);
+    Pile deckPile;
+    pileInitFullDeck(&deckPile);
+    assert(deckPile.size == 52);
+    pileShuffle(&deckPile);
+    assert(deckPile.size == 52);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -292,12 +341,10 @@ void pileTest(void) {
 //    MeldSet
 //
 
-typedef struct MeldSetStruct MeldSet;
-
-struct MeldSetStruct {
+typedef struct MeldSetStruct {
     Heap runs;
     Heap sets;
-};
+} MeldSet;
 
 MeldSet *meldSetInit(MeldSet *meldSet) {
     meldSet->runs = 0;
@@ -324,12 +371,16 @@ void meldSetRemoveSet(MeldSet *meldSet, Heap meld) {
 void meldSetPrint(MeldSet *meldSet) {
     printf("  a23456789TJQKA\n");
     for (int suit = SUIT_CLUBS; suit <= SUIT_SPADES; suit += 16) {
-        printf("%s ", kSuitSymbol[suit >> 16]);
+        printf("%s ", kSuitSymbol[suit >> 4]);
         for (int value = VALUE_LOW_ACE; value <= VALUE_ACE; ++value) {
             Heap card = indexToHeap(suit + value);
-            if (heapHas(meldSet->runs, card)) {
+            bool inRun = heapHas(meldSet->runs, card);
+            bool inSet = heapHas(meldSet->sets, card);
+            if (inRun && inSet) {
+                printf("+");  // can happen when considering *possible* melds
+            } else if (inRun) {
                 printf("-");
-            } else if (heapHas(meldSet->sets, card)) {
+            } else if (inSet) {
                 printf("|");
             } else {
                 printf(".");
@@ -360,7 +411,9 @@ void meldSetTest(void) {
     meldSetAddRun(&meldSet, clubRun);
 
     // Print the MeldSet
+    printf("vvvvv meldSetPrint() Test Output vvvvv\n");
     meldSetPrint(&meldSet);
+    printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -384,6 +437,7 @@ struct GameStruct {
     Player *players;
     Pile drawPile;
     Pile discardPile;
+    MeldSet melds;
     Heap discarded;
 };
 
@@ -415,6 +469,35 @@ void playerDiscard(Player *player, Heap card) {
     pilePush(&(player->game->discardPile), card);
 }
 
+void playerUndoDiscard(Player *player) {
+    Heap card = pilePop(&(player->game->discardPile));
+    heapAdd(&(player->hand), card);
+}
+
+void playerPlayRun(Player *player, Heap run) {
+    player->points += heapPoints(run);
+    meldSetAddRun(&(player->game->melds), run);
+    heapRemove(&(player->hand), heapExpand(run));
+}
+
+void playerUndoRun(Player *player, Heap run) {
+    player->points -= heapPoints(run);
+    meldSetRemoveRun(&(player->game->melds), run);
+    heapAdd(&(player->hand), heapContract(run));
+}
+
+void playerPlaySet(Player *player, Heap set) {
+    player->points += heapPoints(set);
+    meldSetAddSet(&(player->game->melds), set);
+    heapRemove(&(player->hand), heapExpand(set));
+}
+
+void playerUndoSet(Player *player, Heap set) {
+    player->points -= heapPoints(set);
+    meldSetRemoveSet(&(player->game->melds), set);
+    heapAdd(&(player->hand), heapContract(set));
+}
+
 void playerPrint(Player *player) {
     printf("Player %d: ", player->index);
     heapPrint(player->hand);
@@ -431,79 +514,81 @@ void playerTest(void) {
     playerPrint(&player);
 }
 
-#if 0
-
 ///////////////////////////////////////////////////////////////////////////////
 //
 //    Game Methods
 //
 
-Player *Game_player(Game *game, int playerIndex) {
+Player *gamePlayer(Game *game, int playerIndex) {
     return &(game->players[playerIndex]);
 }
 
-Game *Game_new(int numPlayers) {
-    Game *game = malloc(sizeof(Game));
-    CardList_init(&(game->drawPile));
-    CardList_init(&(game->discardPile));
-    game->discarded = 0;
+Player *gameCurrentPlayer(Game *game) {
+    return &game->players[game->currentPlayer];
+}
+
+Game *gameInit(Game *game, int numPlayers) {
     game->numPlayers = numPlayers;
     game->currentPlayer = 0;
+    game->discarded = 0;
+
+    pileInitEmpty(&(game->drawPile));
+    pileInitEmpty(&(game->discardPile));
+
+    meldSetInit(&(game->melds));
+
     game->players = malloc(numPlayers * sizeof(Player));
     for (int i = 0; i < numPlayers; ++i) {
-        Player_init(Game_player(game, i), game, i);
+        playerInit(gamePlayer(game, i), game, i);
     }
 
     // Fill and shuffle the draw pile.
-    for (int i = 0; i < 64; ++i) {
-        if (Card_value(i) >= VALUE_2 && Card_value(i) <= VALUE_ACE) {
-            CardList_push(&game->drawPile, i);
-        }
-    }
-    CardList_shuffle(&game->drawPile);
+    pileInitFullDeck(&(game->drawPile));
+    pileShuffle(&(game->drawPile));
 
     // Deal cards to each player.
     for (int i = 0; i < game->numPlayers; ++i) {
-        Player *player = Game_player(game, i);
+        Player *player = gamePlayer(game, i);
         for (int j = 0; j < 7; ++j) {
-            Player_drawCard(player);
+            playerDraw(player);
         }
     }
 
     // First player draws one more card, which becomes the discard pile.
-    Player *firstPlayer = Game_player(game, 0);
-    Player_discardCard(firstPlayer, Player_drawCard(firstPlayer));
+    Player *firstPlayer = gamePlayer(game, 0);
+    playerDiscard(firstPlayer, playerDraw(firstPlayer));
 
     return game;
 }
 
-void Game_free(Game *game) {
-    if (game) {
-        free(game->players);
-        free(game);
-    }
-}
-
-Player *Game_currentPlayer(Game *game) {
-    return &game->players[game->currentPlayer];
-}
-
-void Game_print(Game *game) {
+void gamePrint(Game *game) {
     printf("Player %d/%d\n", game->currentPlayer, game->numPlayers);
     for (int i = 0; i < game->numPlayers; ++i) {
-        Player_print(Game_player(game, i));
+        playerPrint(gamePlayer(game, i));
     }
     printf("Draw pile: ");
-    CardList_print(&game->drawPile);
+    pilePrint(&game->drawPile);
     printf("\nDiscard pile: ");
-    CardList_print(&game->discardPile);
-    printf("\n");
+    pilePrint(&game->discardPile);
+    printf("\nMelds:\n");
+    meldSetPrint(&game->melds);
 }
 
-void Game_test() {
-    Game *game = Game_new(3);
-    Game_print(game);
-    Game_free(game);
+void gameTest(void) {
+    Game game;
+    gameInit(&game, 3);
+    assert(game.numPlayers == 3);
+    assert(game.currentPlayer == 0);
+    assert(game.drawPile.size == 52 - 3 * 7 - 1);
+    assert(game.discardPile.size == 1);
+    for (int i = 0; i < game.numPlayers; ++i) {
+        assert(heapSize(game.players[i].hand) == 7);
+        assert(game.players[i].points == 0);
+    }
+
+    printf("vvvvv gamePrint() Test Output vvvvv\n");
+    gamePrint(&game);
+    printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -511,45 +596,44 @@ void Game_test() {
 //    Evaluate
 //
 
-int Evaluate(Game *game) {
-    Player *player = Game_currentPlayer(game);
-    int pointsInHand = CardSet_points(player->hand);
+int evaluate(Game *game) {
+    Player *player = gameCurrentPlayer(game);
+    int pointsInHand = heapPoints(player->hand);
     int pointsFromRivals = 0;
     if (player->hand == 0) {
         for (int p = 0; p < game->numPlayers; ++p) {
             if (p != player->index) {
-                pointsFromRivals += CardSet_size(game->players[p].hand);
+                pointsFromRivals += heapSize(game->players[p].hand);
             }
         }
         pointsFromRivals *= 7;
         pointsFromRivals /= (game->numPlayers - 1);
     }
-    return player->points + pointsInHand / 2 + pointsFromRivals;
+    int eval = player->points + pointsInHand / 2 + pointsFromRivals;
+    return eval;
 }
 
-void Evaluate_test() {
+void evaluateTest() {
     // Create a game
-    Game *game = Game_new(3);
+    Game game;
+    gameInit(&game, 3);
 
-    // Set up the hand of player 0.
-    Player *player = Game_player(game, 0);
+    Player *player = gamePlayer(&game, 0);
     player->points = 100;
- *hand = &(player->hand);
+    Heap *hand = &(player->hand);
     *hand = 0;
-    CardSet_add(hand, VALUE_3 + SUIT_HEARTS);
-    CardSet_add(hand, VALUE_QUEEN + SUIT_CLUBS);
-    CardSet_add(hand, VALUE_ACE + SUIT_CLUBS);
+    heapAdd(hand, indexToHeap(VALUE_3 + SUIT_HEARTS));
+    heapAdd(hand, indexToHeap(VALUE_QUEEN + SUIT_CLUBS));
+    heapAdd(hand, indexToHeap(VALUE_ACE + SUIT_CLUBS));
 
     // Eval is 100 points played + 30 / 2 for points in hand
-    int score = Evaluate(game);
+    int score = evaluate(&game);
     assert(score == 100 + (5 + 10 + 15) / 2);
 
     // Eval is 100 points played + 7 points per rival card in hand
     *hand = 0;
-    int outScore = Evaluate(game);
+    int outScore = evaluate(&game);
     assert(outScore == 100 + 7 * 7);
-
-    Game_free(game);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -557,31 +641,145 @@ void Evaluate_test() {
 //    Play
 //
 
-typedef struct PlayStruct Play;
-
-struct PlayStruct {
-    CardList cardsTaken;  // I especially care about the deepest card taken.  Can I avoid a list?
-    Card cardDrawn;
+typedef struct PlayStruct {
+    Pile taken;  // Do I need a complete list or just num + deepest card?
+    Heap drawn;
     MeldSet melds;
-    MeldSet rejectedMelds;  // for bookkeeping during search
-    Card discard;
-    int score;
-};
+    Heap discard;
+    int eval;
+} Play;
 
-int Play_improve(Play *best, Play *scratch) {
-    if (scratch->score > best->score) {
-        // Copy the cardsTaken list
-        best->cardsTaken.size = scratch->cardsTaken.size;
-        for (int i = 0; i < scratch->cardsTaken.size; ++i) {
-            best->cardsTaken.cards[i] = scratch->cardsTaken.cards[i];
-        }
-        best->cardDrawn = scratch->cardDrawn;
+void playInit(Play *play) {
+    pileInitEmpty(&(play->taken));
+    play->drawn = 0;;
+    meldSetInit(&(play->melds));
+    play->discard = 0;
+    play->eval = 0;
+}
+
+int playMax(Play *best, Play *scratch) {
+    if (scratch->eval > best->eval) {
+        best->taken = scratch->taken;
+        best->drawn = scratch->drawn;
         best->melds = scratch->melds;
-        best->rejectedMelds = scratch->rejectedMelds;
         best->discard = scratch->discard;
-        best->score = scratch->score;
+        best->eval = scratch->eval;
     }
-    return best->score;
+    return best->eval;
+}
+
+void playPrint(Play *play) {
+    printf("Take: ");
+    pilePrint(&(play->taken));
+    printf(" Draw:");
+    heapPrint(play->drawn);
+    printf("\n");
+    meldSetPrint(&(play->melds));
+    printf("Discard: ");
+    heapPrint(play->discard);
+    printf(" Eval: %d\n", play->eval);
+}
+
+void playTest() {
+    Play best;
+    playInit(&best);
+    Play scratch;
+    playInit(&scratch);
+
+    // Test case 1: Basic play
+    scratch.eval = 10;
+    playMax(&best, &scratch);
+    assert(best.eval == 10);
+
+    // Test case 2: Better play
+    scratch.eval = 15;
+    playMax(&best, &scratch);
+    assert(best.eval == 15);
+
+    // Test case 3: Worse play
+    scratch.eval = 5;
+    playMax(&best, &scratch);
+    assert(best.eval == 15);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+//    Opt - Meld Options
+//
+
+typedef struct OptStruct {
+    Heap runCenters;
+    Heap runExtensions;
+    Heap setCenters;
+    Heap setExtensions;
+} Opt;
+
+void optInit(Opt *meldOpt) {
+    meldOpt->runCenters = 0;
+    meldOpt->runExtensions = 0;
+    meldOpt->setCenters = 0;
+    meldOpt->setExtensions = 0;
+}
+
+void optFind(Game *game, Opt *meldOpt) {
+    Heap hand = gameCurrentPlayer(game)->hand;
+    MeldSet *melds = &(game->melds);
+
+    // Add a low ace for every high ace
+    Heap lowedHand = hand | ((hand & kHighAceMask) >> (VALUE_ACE - VALUE_LOW_ACE));
+    meldOpt->runCenters = hand & (hand << 1) & (hand >> 1);
+    meldOpt->setCenters = (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48)));
+    meldOpt->runExtensions = ((melds->runs << 1) | (melds->runs >> 1)) & hand;
+    meldOpt->setExtensions = ((melds->sets << 16) | (melds->sets >> 16)) & hand;
+}
+
+void optExclude(Opt *meldOpt, Opt *rejectedOptions) {
+    meldOpt->runCenters &= ~rejectedOptions->runCenters;
+    meldOpt->runExtensions &= ~rejectedOptions->runExtensions;
+    meldOpt->setCenters &= ~rejectedOptions->setCenters;
+    meldOpt->setExtensions &= ~rejectedOptions->setExtensions;
+}
+
+bool optNone(Opt *meldOpt) {
+    return (meldOpt->runCenters == 0 && meldOpt->runExtensions == 0 &&
+            meldOpt->setCenters == 0 && meldOpt->setExtensions == 0);
+}
+
+Heap optRunCenterToMeld(Heap center) {
+    return center | (center << 1) | (center >> 1);
+}
+
+Heap optSetCenterToMeld(Heap center) {
+    return center |(center << 16) | (center >> 16) | (center >> 48) | (center << 48);
+}
+
+void optPrint(Opt *meldOpt) {
+    printf("Run Centers: ");
+    heapPrint(meldOpt->runCenters);
+    printf("\nRun Extensions: ");
+    heapPrint(meldOpt->runExtensions);
+    printf("\nSet Centers: ");
+    heapPrint(meldOpt->setCenters);
+    printf("\nSet Extensions: ");
+    heapPrint(meldOpt->setExtensions);
+    printf("\n");
+}
+
+void optTest() {
+    Game game;
+    gameInit(&game, 3);
+    
+    // Set hand of the current player
+    Heap *hand = &(gameCurrentPlayer(&game)->hand);
+    *hand = heapFromString("JC QC KC AC QD QS 7S 9H");
+
+    // Add some already-played melds to the game
+    meldSetAddRun(&(game.melds), heapFromString("TH JH QH KH AH"));
+    meldSetAddSet(&(game.melds), heapFromString("7H 7C 7D"));
+
+    Opt meldOpt;
+    optFind(&game, &meldOpt);
+    optPrint(&meldOpt);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -589,36 +787,106 @@ int Play_improve(Play *best, Play *scratch) {
 //    Search
 //
 
-// All search functions return the highest-achieved score.  Parameters
-// are the game state, a Play structure recording actions to reach
-// that game state, and the best Play found so far, which includes its
-// score.
+// TODO:  Check that the deepest card taken from the discard pile was melded.
 
-int searchDiscard(Game *game, Play *scratch, Play *best) {
-    Player *player = Game_currentPlayer(game); hand = player->hand;
+void searchDraw() {
 
-    if (hand == 0) {
-        // Hand is empty.  Discard nothing.
-        scratch->discard = 0;
-        scratch->score = Evaluate(game);
-        return Play_improve(best, scratch);
-    }
-
-    // Iterate over cards in the hand
-    for cs = CardSet_lowestCard(hand); cs != 0; cs = CardSet_nextCard(hand, cs)) {
-        scratch->discard = cs;
-    
-        Player_discard(cs);  // TODO:  track whether this was previously discarded
-        scratch->score = Evaluate(game);
-        Play_improve(best, scratch);
-        Player_undoDiscard(cs);
-        player->hand = hand | cs;  // put the card back
-    }
-
-    return 0;
 }
 
-#endif
+void searchTake() {
+    
+}
+
+void searchDiscard(Game *game, Play *scratch, Play *best) {
+    Player *player = gameCurrentPlayer(game);
+    Heap *hand = &(player->hand);
+
+    if (*hand == 0) {
+        // Hand is empty.  Discard nothing.
+        scratch->discard = 0;
+        scratch->eval = evaluate(game);
+        playMax(best, scratch);
+        printf("\n");
+        playPrint(scratch);
+    } else {
+        // Try discarding each card in the hand
+        for (Heap card = heapLowCard(*hand); card != 0; card = heapNextCard(*hand, card)) {
+            scratch->discard = card;
+            playerDiscard(player, card);
+            scratch->eval = evaluate(game);
+            printf("\n");
+            playPrint(scratch);
+            playMax(best, scratch);
+            playerUndoDiscard(player);
+        }
+    }
+}
+
+void searchMeldRec(Game *game, Play *scratch, Play *best, Opt *rejectedOptions) {
+    Player *player = gameCurrentPlayer(game);
+    Heap *hand = &(player->hand);
+
+    Opt meldOptions;
+    optFind(game, &meldOptions);
+    optExclude(&meldOptions, rejectedOptions);
+
+    if (optNone(&meldOptions)) {
+        searchDiscard(game, scratch, best);
+        return;
+    }
+
+    for (Heap center = heapLowCard(meldOptions.runCenters); center != 0; center = heapNextCard(meldOptions.runCenters, center)) {
+        Heap meld = optRunCenterToMeld(center);
+        meldSetAddRun(&(scratch->melds), meld);
+        playerPlayRun(player, meld);
+        searchMeldRec(game, scratch, best, rejectedOptions);
+        playerUndoRun(player, meld);
+        meldSetRemoveRun(&(scratch->melds), meld);
+        heapAdd(&(rejectedOptions->runCenters), center);
+    }
+
+    for (Heap center = heapLowCard(meldOptions.setCenters); center != 0; center = heapNextCard(meldOptions.setCenters, center)) {
+        Heap meld = optSetCenterToMeld(center);
+        meldSetAddSet(&(scratch->melds), meld);
+        playerPlaySet(player, meld);
+        searchMeldRec(game, scratch, best, rejectedOptions);
+        playerUndoSet(player, meld);
+        meldSetRemoveSet(&(scratch->melds), meld);
+        heapAdd(&(rejectedOptions->setCenters), center);
+    }
+
+    for (Heap meld = heapLowCard(meldOptions.runExtensions); meld != 0; meld = heapNextCard(meldOptions.runExtensions, meld)) {
+        meldSetAddRun(&(scratch->melds), meld);
+        playerPlayRun(player, meld);
+        searchMeldRec(game, scratch, best, rejectedOptions);
+        playerUndoRun(player, meld);
+        meldSetRemoveRun(&(scratch->melds), meld);
+        heapAdd(&(rejectedOptions->runExtensions), meld);
+    }
+
+    for (Heap meld = heapLowCard(meldOptions.setExtensions); meld != 0; meld = heapNextCard(meldOptions.setExtensions, meld)) {
+        meldSetAddSet(&(scratch->melds), meld);
+        playerPlaySet(player, meld);
+        searchMeldRec(game, scratch, best, rejectedOptions);
+        playerUndoSet(player, meld);
+        meldSetRemoveSet(&(scratch->melds), meld);
+        heapAdd(&(rejectedOptions->setExtensions), meld);
+    }
+
+    // All options in this branch were rejected.
+    searchMeldRec(game, scratch, best, rejectedOptions);
+
+    heapRemove(&(rejectedOptions->runCenters), meldOptions.runCenters);
+    heapRemove(&(rejectedOptions->setCenters), meldOptions.setCenters);
+    heapRemove(&(rejectedOptions->runExtensions), meldOptions.runExtensions);
+    heapRemove(&(rejectedOptions->setExtensions), meldOptions.setExtensions);
+}
+
+void searchMeld(Game *game, Play *scratch, Play *best) {
+    Opt rejectedOptions;
+    optInit(&rejectedOptions);
+    searchMeldRec(game, scratch, best, &rejectedOptions);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -626,34 +894,29 @@ int searchDiscard(Game *game, Play *scratch, Play *best) {
 //
 
 int main(int argc, char **argv) {
+/*
     indexTest();
     heapTest();
     pileTest();
     meldSetTest();
-
-#if 0
-    CardSet_test();
-    CardList_test();
-    MeldSet_test();
-    Player_test();
-    Game_test();
-    Evaluate_test();
-
-    uint64_t x = (1 << 13) | (1 << 21);
-    printf("%llu\n", x & -x);
-#endif
-
-    /*
-    CardList *cl = new_CardList();
-    for (int i = 0; i < 52; ++i) {
-        CardList_push(cl, i);
-    }
-    CardList_shuffle(cl);
-    
-    CardList_print(cl);
-    printf("\n");
-
-    CardList_free(cl);
-    return 0;
+    gameTest();
+    evaluateTest();
     */
+
+    Game game;
+    gameInit(&game, 3);
+
+    gameCurrentPlayer(&game)->hand = heapFromString("8C 9C TC 2H 2D 2S 4C");
+
+    printf("Starting game position:\n");
+    gamePrint(&game);
+
+    Play scratch;
+    playInit(&scratch);
+    Play best;
+    playInit(&best);
+
+    searchMeld(&game, &scratch, &best);
+    printf("--- BEST PLAY ---\n");
+    playPrint(&best);
 }
