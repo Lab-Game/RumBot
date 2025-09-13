@@ -1,6 +1,9 @@
 #ifndef GAME_H
 #define GAME_H
 
+#include "play.h"
+#include "cards.h"
+#include "pile.h"
 #include "table.h"
 
 #define NUM_PLAYERS 3
@@ -12,6 +15,7 @@ typedef struct PlayerStruct {
     int id;
     Cards hand;
     int score;
+    Play play;
 } Player;
 
 struct GameStruct {

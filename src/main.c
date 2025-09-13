@@ -1,10 +1,14 @@
 #include <stdio.h>
 
 #include "cards.h"
+#include "pile.h"
+#include "table.h"
+#include "game.h"
 
 int main(void) {
-    Cards cards = Cards_fromString("aC TC 5D 6D 2H JH 6S KS AS");
-    Cards_print(cards);
-    printf("\n");
+    Game game;
+    Game_init(&game);
+    Game_print(&game);
+
     return 0;
 }
