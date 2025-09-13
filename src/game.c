@@ -13,8 +13,8 @@ void Game_init(Game *game) {
         Player_init(&game->players[i], game, i);
     }
     Pile_fullDeck(&game->drawPile);
-    Pile_clear(&game->discardPile);
-    Table_clear(&game->table);
+    Pile_init(&game->discardPile);
+    Table_init(&game->table);
     game->discarded = 0;
 
     // Shuffle the draw pile
@@ -86,6 +86,14 @@ void Player_discard(Player *player, Cards card) {
 void Player_undoDiscard(Player *player) {
     Cards card = Pile_pop(&player->game->discardPile);
     Cards_add(&player->hand, card);
+}
+
+void Player_playRun(Player *player, Cards meld) {
+    assert(Cards_size(meld) >= 3);
+    assert(Cards_isLegal(meld));
+    assert(Cards_has(player->hand, meld));
+    Table_addRun(&player->game->table, meld);
+    Cards_remove(&player->hand, meld);
 }
 
 void Player_print(Player *player) {

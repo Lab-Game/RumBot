@@ -8,7 +8,7 @@ typedef struct TableStruct {
     Cards sets;
 } Table;
 
-static inline Table *Table_clear(Table *table) {
+static inline Table *Table_init(Table *table) {
     table->runs = 0;
     table->sets = 0;
     return table;

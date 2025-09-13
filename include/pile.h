@@ -24,7 +24,7 @@ static inline Cards Pile_pop(Pile *pile) {
     return pile->cards[--pile->size];
 }
 
-static inline void Pile_clear(Pile *pile) {
+static inline void Pile_init(Pile *pile) {
     pile->size = 0;
 }
 
