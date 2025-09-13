@@ -4,8 +4,10 @@
 #include "cards.h"
 #include "pile.h"
 #include "table.h"
+#include "game.h"
 
 void Cards_test(void) {
+    puts("Testing Cards...");
     Cards cards = Cards_fromString("aC TC 5D 6D 2H JH 6S KS AS");
     printf("Expected:  aC TC 5D 6D 2H JH 6S KS AS\n");
     printf("Actual:    ");
@@ -31,6 +33,7 @@ void Cards_test(void) {
 }
 
 void Pile_test(void) {
+    puts("Testing Pile...");
     Pile pile;
     Pile_clear(&pile);
     assert(Pile_size(&pile) == 0);
@@ -45,6 +48,10 @@ void Pile_test(void) {
         assert(Cards_size(card) == 1);
     }
     assert(Pile_size(&pile) == 0);
+    printf("Expected:  (none)\n");
+    printf("Actual:    ");
+    Pile_print(&pile);
+    printf("\n");
     Pile_push(&pile, Cards_fromString("KD"));
     Pile_push(&pile, Cards_fromString("QS"));
     Pile_push(&pile, Cards_fromString("7H"));
@@ -58,6 +65,7 @@ void Pile_test(void) {
 }
 
 void Table_test(void) {
+    puts("Testing Table...");
     Table table;
     Table_clear(&table);
     assert(table.runs == 0);
@@ -78,10 +86,32 @@ void Table_test(void) {
     assert(table.sets == 0);
 }
 
+void Game_test(void) {
+    puts("Testing Game...");
+    Game game;
+    Game_init(&game);
+    assert(game.numPlayers == NUM_PLAYERS);
+    assert(game.currentPlayer == 0);
+    assert(Pile_size(&game.drawPile) == 52 - NUM_PLAYERS * 7 - 1);
+    assert(Pile_size(&game.discardPile) == 1);
+    assert(game.table.runs == 0);
+    assert(game.table.sets == 0);
+    assert(game.discarded == 0);
+    for (int i = 0; i < game.numPlayers; ++i) {
+        Player *player = Game_player(&game, i);
+        assert(player->game == &game);
+        assert(player->id == i);
+        assert(player->score == 0);
+        assert(Cards_size(player->hand) == 7);
+    }
+    Game_print(&game);
+}
+
 int main(void) {
     Cards_test();
     Pile_test();
     Table_test();
+    Game_test();
     printf("All tests passed.\n");
     return 0;
 }

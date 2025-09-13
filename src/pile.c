@@ -31,4 +31,8 @@ void Pile_print(Pile *pile) {
             printf(" %s", Card_name(Cards_toCard(card)));
         }
     }
+
+    if (first) {
+        printf("(none)");
+    }
 }
