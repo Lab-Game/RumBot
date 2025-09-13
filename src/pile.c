@@ -3,7 +3,7 @@
 #include <assert.h>
 #include "pile.h"
 
-void Pile_initFullDeck(Pile *pile) {
+void Pile_fullDeck(Pile *pile) {
     pile->size = 0;
     for (Cards c = Cards_low(FULL_DECK); c != 0; c = Cards_next(FULL_DECK, c)) {
         Pile_push(pile, c);
