@@ -1,7 +1,7 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include "play.h"
+#include "turn.h"
 #include "cards.h"
 #include "pile.h"
 #include "table.h"
@@ -15,7 +15,7 @@ typedef struct PlayerStruct {
     int id;
     Cards hand;
     int score;
-    Play play;
+    Turn turn;
 } Player;
 
 struct GameStruct {
@@ -37,6 +37,8 @@ void Game_print(Game *game);
 void Player_init(Player *player, Game *game, int id);
 Cards Player_draw(Player *player);
 void Player_undoDraw(Player *player, Cards card);
+void Player_take(Player *player);
+void Player_undoTakes(Player *player);
 void Player_discard(Player *player, Cards card);
 void Player_undoDiscard(Player *player);
 void Player_print(Player *player);

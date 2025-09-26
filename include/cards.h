@@ -48,6 +48,11 @@ static inline int Cards_size(Cards cards) {
     return __builtin_popcountll(cards);
 }
 
+static inline Cards Cards_addLowAces(Cards cards) {
+    const uint64_t kHighAceMask = 0x0001000100010001ULL;
+    return cards | ((cards & kHighAceMask) >> 13);
+}
+
 static inline Card Cards_toCard(Cards cards) {
     assert(cards != 0);
     return __builtin_ctzll(cards); // count trailing zeros

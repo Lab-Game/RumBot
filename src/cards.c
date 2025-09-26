@@ -1,9 +1,9 @@
-#include "cards.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "cards.h"
 
 const char *kCardName[64] = {
     "aC", "2C", "3C", "4C", "5C", "6C", "7C", "8C", "9C", "TC", "JC", "QC", "KC", "AC", "14", "15",

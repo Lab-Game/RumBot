@@ -1,9 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "cards.h"
-#include "pile.h"
 #include "game.h"
 
 void Game_init(Game *game) {
@@ -33,7 +30,7 @@ void Game_init(Game *game) {
     Player_discard(firstPlayer, Player_draw(firstPlayer));
 
     // Clear the play for the first player
-    Play_init(&firstPlayer->play);
+    Turn_init(&firstPlayer->turn);
 }
 
 Player *Game_player(Game *game, int num) {
@@ -47,7 +44,7 @@ Player *Game_currentPlayer(Game *game) {
 
 void Game_nextTurn(Game *game) {
     game->currentPlayer = (game->currentPlayer + 1) % game->numPlayers;
-    Play_init(&game->players[game->currentPlayer].play);
+    Turn_init(&game->players[game->currentPlayer].turn);
 }
 
 void Game_print(Game *game) {
@@ -69,20 +66,35 @@ void Player_init(Player *player, Game *game, int id) {
     player->id = id;
     player->score = 0;
     player->hand = 0;
-    Play_init(&player->play);
+    Turn_init(&player->turn);
 }
 
 Cards Player_draw(Player *player) {
     Cards card = Pile_pop(&player->game->drawPile);
     Cards_add(&player->hand, card);
-    player->play.draw = card;
+    player->turn.draw = card;
     return card;
 }
 
 void Player_undoDraw(Player *player, Cards card) {
     Pile_push(&player->game->drawPile, card);
     Cards_remove(&player->hand, card);
-    player->play.draw = 0;
+    player->turn.draw = 0;
+}
+
+void Player_take(Player *player) {
+    assert(Pile_size(&player->game->discardPile) >= 1);
+    Cards card = Pile_pop(&player->game->discardPile);
+    Pile_push(&player->turn.taken, card);
+    Cards_add(&player->hand, card);
+}
+
+void Player_undoTakes(Player *player) {
+    while (Pile_size(&player->turn.taken) > 0) {
+        Cards card = Pile_pop(&player->turn.taken);
+        Cards_remove(&player->hand, card);
+        Pile_push(&player->game->discardPile, card);
+    }
 }
 
 void Player_playRun(Player *player, Cards meld) {
@@ -90,14 +102,14 @@ void Player_playRun(Player *player, Cards meld) {
     assert(Cards_isLegal(meld));
     assert(Cards_has(player->hand, meld));
     Table_addRun(&player->game->table, meld);
-    Table_addRun(&player->play.meld, meld);
+    Table_addRun(&player->turn.meld, meld);
     Cards_remove(&player->hand, meld);
 }
 
 void Player_undoPlayRun(Player *player, Cards meld) {
     Cards_add(&player->hand, meld);
     Table_removeRun(&player->game->table, meld);
-    Table_removeRun(&player->play.meld, meld);
+    Table_removeRun(&player->turn.meld, meld);
 }
 
 void Player_playSet(Player *player, Cards meld) {
@@ -105,26 +117,26 @@ void Player_playSet(Player *player, Cards meld) {
     assert(Cards_isLegal(meld));
     assert(Cards_has(player->hand, meld));
     Table_addSet(&player->game->table, meld);
-    Table_addSet(&player->play.meld, meld);
+    Table_addSet(&player->turn.meld, meld);
     Cards_remove(&player->hand, meld);
 }
 
 void Player_undoPlaySet(Player *player, Cards meld) {
     Cards_add(&player->hand, meld);
     Table_removeSet(&player->game->table, meld);
-    Table_removeSet(&player->play.meld, meld);
+    Table_removeSet(&player->turn.meld, meld);
 }
 
 void Player_discard(Player *player, Cards card) {
     Cards_remove(&player->hand, card);
     Pile_push(&player->game->discardPile, card);
-    player->play.discard = card;
+    player->turn.discard = card;
 }
 
 void Player_undoDiscard(Player *player) {
     Cards card = Pile_pop(&player->game->discardPile);
     Cards_add(&player->hand, card);
-    player->play.discard = 0;
+    player->turn.discard = 0;
 }
 
 void Player_print(Player *player) {
