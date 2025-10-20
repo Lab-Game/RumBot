@@ -1,6 +1,11 @@
 #ifndef TURN_H
 #define TURN_H
 
+// a "Turn" represents a player's actions during their turn.  While searching for
+// the best turn, we keep track of the current "scratch" turn and the best turn.
+// At a leaf of the search tree, we evaluate the turn and update the best turn if
+// the scratch turn is better.
+
 #include "cards.h"
 #include "pile.h"
 #include "table.h"
