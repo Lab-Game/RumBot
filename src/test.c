@@ -89,18 +89,20 @@ void Table_test(void) {
     assert(table.sets == 0);
 
     Table_addRun(&table, Cards_fromString("TH JH QH"));
+    Table_addRun(&table, Cards_fromString("4C 5C 6C 7C"));
     Table_addSet(&table, Cards_fromString("7H 7C 7D"));
-    printf("Expected:\nRuns: TH JH QH\nSets: 7C 7D 7H\nActual:\n");
+    Table_addSet(&table, Cards_fromString("JC JD JH JS"));
+    printf("Expected:\nRuns: 4C 5C 6C 7C, TH JH QH\nSets: 7C 7D 7H, JC JD JH JS\nActual:\n");
     Table_print(&table);
-    assert(table.runs == Cards_fromString("TH JH QH"));
-    assert(table.sets == Cards_fromString("7C 7D 7H"));
+    assert(table.runs == Cards_fromString("4C 5C 6C 7C TH JH QH"));
+    assert(table.sets == Cards_fromString("7C 7D 7H JC JD JH JS"));
 
     Table_removeRun(&table, Cards_fromString("TH JH QH"));
     Table_removeSet(&table, Cards_fromString("7C 7D 7H"));
     printf("Expected:\nRuns: (no cards)\nSets: (no cards)\nActual:\n");
     Table_print(&table);
-    assert(table.runs == 0);
-    assert(table.sets == 0);
+    assert(Cards_size(table.runs) == 4);
+    assert(Cards_size(table.sets) == 4);
 }
 
 void Game_test(void) {
