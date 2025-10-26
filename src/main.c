@@ -45,7 +45,7 @@ int Eval(Game *game) {
         int pointsFromRivals = 0;
         for (int p = 0; p < game->numPlayers; ++p) {
             if (p != player->id) {
-                pointsFromRivals += 7 * heapSize(game->players[p].hand);
+                pointsFromRivals += 7 * Cards_size(game->players[p].hand);
             }
         }
         return basicEval + pointsFromRivals;
