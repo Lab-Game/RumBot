@@ -5,7 +5,7 @@
 
 void Pile_fullDeck(Pile *pile) {
     pile->size = 0;
-    for (Cards c = Cards_low(FULL_DECK); c != 0; c = Cards_next(FULL_DECK, c)) {
+    for (Cards c = Cards_first(FULL_DECK); c != 0; c = Cards_next(FULL_DECK, c)) {
         Pile_push(pile, c);
     }
 }
@@ -20,19 +20,17 @@ void Pile_shuffle(Pile *pile) {
 }
 
 void Pile_print(Pile *pile) {
-    bool first = true;
+    bool printed = false;
     for (int i = 0; i < pile->size; ++i) {
         Cards card = pile->cards[i];
         assert(Cards_size(card) == 1);
-        if (first) {
-            printf("%s", Card_name(Cards_toCard(card)));
-            first = false;
-        } else {
-            printf(" %s", Card_name(Cards_toCard(card)));
+        if (printed) {
+            printf(" ");
         }
+        printf("%s", Card_name(Cards_toCard(card)));
+        printed = true;
     }
-
-    if (first) {
-        printf("(none)");
+    if (!printed) {
+        printf("(empty pile)");
     }
 }

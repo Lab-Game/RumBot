@@ -37,6 +37,16 @@ void Cards_test(void) {
     printf("Actual:    ");
     Cards_print(fullDeck);
     printf("\n");
+
+    // Test iteration over a Cards set.
+    printf("Iterating over cards in hand:\n");
+    Cards hand = Cards_fromString("TC JC QC 5D 6D 2H JH 6S KS AS");
+    int numCards = 0;
+    for (Cards c = Cards_first(hand); c != 0; c = Cards_next(hand, c)) {
+        assert(Cards_has(hand, c));
+        numCards++;
+    }
+    assert(numCards == Cards_size(hand));
 }
 
 void Pile_test(void) {
@@ -55,7 +65,7 @@ void Pile_test(void) {
         assert(Cards_size(card) == 1);
     }
     assert(Pile_size(&pile) == 0);
-    printf("Expected:  (none)\n");
+    printf("Expected:  (no cards)\n");
     printf("Actual:    ");
     Pile_print(&pile);
     printf("\n");
@@ -80,14 +90,14 @@ void Table_test(void) {
 
     Table_addRun(&table, Cards_fromString("TH JH QH"));
     Table_addSet(&table, Cards_fromString("7H 7C 7D"));
-    printf("Expected:\nRuns: TH JH QH\nSets: 7H 7C 7D\nActual:\n");
+    printf("Expected:\nRuns: TH JH QH\nSets: 7C 7D 7H\nActual:\n");
     Table_print(&table);
     assert(table.runs == Cards_fromString("TH JH QH"));
-    assert(table.sets == Cards_fromString("7H 7C 7D"));
+    assert(table.sets == Cards_fromString("7C 7D 7H"));
 
     Table_removeRun(&table, Cards_fromString("TH JH QH"));
-    Table_removeSet(&table, Cards_fromString("7H 7C 7D"));
-    printf("Expected:\nRuns: (none)\nSets: (none)\nActual:\n");
+    Table_removeSet(&table, Cards_fromString("7C 7D 7H"));
+    printf("Expected:\nRuns: (no cards)\nSets: (no cards)\nActual:\n");
     Table_print(&table);
     assert(table.runs == 0);
     assert(table.sets == 0);
@@ -119,6 +129,6 @@ int main(void) {
     Pile_test();
     Table_test();
     Game_test();
-    printf("All tests passed.\n");
+    printf("\nAll tests passed.\n");
     return 0;
 }

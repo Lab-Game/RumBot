@@ -47,7 +47,7 @@ Cards Cards_fromString(const char *str) {
 
 void Cards_print(Cards cards) {
     bool first = true;
-    for (Cards cs = Cards_low(cards); cs != 0; cs = Cards_next(cards, cs)) {
+    for (Cards cs = Cards_first(cards); cs != 0; cs = Cards_next(cards, cs)) {
         Card c = Cards_toCard(cs);
         if (first) {
             printf("%s", Card_name(c));

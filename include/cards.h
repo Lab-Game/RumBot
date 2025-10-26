@@ -78,8 +78,8 @@ static inline int Cards_points(Cards cards) {
 }
 
 // Iterate over the cards in a Cards set:
-//   for (Cards c = Cards_low(cards); c != 0; c = Cards_next(cards, c)) { ... } 
-static inline Cards Cards_low(Cards cards) {
+//   for (Cards c = Cards_first(cards); c != 0; c = Cards_next(cards, c)) { ... } 
+static inline Cards Cards_first(Cards cards) {
     return cards & -cards;
 }
 
