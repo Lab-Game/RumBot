@@ -38,7 +38,15 @@ static inline void Plays_init(Plays *plays) {
 
 // Find all possible melds (runs and sets) that can be played given the
 // current table state and the player's hand.
-void Plays_find(Table *table, Cards hand, Plays *plays);
+void Plays_findAll(Table *table, Cards hand, Plays *plays);
+
+// Find all possible melds that have not been rejected and can be added
+// to the accepted set so as to produce a canonical set of plays.
+// In particular:
+//   - A run extension can not precede a 3-card run.
+//   - There can not be three consecutive 1-card run extensions.
+//   - A 3-card set can only be extended by adding a club.
+void Plays_findAcceptable(Table *table, Cards hand, Plays *accepted, Plays *rejected, Plays *plays);
 
 // Exclude all melds in 'rejected' from the melds in 'play'.  This is
 // used while searching for the best meld sequence to play.  In particular,
@@ -53,6 +61,11 @@ static inline void Plays_exclude(Plays *plays, Plays *rejected) {
 // Return true if there are no possible melds in the Plays.
 static inline bool Plays_none(Plays *plays) {
     return (plays->runCenters | plays->runExtensions | plays->setCenters | plays->setExtensions) == 0;
+}
+
+static inline int Plays_count(Plays *plays) {
+    return Cards_size(plays->runCenters) + Cards_size(plays->runExtensions) +
+           Cards_size(plays->setCenters) + Cards_size(plays->setExtensions);
 }
 
 // Convert a run center card to the full three-card meld.

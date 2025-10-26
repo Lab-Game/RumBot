@@ -124,7 +124,7 @@ void Plays_test(void) {
 
     Cards hand = Cards_fromString("4H 8H TH 9S TD JD QD KD QH QS");
     Plays plays;
-    Plays_find(&table, hand, &plays);
+    Plays_findAll(&table, hand, &plays);
 
     assert(plays.runCenters == Cards_fromString("JD QD"));
     assert(plays.runExtensions == Cards_fromString("4H 8H"));
@@ -134,7 +134,7 @@ void Plays_test(void) {
     Table_init(&table);
     Table_addRun(&table, Cards_fromString("2H 3H 4H JC QC KC"));
     hand = Cards_fromString("AH AC AD 2D 3D");
-    Plays_find(&table, hand, &plays);
+    Plays_findAll(&table, hand, &plays);
 
     assert(plays.runCenters == Cards_fromString("2D"));
     assert(plays.runExtensions == Cards_fromString("AC aH"));
@@ -178,15 +178,26 @@ void Game_test(void) {
 
 void PlayList_test(void) {
     puts("\nTesting PlayList...");
+
     Table table;
+    Table_init(&table);
+    Cards hand = Cards_fromString("AH 2H 3H 4H 5H 6H 7H 8H 9H TH JH QH KH");
+    generatePlays(&table, hand);
+
+    Table_init(&table);
+    hand = Cards_fromString("AC AD AH AS 5H 6H");
+    generatePlays(&table, hand);
+
     Table_init(&table);
     Table_addRun(&table, Cards_fromString("5H 6H 7H"));
     Table_addSet(&table, Cards_fromString("9C 9D 9H"));
-
-    Cards hand = Cards_fromString("QC 4H 8H TH 9S TD JD QD KD QH QS");
-
+    hand = Cards_fromString("QC 4H 8H TH 9S TD JD QD KD QH QS");
     generatePlays(&table, hand);
-}   
+
+    Table_init(&table);
+    hand = FULL_DECK;
+    generatePlays(&table, hand);
+}
 
 int main(void) {
     Cards_test();

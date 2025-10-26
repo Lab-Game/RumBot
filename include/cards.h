@@ -27,6 +27,12 @@ const char *Card_name(Card i);
 // A "Cards" is a bitmask of cards, with bit 0 representing card 0, bit 1
 // representing card 1, and so forth.  This allows a "Cards" to represent
 // both individual cards and sets of cards.
+//
+// Treatment of low aces varies:
+//   - A player's hand contains only high aces.
+//   - A run may contain either high or low aces.
+//   - A set contains only high aces.
+//   - Aces in the discard and draw piles are always high.
 typedef uint64_t Cards;
 
 // Full deck mask (all legal cards).  Only high aces are included.
@@ -61,6 +67,12 @@ static inline int Cards_size(Cards cards) {
 static inline Cards Cards_addLowAces(Cards cards) {
     const uint64_t kHighAceMask = 0x2000200020002000ULL;
     return cards | ((cards & kHighAceMask) >> 13);
+}
+
+// Return a Cards set with a high ace added for every low ace present.
+static inline Cards Cards_raiseAces(Cards cards) {
+    const uint64_t kLowAceMask = 0x0001000100010001ULL;
+    return (cards | ((cards & kLowAceMask) << 13)) & FULL_DECK;
 }
 
 // Return the Card corresponding to the lowest card in the Cards set.
