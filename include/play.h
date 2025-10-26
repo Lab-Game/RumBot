@@ -5,7 +5,7 @@
 #include "game.h"
 #include "table.h"
 
-// A Play represents all possible melds (runs and sets) that a player can make
+// A Play represents all possible runs and sets that a player can make
 // given their hand and the current table state.  A meld can be either a
 // three-card run, a three-card set, or a single-card extension to an existing
 // run or set.
