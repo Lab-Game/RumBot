@@ -138,6 +138,19 @@ void Play_test(void) {
     assert(play.runExtensions == Cards_fromString("AC aH"));
     assert(play.setCenters == Cards_fromString("AD"));
     assert(play.setExtensions == 0);
+
+    // Test expansion of set center and run center to meld.
+    Cards runMeld = Play_runCenterToMeld(Cards_fromString("3H"));
+    Cards expectedRunMeld = Cards_fromString("2H 3H 4H");
+    assert(runMeld == expectedRunMeld);
+
+    runMeld = Play_runCenterToMeld(Cards_fromString("2C"));
+    expectedRunMeld = Cards_fromString("aC 2C 3C");
+    assert(runMeld == expectedRunMeld);
+
+    Cards setMeld = Play_setCenterToMeld(Cards_fromString("9D"));
+    Cards expectedSetMeld = Cards_fromString("9C 9D 9H");
+    assert(setMeld == expectedSetMeld);
 }
 
 void Game_test(void) {
