@@ -65,4 +65,6 @@ static inline Cards Play_setCenterToMeld(Cards center) {
     return center |(center << 16) | (center >> 16) | (center >> 48) | (center << 48);
 }
 
+void Play_print(Play *play);
+
 #endif // PLAY_H

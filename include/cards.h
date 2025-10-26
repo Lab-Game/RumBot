@@ -59,7 +59,7 @@ static inline int Cards_size(Cards cards) {
 
 // Return a Cards set with a low ace added for every high ace present.
 static inline Cards Cards_addLowAces(Cards cards) {
-    const uint64_t kHighAceMask = 0x0001000100010001ULL;
+    const uint64_t kHighAceMask = 0x2000200020002000ULL;
     return cards | ((cards & kHighAceMask) >> 13);
 }
 

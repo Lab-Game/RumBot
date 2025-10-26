@@ -39,8 +39,15 @@ void Cards_test(void) {
     Cards_print(fullDeck);
     printf("\n");
 
+    // Test adding low aces.
+    Cards handWithHighAces = Cards_fromString("AC AD AH AS 5H 6H");
+    Cards handWithLowAces = Cards_addLowAces(handWithHighAces);
+    printf("Expected with low aces:  aC AC aD AD aH 5H 6H AH aS AS\n");
+    printf("Actual with low aces:    ");
+    Cards_print(handWithLowAces);
+    printf("\n");
+
     // Test iteration over a Cards set.
-    printf("Iterating over cards in hand:\n");
     Cards hand = Cards_fromString("TC JC QC 5D 6D 2H JH 6S KS AS");
     int numCards = 0;
     for (Cards c = Cards_first(hand); c != 0; c = Cards_next(hand, c)) {
@@ -121,6 +128,16 @@ void Play_test(void) {
     assert(play.runExtensions == Cards_fromString("4H 8H"));
     assert(play.setCenters == Cards_fromString("QH"));
     assert(play.setExtensions == Cards_fromString("9S"));
+
+    Table_init(&table);
+    Table_addRun(&table, Cards_fromString("2H 3H 4H JC QC KC"));
+    hand = Cards_fromString("AH AC AD 2D 3D");
+    Play_find(&table, hand, &play);
+
+    assert(play.runCenters == Cards_fromString("2D"));
+    assert(play.runExtensions == Cards_fromString("AC aH"));
+    assert(play.setCenters == Cards_fromString("AD"));
+    assert(play.setExtensions == 0);
 }
 
 void Game_test(void) {
