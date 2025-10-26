@@ -25,12 +25,12 @@ void Table_print(Table *table) {
     // Similarly, print all the sets on the Table.
     printf("|  Sets: ");
     prevPrinted = 0;
-    for (int value = 0; value < 13; ++value) {
+    for (int value = 0; value <= 13; ++value) {
         for (int suit = 0; suit < 4; ++suit) {
-            Cards c = 1ULL << (value + (suit << 4));
+            Cards c = Cards_fromCard(value + (suit << 4));
             if (Cards_has(table->sets, c)) {
-                if (prevPrinted != 0) {
-                    if ((prevPrinted << 16) == c || (prevPrinted >> 48) == c) {
+                if (prevPrinted != 0) {                        
+                    if ((Cards_toCard(prevPrinted) & 0xF) == value) {
                         // Same set, just print a space
                         printf(" ");
                     } else {

@@ -69,6 +69,11 @@ static inline Card Cards_toCard(Cards cards) {
     return __builtin_ctzll(cards); // count trailing zeros
 }
 
+static inline Cards Cards_fromCard(Card c) {
+    assert(Card_isLegal(c));
+    return 1ULL << c;
+}
+
 // Return the point value of the Cards set.  Counts low aces as 5 points
 // and high aces as 15 points.
 static inline int Cards_points(Cards cards) {

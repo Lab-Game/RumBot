@@ -4,7 +4,8 @@
 #include "cards.h"
 #include "pile.h"
 #include "table.h"
-#include "play.h"
+#include "plays.h"
+#include "playlist.h"
 #include "game.h"
 
 void Cards_test(void) {
@@ -107,50 +108,51 @@ void Table_test(void) {
 
     Table_removeRun(&table, Cards_fromString("TH JH QH"));
     Table_removeSet(&table, Cards_fromString("7C 7D 7H"));
-    printf("Expected:\nRuns: (no cards)\nSets: (no cards)\nActual:\n");
+    Table_addSet(&table, Cards_fromString("QC QH QS"));
+    printf("Expected:\nRuns: (no cards)\nSets: JC JD JH JS, QC QH QS\nActual:\n");
     Table_print(&table);
     assert(Cards_size(table.runs) == 4);
-    assert(Cards_size(table.sets) == 4);
+    assert(Cards_size(table.sets) == 7);
 }
 
-void Play_test(void) {
-    puts("\nTesting Play...");
+void Plays_test(void) {
+    puts("\nTesting Plays...");
     Table table;
     Table_init(&table);
     Table_addRun(&table, Cards_fromString("5H 6H 7H"));
     Table_addSet(&table, Cards_fromString("9C 9D 9H"));
 
     Cards hand = Cards_fromString("4H 8H TH 9S TD JD QD KD QH QS");
-    Play play;
-    Play_find(&table, hand, &play);
+    Plays plays;
+    Plays_find(&table, hand, &plays);
 
-    assert(play.runCenters == Cards_fromString("JD QD"));
-    assert(play.runExtensions == Cards_fromString("4H 8H"));
-    assert(play.setCenters == Cards_fromString("QH"));
-    assert(play.setExtensions == Cards_fromString("9S"));
+    assert(plays.runCenters == Cards_fromString("JD QD"));
+    assert(plays.runExtensions == Cards_fromString("4H 8H"));
+    assert(plays.setCenters == Cards_fromString("QH"));
+    assert(plays.setExtensions == Cards_fromString("9S"));
 
     Table_init(&table);
     Table_addRun(&table, Cards_fromString("2H 3H 4H JC QC KC"));
     hand = Cards_fromString("AH AC AD 2D 3D");
-    Play_find(&table, hand, &play);
+    Plays_find(&table, hand, &plays);
 
-    assert(play.runCenters == Cards_fromString("2D"));
-    assert(play.runExtensions == Cards_fromString("AC aH"));
-    assert(play.setCenters == Cards_fromString("AD"));
-    assert(play.setExtensions == 0);
+    assert(plays.runCenters == Cards_fromString("2D"));
+    assert(plays.runExtensions == Cards_fromString("AC aH"));
+    assert(plays.setCenters == Cards_fromString("AD"));
+    assert(plays.setExtensions == 0);
 
     // Test expansion of set center and run center to meld.
-    Cards runMeld = Play_runCenterToMeld(Cards_fromString("3H"));
-    Cards expectedRunMeld = Cards_fromString("2H 3H 4H");
-    assert(runMeld == expectedRunMeld);
+    Cards runCards = Plays_runCenterToCards(Cards_fromString("3H"));
+    Cards expectedRunCards = Cards_fromString("2H 3H 4H");
+    assert(runCards == expectedRunCards);
 
-    runMeld = Play_runCenterToMeld(Cards_fromString("2C"));
-    expectedRunMeld = Cards_fromString("aC 2C 3C");
-    assert(runMeld == expectedRunMeld);
+    runCards = Plays_runCenterToCards(Cards_fromString("2C"));
+    expectedRunCards = Cards_fromString("aC 2C 3C");
+    assert(runCards == expectedRunCards);
 
-    Cards setMeld = Play_setCenterToMeld(Cards_fromString("9D"));
-    Cards expectedSetMeld = Cards_fromString("9C 9D 9H");
-    assert(setMeld == expectedSetMeld);
+    Cards setCards = Plays_setCenterToCards(Cards_fromString("9D"));
+    Cards expectedSetCards = Cards_fromString("9C 9D 9H");
+    assert(setCards == expectedSetCards);
 }
 
 void Game_test(void) {
@@ -174,11 +176,24 @@ void Game_test(void) {
     Game_print(&game);
 }
 
+void PlayList_test(void) {
+    puts("\nTesting PlayList...");
+    Table table;
+    Table_init(&table);
+    Table_addRun(&table, Cards_fromString("5H 6H 7H"));
+    Table_addSet(&table, Cards_fromString("9C 9D 9H"));
+
+    Cards hand = Cards_fromString("QC 4H 8H TH 9S TD JD QD KD QH QS");
+
+    generatePlays(&table, hand);
+}   
+
 int main(void) {
     Cards_test();
     Pile_test();
     Table_test();
-    Play_test();
+    Plays_test();
+    PlayList_test();
     Game_test();
     printf("\nAll tests passed.\n");
     return 0;

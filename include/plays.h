@@ -1,5 +1,5 @@
-#ifndef PLAY_H
-#define PLAY_H
+#ifndef PLAYS_H
+#define PLAYS_H
 
 #include "cards.h"
 #include "game.h"
@@ -20,51 +20,51 @@
 // if the player can play the 5H 6H 7H run, then the bit for 6H will be set
 // in runCenters.
 
-typedef struct PlayStruct {
+typedef struct PlaysStruct {
     Cards runCenters;
     Cards runExtensions;
     Cards setCenters;
     Cards setExtensions;
-} Play;
+} Plays;
 
 // Clear the Play to have no possible melds.  Useful when starting to
 // collect rejected melds.
-static inline void Play_init(Play *play) {
-    play->runCenters = 0;
-    play->runExtensions = 0;
-    play->setCenters = 0;
-    play->setExtensions = 0;
+static inline void Plays_init(Plays *plays) {
+    plays->runCenters = 0;
+    plays->runExtensions = 0;
+    plays->setCenters = 0;
+    plays->setExtensions = 0;
 }
 
 // Find all possible melds (runs and sets) that can be played given the
 // current table state and the player's hand.
-void Play_find(Table *table, Cards hand, Play *play);
+void Plays_find(Table *table, Cards hand, Plays *plays);
 
 // Exclude all melds in 'rejected' from the melds in 'play'.  This is
 // used while searching for the best meld sequence to play.  In particular,
 // this helps avoid considering the same meld multiple times.
-static inline void Play_exclude(Play *play, Play *rejected) {
-    play->runCenters &= ~rejected->runCenters;
-    play->runExtensions &= ~rejected->runExtensions;
-    play->setCenters &= ~rejected->setCenters;
-    play->setExtensions &= ~rejected->setExtensions;
+static inline void Plays_exclude(Plays *plays, Plays *rejected) {
+    plays->runCenters &= ~rejected->runCenters;
+    plays->runExtensions &= ~rejected->runExtensions;
+    plays->setCenters &= ~rejected->setCenters;
+    plays->setExtensions &= ~rejected->setExtensions;
 }
 
-// Return true if there are no possible melds in the Play.
-static inline bool Play_none(Play *play) {
-    return (play->runCenters | play->runExtensions | play->setCenters | play->setExtensions) == 0;
+// Return true if there are no possible melds in the Plays.
+static inline bool Plays_none(Plays *plays) {
+    return (plays->runCenters | plays->runExtensions | plays->setCenters | plays->setExtensions) == 0;
 }
 
 // Convert a run center card to the full three-card meld.
-static inline Cards Play_runCenterToMeld(Cards center) {
+static inline Cards Plays_runCenterToCards(Cards center) {
     return center | (center << 1) | (center >> 1);
 }
 
 // Convert a set center card to the full three-card meld.
-static inline Cards Play_setCenterToMeld(Cards center) {
+static inline Cards Plays_setCenterToCards(Cards center) {
     return center |(center << 16) | (center >> 16) | (center >> 48) | (center << 48);
 }
 
-void Play_print(Play *play);
+void Plays_print(Plays *plays);
 
-#endif // PLAY_H
+#endif // PLAYS_H
