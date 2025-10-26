@@ -27,7 +27,8 @@ typedef struct PlayStruct {
     Cards setExtensions;
 } Play;
 
-// Clear the Play to have no possible melds.
+// Clear the Play to have no possible melds.  Useful when starting to
+// collect rejected melds.
 static inline void Play_init(Play *play) {
     play->runCenters = 0;
     play->runExtensions = 0;

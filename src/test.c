@@ -4,6 +4,7 @@
 #include "cards.h"
 #include "pile.h"
 #include "table.h"
+#include "play.h"
 #include "game.h"
 
 void Cards_test(void) {
@@ -105,6 +106,23 @@ void Table_test(void) {
     assert(Cards_size(table.sets) == 4);
 }
 
+void Play_test(void) {
+    puts("\nTesting Play...");
+    Table table;
+    Table_init(&table);
+    Table_addRun(&table, Cards_fromString("5H 6H 7H"));
+    Table_addSet(&table, Cards_fromString("9C 9D 9H"));
+
+    Cards hand = Cards_fromString("4H 8H TH 9S TD JD QD KD QH QS");
+    Play play;
+    Play_find(&table, hand, &play);
+
+    assert(play.runCenters == Cards_fromString("JD QD"));
+    assert(play.runExtensions == Cards_fromString("4H 8H"));
+    assert(play.setCenters == Cards_fromString("QH"));
+    assert(play.setExtensions == Cards_fromString("9S"));
+}
+
 void Game_test(void) {
     puts("\nTesting Game...");
     Game game;
@@ -130,6 +148,7 @@ int main(void) {
     Cards_test();
     Pile_test();
     Table_test();
+    Play_test();
     Game_test();
     printf("\nAll tests passed.\n");
     return 0;
