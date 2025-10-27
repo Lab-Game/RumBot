@@ -7,164 +7,146 @@ PlayList playList;
 
 static int depth = 0;
 
+// Given a table and hand, we'll recursively explore possible plays of runs,
+// sets, and extensions from the hand onto the table.  As we consider each
+// possible play, we either accept it (adding it to 'accepted') or reject it
+// (adding it to 'rejected').  We try to keep the smaller of the number
+// of accepted and rejected plays below a certain threshold, to avoid
+// combinatorial explosion.
+// When we reach a point where there are no more possible plays, we
+// print the accepted plays as one possible play sequence.
 static void generateRec(Table *table, Cards hand, Plays *accepted, Plays *rejected) {
-    int numAccepted = Plays_count(accepted);
-    int numRejected = Plays_count(rejected);
+    depth += 1;
+
+    if (Plays_count(accepted) > MAXMIN && Plays_count(rejected) > MAXMIN) {
+        // If we've both accepted and rejected lots of possible plays,
+        // then we're heading toward a combinatorial explosion.  Stop exploring.
+        return;
+    }
 
     Plays plays;
     Cards lowHand = Cards_addLowAces(hand);
 
-    // Find all possible runs, sets, and extensions.
+    // Find all possible runs, sets, and extensions, given the current table and hand.
     plays.runCenters = hand & (lowHand << 1) & (hand >> 1);
     plays.setCenters = (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48)));
     plays.runExtensions = ((table->runs << 1) | (table->runs >> 1)) & lowHand;
     plays.setExtensions = ((table->sets << 16) | (table->sets >> 16)) & lowHand;
 
-    // Exlude melds that were rejected at a higher level in the recursive search.
+    // Exclude melds that were rejected at a higher level in the recursive search.
     plays.runCenters &= ~rejected->runCenters;
     plays.runExtensions &= ~rejected->runExtensions;
     plays.setCenters &= ~rejected->setCenters;
     plays.setExtensions &= ~rejected->setExtensions;
 
-    // To avoid counting the same run in multiple ways:
+    // We must avoid tiling the same N-card run with different combinations
+    // of 3-card runs and 1-card extensions.  The canonical tiling consists
+    // of as many 3-card runs as possible, followed by 0, 1, or 2 single-card
+    // extensions.  To enforce this, we apply the following rules:
     //   - Never add a 3-card-run immediately after a 1-card extension
     //   - Never add a 1-card extension immediately before a 3-card-run
     //   - Never add 3 consecutive 1-card extensions
     plays.runExtensions &= ~(accepted->runCenters >> 2);
-    plays.runExtensions &= ~(accepted->runExtensions << 2);
     plays.runCenters &= ~(accepted->runExtensions << 2);
+    plays.runExtensions &= ~((accepted->runExtensions << 1) & (accepted->runExtensions << 2));
 
-    // For sets, I want to avoid counting a four-of-a-kind
-    // in four different ways.  So the only legal way so to do so is
-    // AC + AD AH AS.
+    // Similarly, we must avoid tiling a four-of-a-kind in four
+    // different ways.  The only permitted tiling is AD AH AS + AC.
+    // When looking at a specific card as a possible set extension, we
+    // check to see if the "opposite" card of the same value is the center
+    // of an accepted set.  If so, then this specific card can only be
+    // an extension if it is clubs.
     plays.setExtensions &= ~(((accepted->setCenters >> 32) | (accepted->setCenters << 32)) & 0xFFFFFFFFFFFF0000ULL);
 
+    // We'll now find the first possible play (run, set, or extension) and
+    // consider both accepting and rejecting it, recursively exploring
+    // each choice.  Note that we only consider accepting and rejecting
+    // one play per involcation of this function.
+
     // Consider each possible run.
-    for (Cards cs = Cards_first(plays.runCenters); cs != 0; cs = Cards_next(plays.runCenters, cs)) {
-        Cards run = Plays_runCenterToCards(cs);
+    Cards c;
+
+    if ((c = Cards_first(plays.runCenters))) {
+        Cards run = Plays_runCenterToCards(c);
         Cards raised = Cards_raiseAces(run);
 
-        // Try playing this run, unless we've rejected lots of plays already.
-        if (numAccepted < MAXMIN || numRejected <= MAXMIN) {
-            accepted->runCenters |= cs;
-            Table_addRun(table, run);
-            Cards_remove(&hand, raised);
-            depth += 1;
-            generatePlaysRec(table, hand, accepted, rejected);
-            depth -= 1;
-            Cards_add(&hand, raised);
-            Table_removeRun(table, run);
-            accepted->runCenters &= ~cs;
-        }
+        // Accept this run
+        accepted->runCenters |= c;
+        Table_addRun(table, run);
+        Cards_remove(&hand, raised);
+        generateRec(table, hand, accepted, rejected);
+        Cards_add(&hand, raised);
+        Table_removeRun(table, run);
+        accepted->runCenters &= ~c;
+        
+        // Reject this run
+        rejected->runCenters |= c;
+        generateRec(table, hand, accepted, rejected);
+        rejected->runCenters &= ~c;
+    } else if ((c = Cards_first(plays.setCenters))) {
+        Cards set = Plays_setCenterToCards(c);
 
-        // Try rejecting this run, unless we've accepted lots of plays already.
-        if (numRejected < MAXMIN || numAccepted <= MAXMIN) {
-            rejected->runCenters |= cs;
-            depth += 1;
-            generatePlaysRec(table, hand, accepted, rejected);
-            depth -= 1;
-            rejected->runCenters &= ~cs;
-        }
+        // Accept this set
+        accepted->setCenters |= c;
+        Table_addSet(table, set);
+        Cards_remove(&hand, set);
+        generateRec(table, hand, accepted, rejected);
+        Cards_add(&hand, set);
+        Table_removeSet(table, set);
+        accepted->setCenters &= ~c;
 
-        return;
-    }
-
-    // Consider each possible set.
-    for (Cards cs = Cards_first(plays.setCenters); cs != 0; cs = Cards_next(plays.setCenters, cs)) {
-        Cards set = Plays_setCenterToCards(cs);
-
-        // Try playing this set, unless we've rejected lots of plays already.
-        if (numAccepted < MAXMIN || numRejected <= MAXMIN) {
-            accepted->setCenters |= cs;
-            Table_addSet(table, set);
-            Cards_remove(&hand, set);
-            depth += 1;
-            generatePlaysRec(table, hand, accepted, rejected);
-            depth -= 1;
-            Cards_add(&hand, set);
-            Table_removeSet(table, set);
-            accepted->setCenters &= ~cs;
-        }
-
-        // Try rejecting this set, unless we've accepted lots of plays already.
-        if (numRejected < MAXMIN || numAccepted <= MAXMIN) {
-            rejected->setCenters |= cs;
-            depth += 1;
-            generatePlaysRec(table, hand, accepted, rejected);
-            depth -= 1;
-            rejected->setCenters &= ~cs;
-        }
-
-        return;
-    }
-
-    // Consider each possible run extension.
-    for (Cards cs = Cards_first(plays.runExtensions); cs != 0; cs = Cards_next(plays.runExtensions, cs)) {
-        Cards run = cs;
+        // Reject this set
+        rejected->setCenters |= c;
+        generateRec(table, hand, accepted, rejected);
+        rejected->setCenters &= ~c;
+    } else if ((c = Cards_first(plays.runExtensions))) {
+        Cards run = c;
         Cards raised = Cards_raiseAces(run);
 
-        // Try playing this run extension, unless we've rejected lots of plays already.
-        if (numAccepted < MAXMIN || numRejected <= MAXMIN) {
-            accepted->runExtensions |= cs;
-            Table_addRun(table, run);
-            Cards_remove(&hand, raised);
-            depth += 1;
-            generatePlaysRec(table, hand, accepted, rejected);
-            depth -= 1;
-            Cards_add(&hand, raised);
-            Table_removeRun(table, run);
-            accepted->runExtensions &= ~cs;
-        }
+        // Accept this run extension
+        accepted->runExtensions |= c;
+        Table_addRun(table, run);
+        Cards_remove(&hand, raised);
+        generateRec(table, hand, accepted, rejected);
+        Cards_add(&hand, raised);
+        Table_removeRun(table, run);
+        accepted->runExtensions &= ~c;
 
-        // Try rejecting this run extension, unless we've accepted lots of plays already.
-        if (numRejected < MAXMIN || numAccepted <= MAXMIN) {
-            rejected->runExtensions |= cs;
-            depth += 1;
-            generatePlaysRec(table, hand, accepted, rejected);
-            depth -= 1;
-            rejected->runExtensions &= ~cs;
-        }
+        // Reject this run extension
+        rejected->runExtensions |= c;
+        generateRec(table, hand, accepted, rejected);
+        rejected->runExtensions &= ~c;
+    } else if ((c = Cards_first(plays.setExtensions))) {
+        Cards set = c;
 
-        return;
+        // Accept this set extension
+        accepted->setExtensions |= c;
+        Table_addSet(table, set);
+        Cards_remove(&hand, set);
+        generateRec(table, hand, accepted, rejected);
+        Cards_add(&hand, set);
+        Table_removeSet(table, set);
+        accepted->setExtensions &= ~c;
+
+        // Reject this set extension
+        rejected->setExtensions |= c;
+        generateRec(table, hand, accepted, rejected);
+        rejected->setExtensions &= ~c;
+    } else {
+
+        playList.plays[playList.size++] = *accepted;
+
+        // No more possible plays.  Print the accepted plays.
+        for (int i = 0; i < depth; ++i) {
+            printf(" ");
+        }
+        Plays_print(accepted);
+        printf("     /     ");
+        Plays_print(rejected);
+        printf("\n");
     }
 
-    // Consider each possible set extension.
-    for (Cards cs = Cards_first(plays.setExtensions); cs != 0; cs = Cards_next(plays.setExtensions, cs)) {
-        Cards set = cs;
-
-        // Try playing this set extension, unless we've rejected lots of plays already.
-        if (numAccepted < MAXMIN || numRejected <= MAXMIN) {
-            accepted->setExtensions |= cs;
-            Table_addSet(table, set);
-            Cards_remove(&hand, set);
-            depth += 1;
-            generatePlaysRec(table, hand, accepted, rejected);
-            depth -= 1;
-            Cards_add(&hand, set);
-            Table_removeSet(table, set);
-            accepted->setExtensions &= ~cs;
-        }
-
-        // Try rejecting this set extension, unless we've accepted lots of plays already.
-        if (numRejected < MAXMIN || numAccepted <= MAXMIN) {
-            rejected->setExtensions |= cs;
-            depth += 1;
-            generatePlaysRec(table, hand, accepted, rejected);
-            depth -= 1;
-            rejected->setExtensions &= ~cs;
-        }
-
-        return;
-    }
-
-    // No more possible plays.  Print the accepted plays.
-    for (int i = 0; i < depth; ++i) {
-        printf(" ");
-    }
-    Plays_print(accepted);
-    printf("     /     ");
-    Plays_print(rejected);
-    printf("\n");
+    depth -= 1;
 }
 
 void PlayGen_generate(Cards hand, Table *table) {
@@ -177,6 +159,8 @@ void PlayGen_generate(Cards hand, Table *table) {
     Plays accepted, rejected;
     Plays_init(&accepted);
     Plays_init(&rejected);
+
+    playList.size = 0;
 
     depth = 0;
     generateRec(table, hand, &accepted, &rejected);

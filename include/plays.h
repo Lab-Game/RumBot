@@ -24,21 +24,6 @@ static inline void Plays_init(Plays *plays) {
     plays->setExtensions = 0;
 }
 
-// Given a table, hand, and previously accepted and rejected plays,
-// find some additional plays that can be made without getting
-// to the same result in multiple ways or getting a combinatorial explosion.
-void Plays_find(Table *table, Cards hand, Plays *accepted, Plays *rejected, Plays *plays);
-
-// Exclude all melds in 'rejected' from the melds in 'play'.  This is
-// used while searching for the best meld sequence to play.  In particular,
-// this helps avoid considering the same meld multiple times.
-static inline void Plays_exclude(Plays *plays, Plays *rejected) {
-    plays->runCenters &= ~rejected->runCenters;
-    plays->runExtensions &= ~rejected->runExtensions;
-    plays->setCenters &= ~rejected->setCenters;
-    plays->setExtensions &= ~rejected->setExtensions;
-}
-
 // Return true if there are no possible melds in the Plays.
 static inline bool Plays_none(Plays *plays) {
     return (plays->runCenters | plays->runExtensions | plays->setCenters | plays->setExtensions) == 0;

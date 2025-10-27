@@ -6,7 +6,7 @@
 #include "pile.h"
 #include "table.h"
 #include "plays.h"
-#include "playlist.h"
+#include "playgen.h"
 #include "game.h"
 
 void Cards_test(void) {
@@ -116,63 +116,12 @@ void Table_test(void) {
     assert(Cards_size(table.sets) == 7);
 }
 
-void Plays_test(void) {
-    puts("\nTesting Plays...");
+void PlayGen_test(void) {
+    puts("\nTesting PlayGen...");
     Table table;
     Table_init(&table);
-    Table_addRun(&table, Cards_fromString("5H 6H 7H"));
-    Table_addSet(&table, Cards_fromString("9C 9D 9H"));
-
-    Cards hand = Cards_fromString("4H 8H TH 9S TD JD QD KD QH QS");
-    Plays plays;
-    Plays_findAll(&table, hand, &plays);
-
-    assert(plays.runCenters == Cards_fromString("JD QD"));
-    assert(plays.runExtensions == Cards_fromString("4H 8H"));
-    assert(plays.setCenters == Cards_fromString("QH"));
-    assert(plays.setExtensions == Cards_fromString("9S"));
-
-    Table_init(&table);
-    Table_addRun(&table, Cards_fromString("2H 3H 4H JC QC KC"));
-    hand = Cards_fromString("AH AC AD 2D 3D");
-    Plays_findAll(&table, hand, &plays);
-
-    assert(plays.runCenters == Cards_fromString("2D"));
-    assert(plays.runExtensions == Cards_fromString("AC aH"));
-    assert(plays.setCenters == Cards_fromString("AD"));
-    assert(plays.setExtensions == 0);
-
-    // Test expansion of set center and run center to meld.
-    Cards runCards = Plays_runCenterToCards(Cards_fromString("3H"));
-    Cards expectedRunCards = Cards_fromString("2H 3H 4H");
-    assert(runCards == expectedRunCards);
-
-    runCards = Plays_runCenterToCards(Cards_fromString("2C"));
-    expectedRunCards = Cards_fromString("aC 2C 3C");
-    assert(runCards == expectedRunCards);
-
-    Cards setCards = Plays_setCenterToCards(Cards_fromString("9D"));
-    Cards expectedSetCards = Cards_fromString("9C 9D 9H");
-    assert(setCards == expectedSetCards);
-}
-
-void PlayList_test(void) {
-    puts("\nTesting PlayList...");
-
-    Table table;
-    Table_init(&table);
-    Cards hand = Cards_fromString("AH 2H 3H 4H 5H 6H 7H 8H 9H TH JH QH KH");
-    generatePlays(&table, hand);
-
-    Table_init(&table);
-    hand = Cards_fromString("AC AD AH AS 5H 6H");
-    generatePlays(&table, hand);
-
-    Table_init(&table);
-    Table_addRun(&table, Cards_fromString("5H 6H 7H"));
-    Table_addSet(&table, Cards_fromString("9C 9D 9H"));
-    hand = Cards_fromString("QC 4H 8H TH 9S TD JD QD KD QH QS");
-    generatePlays(&table, hand);
+    Cards hand = Cards_fromString("9H TH JH QC QH QS 5D 6D 7D 8D");
+    PlayGen_generate(hand, &table);
 }
 
 void Game_test(void) {
@@ -200,8 +149,7 @@ int main(void) {
     Cards_test();
     Pile_test();
     Table_test();
-    Plays_test();
-    PlayList_test();
+    PlayGen_test();
     Game_test();
     printf("\nAll tests passed.\n");
     return 0;
