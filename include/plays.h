@@ -5,21 +5,9 @@
 #include "game.h"
 #include "table.h"
 
-// A Play represents all possible runs and sets that a player can make
-// given their hand and the current table state.  A meld can be either a
-// three-card run, a three-card set, or a single-card extension to an existing
-// run or set.
-//
-// Playing one meld may unlock more.  So, for example, if a player
-// has a four-card run in their hand, then they can play either the lower or
-// higher three-card run.  This unlocks an additional "extension" to that run.
-//
-// Three-card runs and sets that can be played from the player's hand are
-// recorded in the runCenters and setCenters fields.  In particular, these
-// Cards sets hold the *middle* card in each three-card meld.  For example,
-// if the player can play the 5H 6H 7H run, then the bit for 6H will be set
-// in runCenters.
-
+// A Plays objects represents a set of possible runs, sets, and extensions.
+// This can be used to represent all available plays, a set of plays
+// that can all be made, or a set of plays that have been rejected.
 typedef struct PlaysStruct {
     Cards runCenters;
     Cards runExtensions;
@@ -36,17 +24,10 @@ static inline void Plays_init(Plays *plays) {
     plays->setExtensions = 0;
 }
 
-// Find all possible melds (runs and sets) that can be played given the
-// current table state and the player's hand.
-void Plays_findAll(Table *table, Cards hand, Plays *plays);
-
-// Find all possible melds that have not been rejected and can be added
-// to the accepted set so as to produce a canonical set of plays.
-// In particular:
-//   - A run extension can not precede a 3-card run.
-//   - There can not be three consecutive 1-card run extensions.
-//   - A 3-card set can only be extended by adding a club.
-void Plays_findAcceptable(Table *table, Cards hand, Plays *accepted, Plays *rejected, Plays *plays);
+// Given a table, hand, and previously accepted and rejected plays,
+// find some additional plays that can be made without getting
+// to the same result in multiple ways or getting a combinatorial explosion.
+void Plays_find(Table *table, Cards hand, Plays *accepted, Plays *rejected, Plays *plays);
 
 // Exclude all melds in 'rejected' from the melds in 'play'.  This is
 // used while searching for the best meld sequence to play.  In particular,

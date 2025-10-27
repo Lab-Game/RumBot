@@ -8,7 +8,6 @@
 #include "plays.h"
 #include "playlist.h"
 #include "game.h"
-#include "plays2.h"
 
 void Cards_test(void) {
     puts("\nTesting Cards...");
@@ -176,33 +175,6 @@ void PlayList_test(void) {
     generatePlays(&table, hand);
 }
 
-void Plays2_test(void) {
-    puts("\nTesting Plays2...");
-
-    {
-        Table table;
-        Table_init(&table);
-        Cards hand = Cards_fromString("AH 2H 3H 4H 5H 6H");
-        generate(&table, hand);
-    }
-
-    {
-        Table table;
-        Table_init(&table);
-        Cards hand = Cards_fromString("AC AD AH AS 5H 6H");
-        generate(&table, hand);
-    }
-
-    {
-        Table table;
-        Table_init(&table);
-        Table_addRun(&table, Cards_fromString("5H 6H 7H"));
-        Table_addSet(&table, Cards_fromString("9C 9D 9H"));
-        Cards hand = Cards_fromString("QC 4H 8H TH 9S TD JD QD KD QH QS");
-        generate(&table, hand);
-    }
-}
-
 void Game_test(void) {
     puts("\nTesting Game...");
     Game game;
@@ -225,8 +197,6 @@ void Game_test(void) {
 }
 
 int main(void) {
-    Plays2_test();
-    exit(0);
     Cards_test();
     Pile_test();
     Table_test();
