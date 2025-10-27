@@ -58,6 +58,10 @@ static inline void Cards_remove(Cards *cards, Cards c) {
     *cards &= ~c;
 }
 
+static inline bool Cards_isEmpty(Cards cards) {
+    return cards == 0;
+}
+
 // Return the number of cards in the Cards set.
 static inline int Cards_size(Cards cards) {
     return __builtin_popcountll(cards);

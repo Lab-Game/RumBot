@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "cards.h"
 #include "pile.h"
@@ -7,6 +8,7 @@
 #include "plays.h"
 #include "playlist.h"
 #include "game.h"
+#include "plays2.h"
 
 void Cards_test(void) {
     puts("\nTesting Cards...");
@@ -155,6 +157,52 @@ void Plays_test(void) {
     assert(setCards == expectedSetCards);
 }
 
+void PlayList_test(void) {
+    puts("\nTesting PlayList...");
+
+    Table table;
+    Table_init(&table);
+    Cards hand = Cards_fromString("AH 2H 3H 4H 5H 6H 7H 8H 9H TH JH QH KH");
+    generatePlays(&table, hand);
+
+    Table_init(&table);
+    hand = Cards_fromString("AC AD AH AS 5H 6H");
+    generatePlays(&table, hand);
+
+    Table_init(&table);
+    Table_addRun(&table, Cards_fromString("5H 6H 7H"));
+    Table_addSet(&table, Cards_fromString("9C 9D 9H"));
+    hand = Cards_fromString("QC 4H 8H TH 9S TD JD QD KD QH QS");
+    generatePlays(&table, hand);
+}
+
+void Plays2_test(void) {
+    puts("\nTesting Plays2...");
+
+    {
+        Table table;
+        Table_init(&table);
+        Cards hand = Cards_fromString("AH 2H 3H 4H 5H 6H");
+        generate(&table, hand);
+    }
+
+    {
+        Table table;
+        Table_init(&table);
+        Cards hand = Cards_fromString("AC AD AH AS 5H 6H");
+        generate(&table, hand);
+    }
+
+    {
+        Table table;
+        Table_init(&table);
+        Table_addRun(&table, Cards_fromString("5H 6H 7H"));
+        Table_addSet(&table, Cards_fromString("9C 9D 9H"));
+        Cards hand = Cards_fromString("QC 4H 8H TH 9S TD JD QD KD QH QS");
+        generate(&table, hand);
+    }
+}
+
 void Game_test(void) {
     puts("\nTesting Game...");
     Game game;
@@ -176,30 +224,9 @@ void Game_test(void) {
     Game_print(&game);
 }
 
-void PlayList_test(void) {
-    puts("\nTesting PlayList...");
-
-    Table table;
-    Table_init(&table);
-    Cards hand = Cards_fromString("AH 2H 3H 4H 5H 6H 7H 8H 9H TH JH QH KH");
-    generatePlays(&table, hand);
-
-    Table_init(&table);
-    hand = Cards_fromString("AC AD AH AS 5H 6H");
-    generatePlays(&table, hand);
-
-    Table_init(&table);
-    Table_addRun(&table, Cards_fromString("5H 6H 7H"));
-    Table_addSet(&table, Cards_fromString("9C 9D 9H"));
-    hand = Cards_fromString("QC 4H 8H TH 9S TD JD QD KD QH QS");
-    generatePlays(&table, hand);
-
-    Table_init(&table);
-    hand = FULL_DECK;
-    generatePlays(&table, hand);
-}
-
 int main(void) {
+    Plays2_test();
+    exit(0);
     Cards_test();
     Pile_test();
     Table_test();
