@@ -43,7 +43,7 @@ void Cards_test(void) {
 
     // Test adding low aces.
     Cards handWithHighAces = Cards_fromString("AC AD AH AS 5H 6H");
-    Cards handWithLowAces = Cards_addLowAces(handWithHighAces);
+    Cards handWithLowAces = Cards_lowerAces(handWithHighAces);
     printf("Expected with low aces:  aC AC aD AD aH 5H 6H AH aS AS\n");
     printf("Actual with low aces:    ");
     Cards_print(handWithLowAces);

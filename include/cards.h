@@ -9,7 +9,6 @@
 // The low 4 bits are the value (0=low Ace, 1=2, ..., 12=King, 13=high Ace).
 // The high 4 bits are the suit (0=Clubs, 1=Diamonds, 2=Hearts, 3=Spades).
 // Values 14-15, 30-31, 46-47, and 62-63, and 64-255 are illegal.
-
 typedef uint8_t Card;
 
 extern const char *kCardName[64];
@@ -62,7 +61,7 @@ static inline int Cards_size(Cards cards) {
 }
 
 // Return a Cards set with a low ace added for every high ace present.
-static inline Cards Cards_addLowAces(Cards cards) {
+static inline Cards Cards_lowerAces(Cards cards) {
     const uint64_t kHighAceMask = 0x2000200020002000ULL;
     return cards | ((cards & kHighAceMask) >> 13);
 }
@@ -70,7 +69,7 @@ static inline Cards Cards_addLowAces(Cards cards) {
 // Return a Cards set with a high ace added for every low ace present.
 static inline Cards Cards_raiseAces(Cards cards) {
     const uint64_t kLowAceMask = 0x0001000100010001ULL;
-    return (cards | ((cards & kLowAceMask) << 13)) & FULL_DECK;
+    return cards | ((cards & kLowAceMask) << 13);
 }
 
 // Return the Card corresponding to the lowest card in the Cards set.

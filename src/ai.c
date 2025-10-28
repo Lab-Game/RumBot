@@ -52,7 +52,7 @@ void AI_generatePlaysRec(AI *ai, Plays *accepted, Plays *rejected) {
 
     Player *player = ai->player;
     Cards hand = player->hand;
-    Cards lowHand = Cards_addLowAces(hand);
+    Cards lowHand = Cards_lowerAces(hand);
     Meld *Meld = &ai->game->Meld;
 
     // Find all possible runs, sets, and extensions, given the current Meld and hand.
