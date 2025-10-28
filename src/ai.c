@@ -4,70 +4,158 @@
 #include "game.h"
 #include "playgen.h"
 
-static int AI_Evaluate(Game *game) {
-    // Take the score of the current player minus the score of the average rival.
-    Player *player = Game_currentPlayer(game);
-    int playerScore = player->score;
-    int averageRivalScore = 0;
-    for (int i = 0; i < game->numPlayers; ++i) {
-        if (i != player->id) {
-            averageRivalScore += game->players[i].score;
-        }
-    }
-    averageRivalScore /= (game->numPlayers - 1);
-
-    // The evaluation is the player's score minus the average rival score.
-    return player->turn.eval = playerScore - averageRivalScore;
+void AI_init(AI *ai, Game *game, Player *player) {
+    ai->game = game;
+    ai->player = player;
+    ai->bestTurn = &player->turn;
+    ai->numPlays = 0;
 }
 
-static void AI_take(Game *game, Turn *bestTakeTurn) {
-    Player *player = Game_currentPlayer(game);
-    Turn_init(&player->turn);
-    Pile *discardPile = &game->discardPile;
+void AI_go(AI *ai) {
+    Player *player = ai->player;
 
-    // Try taking each number of cards in the discard pile, up to all of them.
-    while (Pile_size(discardPile) > 0) {
-        Player_take(player);
-    }
-    Player_undoTakes(player);
+    printf("=== AI for Player %d ===\n", player->id);
+    Game_print(ai->game);
+
+    printf("---drawing card---\n");
+    Player_draw(player);
+
+    printf("---generating plays---\n");
+    AI_generatePlays(ai);
+    AI_printPlays(ai);
 }
 
-static void AI_findBestTakeTurn(Game *game, Turn *bestTakeTurn) {
-    Player *player = Game_currentPlayer(game);
-    Turn_init(&player->turn);
 
-    Pile *discardPile = &game->discardPile;
-
-    // Try taking each number of cards in the discard pile, up to all of them.
-    while (Pile_size(discardPile) > 0) {
-        Cards c = Player_take(player);
-        PlayGen_generate(player->hand, &game->table);
-
-    }
-    Player_undoTakes(player);
-    printf("Returned cards to discard pile\n");
+void AI_generatePlays(AI *ai) {
+    Plays accepted, rejected;
+    Plays_init(&accepted);
+    Plays_init(&rejected);
+    AI_generatePlaysRec(ai, &accepted, &rejected);
 }
 
-void AI_go(Game *game) {
-    // We need to find the best turn for the current player and
-    // update the game state accordingly.  These are two main
-    // cases:  taking from the discard pile and drawing from the draw pile.
+void AI_generatePlaysRec(AI *ai, Plays *accepted, Plays *rejected) {
+    if (ai->numPlays >= MAX_PLAYS) {
+        // We've already found the maximum number of plays we can store.
+        return;
+    }
 
-    // Find the best turn where 1 or more cards are taken from the discard pile.
-    Turn bestTakeTurn;
-    Turn_init(&bestTakeTurn);
-    AI_findBestTakeTurn(game, &bestTakeTurn);
+    if (Plays_count(accepted) > MAXMIN && Plays_count(rejected) > MAXMIN) {
+        // We've both accepted and rejected lots of possible plays.
+        // We're heading toward a combinatorial explosion.  Stop exploring.
+        return;
+    }
 
-    // TODO:
-    // Find all cards that could be in the draw pile.
-    // Call AI_findBestDrawTurn for each possible drawn card.
+    Player *player = ai->player;
+    Cards hand = player->hand;
+    Cards lowHand = Cards_addLowAces(hand);
+    Table *table = &ai->game->table;
 
-    // Is the average draw turn better than the best take turn?
-    // If so, then we'll draw; otherwise, we'll take.
-    double averageDrawEval = 0.0;
+    // Find all possible runs, sets, and extensions, given the current table and hand.
+    Plays plays;
+    plays.runCenters = hand & (lowHand << 1) & (hand >> 1);
+    plays.setCenters = (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48)));
+    plays.runExtensions = ((table->runs << 1) | (table->runs >> 1)) & lowHand;
+    plays.setExtensions = ((table->sets << 16) | (table->sets >> 16)) & lowHand;
 
-    // If we go with a take turn, then just apply it to the game
-    // in a strightforward way.
-    // If we got with a draw turn, then do the draw and finish
-    // according to the specified best draw turn.
+    // Exclude melds that were rejected at a higher level in the recursive search.
+    plays.runCenters &= ~rejected->runCenters;
+    plays.runExtensions &= ~rejected->runExtensions;
+    plays.setCenters &= ~rejected->setCenters;
+    plays.setExtensions &= ~rejected->setExtensions;
+
+    // We must avoid tiling the same N-card run with different combinations
+    // of 3-card runs and 1-card extensions.  The canonical tiling consists
+    // of as many 3-card runs as possible, followed by 0, 1, or 2 single-card
+    // extensions.  To enforce this, we apply the following rules:
+    //   - Never add a 3-card-run immediately after a 1-card extension
+    //   - Never add a 1-card extension immediately before a 3-card-run
+    //   - Never add 3 consecutive 1-card extensions
+    plays.runExtensions &= ~(accepted->runCenters >> 2);
+    plays.runCenters &= ~(accepted->runExtensions << 2);
+    plays.runExtensions &= ~((accepted->runExtensions << 1) & (accepted->runExtensions << 2));
+
+    // Similarly, we must avoid tiling a four-of-a-kind in four
+    // different ways.  The only permitted tiling is AD AH AS + AC.
+    // When looking at a specific card as a possible set extension, we
+    // check to see if the "opposite" card of the same value is the center
+    // of an accepted set.  If so, then this specific card can only be
+    // an extension if it is clubs.
+    plays.setExtensions &= ~(((accepted->setCenters >> 32) | (accepted->setCenters << 32)) & 0xFFFFFFFFFFFF0000ULL);
+
+    // We'll now find the first possible play (run, set, or extension) and
+    // consider both accepting and rejecting it, recursively exploring
+    // each choice.  Note that we only consider accepting and rejecting
+    // one play per involcation of this function.
+
+    // Consider each possible run.
+    Cards c;
+    if ((c = Cards_first(plays.runCenters))) {
+        Cards run = Plays_runCenterToCards(c);
+
+        // Accept this run
+        accepted->runCenters |= c;
+        Player_playRun(player, run);
+        AI_generatePlaysRec(ai, accepted, rejected);
+        Player_undoRun(player, run);
+        accepted->runCenters &= ~c;
+        
+        // Reject this run
+        rejected->runCenters |= c;
+        AI_generatePlaysRec(ai, accepted, rejected);
+        rejected->runCenters &= ~c;
+    } else if ((c = Cards_first(plays.setCenters))) {
+        Cards set = Plays_setCenterToCards(c);
+
+        // Accept this set
+        accepted->setCenters |= c;
+        Player_playSet(player, set);
+        AI_generatePlaysRec(ai, accepted, rejected);
+        Player_undoSet(player, set);
+        accepted->setCenters &= ~c;
+
+        // Reject this set
+        rejected->setCenters |= c;
+        AI_generatePlaysRec(ai, accepted, rejected);
+        rejected->setCenters &= ~c;
+    } else if ((c = Cards_first(plays.runExtensions))) {
+        Cards run = c;
+        Cards raised = Cards_raiseAces(run);
+
+        // Accept this run extension
+        accepted->runExtensions |= c;
+        Player_playRun(player, run);
+        AI_generatePlaysRec(ai, accepted, rejected);
+        Player_undoRun(player, run);
+        accepted->runExtensions &= ~c;
+
+        // Reject this run extension
+        rejected->runExtensions |= c;
+        AI_generatePlaysRec(ai, accepted, rejected);
+        rejected->runExtensions &= ~c;
+    } else if ((c = Cards_first(plays.setExtensions))) {
+        Cards set = c;
+
+        // Accept this set extension
+        accepted->setExtensions |= c;
+        Player_playSet(player, set);
+        AI_generatePlaysRec(ai, accepted, rejected);
+        Player_undoSet(player, set);
+        accepted->setExtensions &= ~c;
+
+        // Reject this set extension
+        rejected->setExtensions |= c;
+        AI_generatePlaysRec(ai, accepted, rejected);
+        rejected->setExtensions &= ~c;
+    } else {
+        ai->plays[ai->numPlays++] = *accepted;
+    }
+}
+
+void AI_printPlays(AI *ai) {
+    printf("\nGenerated %d possible play sequences:\n", ai->numPlays);
+    for (int i = 0; i < ai->numPlays; ++i) {
+        printf("Play %d: ", i + 1);
+        Plays_print(&ai->plays[i]);
+        printf("\n");
+    }
 }

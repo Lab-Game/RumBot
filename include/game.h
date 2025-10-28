@@ -50,9 +50,9 @@ void Player_undoTakes(Player *player);
 void Player_discard(Player *player, Cards card);
 void Player_undoDiscard(Player *player);
 void Player_playRun(Player *player, Cards run);
-void Player_undoPlayRun(Player *player, Cards run);
+void Player_undoRun(Player *player, Cards run);
 void Player_playSet(Player *player, Cards set);
-void Player_undoPlaySet(Player *player, Cards set);
+void Player_undoSet(Player *player, Cards set);
 void Player_print(Player *player);
 
 #endif // GAME_H

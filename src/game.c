@@ -102,36 +102,6 @@ void Player_undoTakes(Player *player) {
     }
 }
 
-void Player_playRun(Player *player, Cards meld) {
-    assert(Cards_size(meld) >= 3);
-    assert(Cards_isLegal(meld));
-    assert(Cards_has(player->hand, meld));
-    Table_addRun(&player->game->table, meld);
-    Table_addRun(&player->turn.meld, meld);
-    Cards_remove(&player->hand, meld);
-}
-
-void Player_undoPlayRun(Player *player, Cards meld) {
-    Cards_add(&player->hand, meld);
-    Table_removeRun(&player->game->table, meld);
-    Table_removeRun(&player->turn.meld, meld);
-}
-
-void Player_playSet(Player *player, Cards meld) {
-    assert(Cards_size(meld) >= 3);
-    assert(Cards_isLegal(meld));
-    assert(Cards_has(player->hand, meld));
-    Table_addSet(&player->game->table, meld);
-    Table_addSet(&player->turn.meld, meld);
-    Cards_remove(&player->hand, meld);
-}
-
-void Player_undoPlaySet(Player *player, Cards meld) {
-    Cards_add(&player->hand, meld);
-    Table_removeSet(&player->game->table, meld);
-    Table_removeSet(&player->turn.meld, meld);
-}
-
 void Player_discard(Player *player, Cards card) {
     Cards_remove(&player->hand, card);
     Pile_push(&player->game->discardPile, card);
@@ -142,6 +112,32 @@ void Player_undoDiscard(Player *player) {
     Cards card = Pile_pop(&player->game->discardPile);
     Cards_add(&player->hand, card);
     player->turn.discard = 0;
+}
+
+void Player_playRun(Player *player, Cards run) {
+    assert(Cards_has(player->hand, run));
+    Table_addRun(&player->game->table, run);
+    Table_addRun(&player->turn.meld, run);
+    Cards_remove(&player->hand, Cards_raiseAces(run));
+}
+
+void Player_undoRun(Player *player, Cards run) {
+    Cards_add(&player->hand, Cards_raiseAces(run));
+    Table_removeRun(&player->game->table, run);
+    Table_removeRun(&player->turn.meld, run);
+}
+
+void Player_playSet(Player *player, Cards set) {
+    assert(Cards_has(player->hand, set));
+    Table_addSet(&player->game->table, set);
+    Table_addSet(&player->turn.meld, set);
+    Cards_remove(&player->hand, set);
+}
+
+void Player_undoSet(Player *player, Cards set) {
+    Cards_add(&player->hand, set);
+    Table_removeSet(&player->game->table, set);
+    Table_removeSet(&player->turn.meld, set);
 }
 
 void Player_print(Player *player) {

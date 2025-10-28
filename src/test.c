@@ -117,14 +117,6 @@ void Table_test(void) {
     assert(Cards_size(table.sets) == 7);
 }
 
-void PlayGen_test(void) {
-    puts("\nTesting PlayGen...");
-    Table table;
-    Table_init(&table);
-    Cards hand = Cards_fromString("9H TH JH QC QH QS 5D 6D 7D 8D");
-    PlayGen_generate(hand, &table);
-}
-
 void Game_test(void) {
     puts("\nTesting Game...");
     Game game;
@@ -150,17 +142,15 @@ void AI_test(void) {
     puts("\nTesting AI...");
     Game game;
     Game_init(&game);
-    AI_go(&game);
-
-    Player *player = Game_currentPlayer(&game);
-    Turn_print(&player->turn);
+    AI ai;
+    AI_init(&ai, &game, Game_currentPlayer(&game));
+    AI_go(&ai);
 }   
 
 int main(void) {
     Cards_test();
     Pile_test();
     Table_test();
-    PlayGen_test();
     Game_test();
     AI_test();
     printf("\nAll tests passed.\n");
