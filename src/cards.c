@@ -16,6 +16,10 @@ const char *Card_name(Card i) {
     return kCardName[i];
 }
 
+void Card_print(Card c) {
+    printf("%s", Card_name(c));
+}
+
 Cards Cards_fromString(const char *str) {
     const char *values = "a23456789TJQKA";
     const char *suits = "CDHS";

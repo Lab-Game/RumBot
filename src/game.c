@@ -120,20 +120,14 @@ void Player_undoDiscard(Player *player) {
     player->turn.discard = 0;
 }
 
-void Player_makePlays(Player *player, Plays *plays) {
-    Cards runs = Plays_runCenterToCards(plays->runCenters) + plays->runExtensions;
-    Cards sets = Plays_setCenterToCards(plays->setCenters) + plays->setExtensions;
-
-    Player_playRun(player, runs);
-    Player_playSet(player, sets);
+void Player_meld(Player *player, Meld *meld) {
+    Player_playRun(player, meld->runs);
+    Player_playSet(player, meld->sets);
 }
 
-void Player_undoPlays(Player *player, Plays *plays) {
-    Cards runs = Plays_runCenterToCards(plays->runCenters) + plays->runExtensions;
-    Cards sets = Plays_setCenterToCards(plays->setCenters) + plays->setExtensions;
-
-    Player_undoRun(player, runs);
-    Player_undoSet(player, sets);
+void Player_undoMeld(Player *player, Meld *meld) {
+    Player_undoRun(player, meld->runs);
+    Player_undoSet(player, meld->sets);
 }
 
 void Player_playRun(Player *player, Cards run) {

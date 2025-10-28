@@ -11,17 +11,36 @@
 // Values 14-15, 30-31, 46-47, and 62-63, and 64-255 are illegal.
 typedef uint8_t Card;
 
-extern const char *kCardName[64];
+#define ILLEGAL_CARD 255
 
-// Card values 14-15, 30-31, 46-47, and 62-63 are illegal.
 static inline bool Card_isLegal(Card i) {
     return (1ULL << i) & 0x3FFF3FFF3FFF3FFF;
 }
+
+static inline int Card_value(Card c) {
+    assert(Card_isLegal(c));
+    return c & 0xF;
+}
+
+static inline int Card_suit(Card c) {
+    assert(Card_isLegal(c));
+    return c >> 4;
+}
+
+static inline Card Card_fromSuitValue(int suit, int value) {
+    assert(suit >= 0 && suit <= 3);
+    assert(value >= 0 && value <= 13);
+    return (suit << 4) | value;
+}
+
+extern const char *kCardName[64];
 
 // Return a two-letter code for legal cards, e.g. "8C" for the 8 of Clubs.
 // Low aces are represented as "a", high aces as "A".
 // Illegal cards are are represented as the number followed by "?", e.g. "14?".
 const char *Card_name(Card i);
+
+void Card_print(Card c);
 
 // The Cards type is a bitmask used to represent a set of playing cards.
 // There are bits to represent low aces, but these are used only when
@@ -69,7 +88,7 @@ static inline Cards Cards_lowerAces(Cards cards) {
 // Return a Cards set with a high ace added for every low ace present.
 static inline Cards Cards_raiseAces(Cards cards) {
     const uint64_t kLowAceMask = 0x0001000100010001ULL;
-    return cards | ((cards & kLowAceMask) << 13);
+    return (cards | ((cards & kLowAceMask) << 13)) & FULL_DECK;
 }
 
 // Return the Card corresponding to the lowest card in the Cards set.

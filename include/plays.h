@@ -2,10 +2,10 @@
 #define PLAYS_H
 
 #include "cards.h"
+#include "meld.h"
 
 // A Plays objects represents a set of possible runs, sets, and extensions.
-// This can be used to represent all available plays, a set of plays
-// that can all be made, or a set of plays that have been rejected.
+// Used when selecting the player's meld during their turn.
 typedef struct PlaysStruct {
     Cards runCenters;
     Cards runExtensions;
@@ -13,8 +13,6 @@ typedef struct PlaysStruct {
     Cards setExtensions;
 } Plays;
 
-// Clear the Play to have no possible melds.  Useful when starting to
-// collect rejected melds.
 static inline void Plays_init(Plays *plays) {
     plays->runCenters = 0;
     plays->runExtensions = 0;
@@ -40,6 +38,11 @@ static inline Cards Plays_runCenterToCards(Cards center) {
 // Convert a set center card to the full three-card meld.
 static inline Cards Plays_setCenterToCards(Cards center) {
     return center |(center << 16) | (center >> 16) | (center >> 48) | (center << 48);
+}
+
+static inline void Plays_toMeld(Plays *plays, Meld *meld) {
+    meld->runs = Plays_runCenterToCards(plays->runCenters) | plays->runExtensions;
+    meld->sets = Plays_setCenterToCards(plays->setCenters) | plays->setExtensions;
 }
 
 void Plays_print(Plays *plays);

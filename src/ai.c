@@ -7,7 +7,6 @@ void AI_init(AI *ai, Game *game, Player *player) {
     ai->game = game;
     ai->player = player;
     ai->bestTurn = &player->turn;
-    ai->numPlays = 0;
 }
 
 void AI_go(AI *ai) {
@@ -21,25 +20,25 @@ void AI_go(AI *ai) {
     Cards_print(draw);
     printf("\n");
 
-    printf("---generating plays---\n");
-    AI_generatePlays(ai);
-    AI_printPlays(ai);
+    printf("---generating melds---\n");
+    AI_generateMelds(ai);
+    AI_printMelds(ai);
 
-    // Make a play!
-    Player_makePlays(player, &ai->plays[0]);
+    // Play a meld (possibly consisting of zero cards)
+    Player_meld(player, &ai->melds[0]);
 }
 
-void AI_generatePlays(AI *ai) {
+void AI_generateMelds(AI *ai) {
     Plays accepted, rejected;
     Plays_init(&accepted);
     Plays_init(&rejected);
 
-    ai->numPlays = 0;
-    AI_generatePlaysRec(ai, &accepted, &rejected);
+    ai->numMelds = 0;
+    AI_generateMeldsRec(ai, &accepted, &rejected);
 }
 
-void AI_generatePlaysRec(AI *ai, Plays *accepted, Plays *rejected) {
-    if (ai->numPlays >= MAX_PLAYS) {
+void AI_generateMeldsRec(AI *ai, Plays *accepted, Plays *rejected) {
+    if (ai->numMelds >= MAX_MELDS) {
         // We've already found the maximum number of plays we can store.
         return;
     }
@@ -100,13 +99,13 @@ void AI_generatePlaysRec(AI *ai, Plays *accepted, Plays *rejected) {
         // Accept this run
         accepted->runCenters |= c;
         Player_playRun(player, run);
-        AI_generatePlaysRec(ai, accepted, rejected);
+        AI_generateMeldsRec(ai, accepted, rejected);
         Player_undoRun(player, run);
         accepted->runCenters &= ~c;
         
         // Reject this run
         rejected->runCenters |= c;
-        AI_generatePlaysRec(ai, accepted, rejected);
+        AI_generateMeldsRec(ai, accepted, rejected);
         rejected->runCenters &= ~c;
     } else if ((c = Cards_first(plays.setCenters))) {
         Cards set = Plays_setCenterToCards(c);
@@ -114,71 +113,49 @@ void AI_generatePlaysRec(AI *ai, Plays *accepted, Plays *rejected) {
         // Accept this set
         accepted->setCenters |= c;
         Player_playSet(player, set);
-        AI_generatePlaysRec(ai, accepted, rejected);
+        AI_generateMeldsRec(ai, accepted, rejected);
         Player_undoSet(player, set);
         accepted->setCenters &= ~c;
 
         // Reject this set
         rejected->setCenters |= c;
-        AI_generatePlaysRec(ai, accepted, rejected);
+        AI_generateMeldsRec(ai, accepted, rejected);
         rejected->setCenters &= ~c;
     } else if ((c = Cards_first(plays.runExtensions))) {
         // Accept this run extension
         accepted->runExtensions |= c;
         Player_playRun(player, c);
-        AI_generatePlaysRec(ai, accepted, rejected);
+        AI_generateMeldsRec(ai, accepted, rejected);
         Player_undoRun(player, c);
         accepted->runExtensions &= ~c;
 
         // Reject this run extension
         rejected->runExtensions |= c;
-        AI_generatePlaysRec(ai, accepted, rejected);
+        AI_generateMeldsRec(ai, accepted, rejected);
         rejected->runExtensions &= ~c;
     } else if ((c = Cards_first(plays.setExtensions))) {
         // Accept this set extension
         accepted->setExtensions |= c;
         Player_playSet(player, c);
-        AI_generatePlaysRec(ai, accepted, rejected);
+        AI_generateMeldsRec(ai, accepted, rejected);
         Player_undoSet(player, c);
         accepted->setExtensions &= ~c;
 
         // Reject this set extension
         rejected->setExtensions |= c;
-        AI_generatePlaysRec(ai, accepted, rejected);
+        AI_generateMeldsRec(ai, accepted, rejected);
         rejected->setExtensions &= ~c;
     } else {
-        // No more cards can be played.  Store the accepted plays.
-
-        // Maybe I should be storing a Meld containing the cards
-        // in the accepted plays.  If nothing else, that's half the size.
-        // I could call those "melds" instead of "plays" to be more precise.
-        // And where are point values going again?
-        //
-        // Do I end up with three structures?
-        // Meld:  Stores cards in sets and runs.  Certainly needed to track the game
-        //         state.  Maybe useful to store combinations of cards that the
-        //         player can put down on the Meld during a turn.
-        // Plays:  Stores an encoding of possible sets and runs, given a hand and Meld.
-        //         This should really only be used for the recursive search, I think.
-        // Melds:  Stores the cards in sets and runs put down by a player during a turn.
-        //         Identical to a Meld, unfortunately.  I guess I could call both
-        //         Melds.  Includes low aces in runs.
-        //
-        // After I generate all possible melds, I'm going to have to evaluate them.
-        // Where am I going to store that evaluation?
-        //
-        // There is also a Turn, which records everything a player has done during
-        // a turn so that I can explore and rewind various possibilities.
-
-        ai->plays[ai->numPlays++] = *accepted;
+        // No more possible plays to consider.  Store the accepted plays.
+        Plays_toMeld(accepted, &ai->melds[ai->numMelds++]);
     }
 }
 
-void AI_printPlays(AI *ai) {
-    printf("\nGenerated %d possible play sequences:\n", ai->numPlays);
-    for (int i = 0; i < ai->numPlays; ++i) {
-        printf("Play %d: ", i + 1);
-        Plays_print(&ai->plays[i]);
+void AI_printMelds(AI *ai) {
+    printf("\nGenerated %d possible melds:\n", ai->numMelds);
+    for (int i = 0; i < ai->numMelds; ++i) {
+        printf("%d: ", i + 1);
+        Meld_printCompact(&ai->melds[i]);
         printf("\n");
     }
 }

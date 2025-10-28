@@ -1,4 +1,5 @@
 #include <stdio.h>
+
 #include "meld.h"
 
 void Meld_print(Meld *meld) {
@@ -10,7 +11,7 @@ void Meld_print(Meld *meld) {
     for (Cards c = Cards_first(meld->runs); c != 0; c = Cards_next(meld->runs, c)) {
         if (prevPrinted != 0) {
             if ((prevPrinted << 1) == c) {
-                // Same run, just print a space
+                // Same run, print a space
                 printf(" ");
             } else {
                 // Different run, print a comma
@@ -31,7 +32,7 @@ void Meld_print(Meld *meld) {
             if (Cards_has(meld->sets, c)) {
                 if (prevPrinted != 0) {                        
                     if ((Cards_toCard(prevPrinted) & 0xF) == value) {
-                        // Same set, just print a space
+                        // Same set, print a space
                         printf(" ");
                     } else {
                         // Different set, print a comma
@@ -46,4 +47,51 @@ void Meld_print(Meld *meld) {
     printf("\n");
 
     printf("+---------------------------------------------------\n");
+}
+
+void Meld_printCompact(Meld *meld) {
+    Card prev = ILLEGAL_CARD;
+    for (Cards c = Cards_first(meld->runs); c != 0; c = Cards_next(meld->runs, c)) {
+        Card card = Cards_toCard(c);
+
+        if (prev == ILLEGAL_CARD) {
+            printf("<");
+        } else if (Card_value(prev) + 1 == Card_value(card) &&
+                   Card_suit(prev) == Card_suit(card)) {
+            printf(" ");
+        } else {
+            printf("> <");
+        }
+        prev = card;
+
+        Card_print(card);
+    }
+    if (prev != ILLEGAL_CARD) {
+        printf("> ");
+    }
+
+    for (int value = 0; value <= 13; ++value) {
+        Card prev = ILLEGAL_CARD;
+        for (int suit = 0; suit < 4; ++suit) {
+            Cards c = Cards_fromCard(Card_fromSuitValue(suit, value));
+            if (Cards_has(meld->sets, c)) {
+                Card card = Cards_toCard(c);
+
+                if (prev == ILLEGAL_CARD) {
+                    printf("{");
+                    prev = c;
+                } else if (Card_value(prev) != Card_value(card)) {
+                    printf("} {");
+                } else {
+                    printf(" ");
+                }
+                prev = card;
+
+                Card_print(card);
+            }
+        }
+        if (prev != ILLEGAL_CARD) {
+            printf("} ");
+        }
+    }
 }

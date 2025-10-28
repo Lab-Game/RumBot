@@ -39,5 +39,6 @@ static inline void Meld_removeSet(Meld *Meld, Cards meld) {
 
 // Print the runs and sets currently on the Meld.
 void Meld_print(Meld *Meld);
+void Meld_printCompact(Meld *Meld);
 
 #endif // MELD_H
