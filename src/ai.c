@@ -2,7 +2,6 @@
 
 #include "ai.h"
 #include "game.h"
-#include "playgen.h"
 
 void AI_init(AI *ai, Game *game, Player *player) {
     ai->game = game;
@@ -17,8 +16,10 @@ void AI_go(AI *ai) {
     printf("=== AI for Player %d ===\n", player->id);
     Game_print(ai->game);
 
-    printf("---drawing card---\n");
-    Player_draw(player);
+    Cards draw = Player_draw(player);
+    printf("Drew ");
+    Cards_print(draw);
+    printf("\n");
 
     printf("---generating plays---\n");
     AI_generatePlays(ai);
@@ -118,14 +119,11 @@ void AI_generatePlaysRec(AI *ai, Plays *accepted, Plays *rejected) {
         AI_generatePlaysRec(ai, accepted, rejected);
         rejected->setCenters &= ~c;
     } else if ((c = Cards_first(plays.runExtensions))) {
-        Cards run = c;
-        Cards raised = Cards_raiseAces(run);
-
         // Accept this run extension
         accepted->runExtensions |= c;
-        Player_playRun(player, run);
+        Player_playRun(player, c);
         AI_generatePlaysRec(ai, accepted, rejected);
-        Player_undoRun(player, run);
+        Player_undoRun(player, c);
         accepted->runExtensions &= ~c;
 
         // Reject this run extension
@@ -133,13 +131,11 @@ void AI_generatePlaysRec(AI *ai, Plays *accepted, Plays *rejected) {
         AI_generatePlaysRec(ai, accepted, rejected);
         rejected->runExtensions &= ~c;
     } else if ((c = Cards_first(plays.setExtensions))) {
-        Cards set = c;
-
         // Accept this set extension
         accepted->setExtensions |= c;
-        Player_playSet(player, set);
+        Player_playSet(player, c);
         AI_generatePlaysRec(ai, accepted, rejected);
-        Player_undoSet(player, set);
+        Player_undoSet(player, c);
         accepted->setExtensions &= ~c;
 
         // Reject this set extension

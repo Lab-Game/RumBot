@@ -6,7 +6,6 @@
 #include "pile.h"
 #include "table.h"
 #include "plays.h"
-#include "playgen.h"
 #include "game.h"
 #include "ai.h"
 
