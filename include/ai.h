@@ -1,7 +1,6 @@
 #ifndef AI_H
 #define AI_H
 
-#include "cards.h"
 #include "game.h"
 #include "plays.h"
 

@@ -5,7 +5,7 @@
 #include "cards.h"
 #include "pile.h"
 #include "plays.h"
-#include "table.h"
+#include "meld.h"
 
 #define NUM_PLAYERS 3
 
@@ -33,7 +33,7 @@ struct GameStruct {
     Player players[NUM_PLAYERS];
     Pile drawPile;
     Pile discardPile;
-    Table table;
+    Meld Meld;
     Cards discarded;
     bool isOver;
 };

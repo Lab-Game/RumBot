@@ -6,7 +6,7 @@ void Turn_init(Turn *turn) {
     Pile_init(&turn->taken);
     turn->draw = 0;
     turn->discard = 0;
-    Table_init(&turn->meld);
+    Meld_init(&turn->meld);
     turn->eval = -1; // unevaluated
 }
 
@@ -25,6 +25,6 @@ void Turn_print(Turn *turn) {
     printf("\nDiscard: ");
     Cards_print(turn->discard);
     printf("\n");
-    Table_print(&turn->meld);
+    Meld_print(&turn->meld);
     printf("Eval: %d\n", turn->eval);
 }

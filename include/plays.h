@@ -2,7 +2,6 @@
 #define PLAYS_H
 
 #include "cards.h"
-#include "table.h"
 
 // A Plays objects represents a set of possible runs, sets, and extensions.
 // This can be used to represent all available plays, a set of plays

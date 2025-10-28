@@ -11,7 +11,7 @@ void Game_init(Game *game) {
     }
     Pile_fullDeck(&game->drawPile);
     Pile_init(&game->discardPile);
-    Table_init(&game->table);
+    Meld_init(&game->Meld);
     game->discarded = 0;
 
     // Shuffle the draw pile
@@ -68,7 +68,7 @@ void Game_print(Game *game) {
     printf("\nDiscard pile: ");
     Pile_print(&game->discardPile);
     printf("\n");
-    Table_print(&game->table);
+    Meld_print(&game->Meld);
 }
 
 void Player_init(Player *player, Game *game, int id) {
@@ -138,32 +138,40 @@ void Player_undoPlays(Player *player, Plays *plays) {
 
 void Player_playRun(Player *player, Cards run) {
     assert(Cards_has(player->hand, Cards_raiseAces(run)));
-    Table_addRun(&player->game->table, run);
-    Table_addRun(&player->turn.meld, run);
+    Meld_addRun(&player->game->Meld, run);
+    Meld_addRun(&player->turn.meld, run);
     Cards_remove(&player->hand, Cards_raiseAces(run));
+    int points = Cards_points(run);
+    player->score += points;
 }
 
 void Player_undoRun(Player *player, Cards run) {
     Cards_add(&player->hand, Cards_raiseAces(run));
-    Table_removeRun(&player->game->table, run);
-    Table_removeRun(&player->turn.meld, run);
+    Meld_removeRun(&player->game->Meld, run);
+    Meld_removeRun(&player->turn.meld, run);
+    int points = Cards_points(run);
+    player->score -= points;
 }
 
 void Player_playSet(Player *player, Cards set) {
     assert(Cards_has(player->hand, set));
-    Table_addSet(&player->game->table, set);
-    Table_addSet(&player->turn.meld, set);
+    Meld_addSet(&player->game->Meld, set);
+    Meld_addSet(&player->turn.meld, set);
     Cards_remove(&player->hand, set);
+    int points = Cards_points(set);
+    player->score += points;
 }
 
 void Player_undoSet(Player *player, Cards set) {
     Cards_add(&player->hand, set);
-    Table_removeSet(&player->game->table, set);
-    Table_removeSet(&player->turn.meld, set);
+    Meld_removeSet(&player->game->Meld, set);
+    Meld_removeSet(&player->turn.meld, set);
+    int points = Cards_points(set);
+    player->score -= points;
 }
 
 void Player_print(Player *player) {
-    printf("Player %d: score=%d hand=", player->id, player->score);
+    printf("Player %d (%3d pts)  ", player->id, player->score);
     Cards_print(player->hand);
     printf("\n");
 }

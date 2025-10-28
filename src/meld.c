@@ -1,13 +1,13 @@
 #include <stdio.h>
-#include "table.h"
+#include "meld.h"
 
-void Table_print(Table *table) {
+void Meld_print(Meld *meld) {
     printf("+---------------------------------------------------\n");
-    // Print all the runs on the Table.  Separate cards in the same run by spaces,
+    // Print all the runs in the Meld.  Separate cards in the same run by spaces,
     // and separate different runs by commas.
     printf("|  Runs: ");
     Cards prevPrinted = 0;
-    for (Cards c = Cards_first(table->runs); c != 0; c = Cards_next(table->runs, c)) {
+    for (Cards c = Cards_first(meld->runs); c != 0; c = Cards_next(meld->runs, c)) {
         if (prevPrinted != 0) {
             if ((prevPrinted << 1) == c) {
                 // Same run, just print a space
@@ -22,13 +22,13 @@ void Table_print(Table *table) {
     }
     printf("\n");
 
-    // Similarly, print all the sets on the Table.
+    // Similarly, print all the sets in the Meld.
     printf("|  Sets: ");
     prevPrinted = 0;
     for (int value = 0; value <= 13; ++value) {
         for (int suit = 0; suit < 4; ++suit) {
             Cards c = Cards_fromCard(value + (suit << 4));
-            if (Cards_has(table->sets, c)) {
+            if (Cards_has(meld->sets, c)) {
                 if (prevPrinted != 0) {                        
                     if ((Cards_toCard(prevPrinted) & 0xF) == value) {
                         // Same set, just print a space

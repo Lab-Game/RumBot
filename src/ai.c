@@ -53,14 +53,14 @@ void AI_generatePlaysRec(AI *ai, Plays *accepted, Plays *rejected) {
     Player *player = ai->player;
     Cards hand = player->hand;
     Cards lowHand = Cards_addLowAces(hand);
-    Table *table = &ai->game->table;
+    Meld *Meld = &ai->game->Meld;
 
-    // Find all possible runs, sets, and extensions, given the current table and hand.
+    // Find all possible runs, sets, and extensions, given the current Meld and hand.
     Plays plays;
     plays.runCenters = hand & (lowHand << 1) & (hand >> 1);
     plays.setCenters = (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48)));
-    plays.runExtensions = ((table->runs << 1) | (table->runs >> 1)) & lowHand;
-    plays.setExtensions = ((table->sets << 16) | (table->sets >> 16)) & lowHand;
+    plays.runExtensions = ((Meld->runs << 1) | (Meld->runs >> 1)) & lowHand;
+    plays.setExtensions = ((Meld->sets << 16) | (Meld->sets >> 16)) & lowHand;
 
     // Exclude melds that were rejected at a higher level in the recursive search.
     plays.runCenters &= ~rejected->runCenters;
@@ -148,6 +148,28 @@ void AI_generatePlaysRec(AI *ai, Plays *accepted, Plays *rejected) {
         rejected->setExtensions &= ~c;
     } else {
         // No more cards can be played.  Store the accepted plays.
+
+        // Maybe I should be storing a Meld containing the cards
+        // in the accepted plays.  If nothing else, that's half the size.
+        // I could call those "melds" instead of "plays" to be more precise.
+        // And where are point values going again?
+        //
+        // Do I end up with three structures?
+        // Meld:  Stores cards in sets and runs.  Certainly needed to track the game
+        //         state.  Maybe useful to store combinations of cards that the
+        //         player can put down on the Meld during a turn.
+        // Plays:  Stores an encoding of possible sets and runs, given a hand and Meld.
+        //         This should really only be used for the recursive search, I think.
+        // Melds:  Stores the cards in sets and runs put down by a player during a turn.
+        //         Identical to a Meld, unfortunately.  I guess I could call both
+        //         Melds.  Includes low aces in runs.
+        //
+        // After I generate all possible melds, I'm going to have to evaluate them.
+        // Where am I going to store that evaluation?
+        //
+        // There is also a Turn, which records everything a player has done during
+        // a turn so that I can explore and rewind various possibilities.
+
         ai->plays[ai->numPlays++] = *accepted;
     }
 }

@@ -24,15 +24,9 @@ static inline bool Card_isLegal(Card i) {
 // Illegal cards are are represented as the number followed by "?", e.g. "14?".
 const char *Card_name(Card i);
 
-// A "Cards" is a bitmask of cards, with bit 0 representing card 0, bit 1
-// representing card 1, and so forth.  This allows a "Cards" to represent
-// both individual cards and sets of cards.
-//
-// Treatment of low aces varies:
-//   - A player's hand contains only high aces.
-//   - A run may contain either high or low aces.
-//   - A set contains only high aces.
-//   - Aces in the discard and draw piles are always high.
+// The Cards type is a bitmask used to represent a set of playing cards.
+// There are bits to represent low aces, but these are used only when
+// representings runs, the sole place where low aces are meaningful.
 typedef uint64_t Cards;
 
 // Full deck mask (all legal cards).  Only high aces are included.

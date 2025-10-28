@@ -4,7 +4,7 @@
 
 #include "cards.h"
 #include "pile.h"
-#include "table.h"
+#include "meld.h"
 #include "plays.h"
 #include "game.h"
 #include "ai.h"
@@ -91,29 +91,29 @@ void Pile_test(void) {
     assert(Pile_size(&pile) == 5);
 }
 
-void Table_test(void) {
-    puts("\nTesting Table...");
-    Table table;
-    Table_init(&table);
-    assert(table.runs == 0);
-    assert(table.sets == 0);
+void Meld_test(void) {
+    puts("\nTesting Meld...");
+    Meld Meld;
+    Meld_init(&Meld);
+    assert(Meld.runs == 0);
+    assert(Meld.sets == 0);
 
-    Table_addRun(&table, Cards_fromString("TH JH QH"));
-    Table_addRun(&table, Cards_fromString("4C 5C 6C 7C"));
-    Table_addSet(&table, Cards_fromString("7H 7C 7D"));
-    Table_addSet(&table, Cards_fromString("JC JD JH JS"));
+    Meld_addRun(&Meld, Cards_fromString("TH JH QH"));
+    Meld_addRun(&Meld, Cards_fromString("4C 5C 6C 7C"));
+    Meld_addSet(&Meld, Cards_fromString("7H 7C 7D"));
+    Meld_addSet(&Meld, Cards_fromString("JC JD JH JS"));
     printf("Expected:\nRuns: 4C 5C 6C 7C, TH JH QH\nSets: 7C 7D 7H, JC JD JH JS\nActual:\n");
-    Table_print(&table);
-    assert(table.runs == Cards_fromString("4C 5C 6C 7C TH JH QH"));
-    assert(table.sets == Cards_fromString("7C 7D 7H JC JD JH JS"));
+    Meld_print(&Meld);
+    assert(Meld.runs == Cards_fromString("4C 5C 6C 7C TH JH QH"));
+    assert(Meld.sets == Cards_fromString("7C 7D 7H JC JD JH JS"));
 
-    Table_removeRun(&table, Cards_fromString("TH JH QH"));
-    Table_removeSet(&table, Cards_fromString("7C 7D 7H"));
-    Table_addSet(&table, Cards_fromString("QC QH QS"));
+    Meld_removeRun(&Meld, Cards_fromString("TH JH QH"));
+    Meld_removeSet(&Meld, Cards_fromString("7C 7D 7H"));
+    Meld_addSet(&Meld, Cards_fromString("QC QH QS"));
     printf("Expected:\nRuns: (no cards)\nSets: JC JD JH JS, QC QH QS\nActual:\n");
-    Table_print(&table);
-    assert(Cards_size(table.runs) == 4);
-    assert(Cards_size(table.sets) == 7);
+    Meld_print(&Meld);
+    assert(Cards_size(Meld.runs) == 4);
+    assert(Cards_size(Meld.sets) == 7);
 }
 
 void Game_test(void) {
@@ -124,8 +124,8 @@ void Game_test(void) {
     assert(game.currentPlayer == 0);
     assert(Pile_size(&game.drawPile) == 52 - NUM_PLAYERS * 7 - 1);
     assert(Pile_size(&game.discardPile) == 1);
-    assert(game.table.runs == 0);
-    assert(game.table.sets == 0);
+    assert(game.Meld.runs == 0);
+    assert(game.Meld.sets == 0);
     assert(game.discarded == 0);
     for (int i = 0; i < game.numPlayers; ++i) {
         Player *player = Game_player(&game, i);
@@ -158,7 +158,7 @@ void AI_test(void) {
 int main(void) {
     Cards_test();
     Pile_test();
-    Table_test();
+    Meld_test();
     Game_test();
     AI_test();
     printf("\nAll tests passed.\n");
