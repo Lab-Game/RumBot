@@ -33,7 +33,7 @@ struct GameStruct {
     Player players[NUM_PLAYERS];
     Pile drawPile;
     Pile discardPile;
-    Meld Meld;
+    Meld meld;
     Cards discarded;
     bool isOver;
 };

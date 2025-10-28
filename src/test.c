@@ -124,8 +124,8 @@ void Game_test(void) {
     assert(game.currentPlayer == 0);
     assert(Pile_size(&game.drawPile) == 52 - NUM_PLAYERS * 7 - 1);
     assert(Pile_size(&game.discardPile) == 1);
-    assert(game.Meld.runs == 0);
-    assert(game.Meld.sets == 0);
+    assert(game.meld.runs == 0);
+    assert(game.meld.sets == 0);
     assert(game.discarded == 0);
     for (int i = 0; i < game.numPlayers; ++i) {
         Player *player = Game_player(&game, i);

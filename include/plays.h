@@ -20,6 +20,8 @@ static inline void Plays_init(Plays *plays) {
     plays->setExtensions = 0;
 }
 
+void Plays_findAll(Plays *plays, Meld *meld, Cards hand, Plays *accepted, Plays *rejected);
+
 // Return true if there are no possible melds in the Plays.
 static inline bool Plays_none(Plays *plays) {
     return (plays->runCenters | plays->runExtensions | plays->setCenters | plays->setExtensions) == 0;

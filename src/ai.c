@@ -51,40 +51,11 @@ void AI_generateMeldsRec(AI *ai, Plays *accepted, Plays *rejected) {
 
     Player *player = ai->player;
     Cards hand = player->hand;
-    Cards lowHand = Cards_lowerAces(hand);
-    Meld *Meld = &ai->game->Meld;
+    Meld *meld = &ai->game->meld;
 
     // Find all possible runs, sets, and extensions, given the current Meld and hand.
     Plays plays;
-    plays.runCenters = hand & (lowHand << 1) & (hand >> 1);
-    plays.setCenters = (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48)));
-    plays.runExtensions = ((Meld->runs << 1) | (Meld->runs >> 1)) & lowHand;
-    plays.setExtensions = ((Meld->sets << 16) | (Meld->sets >> 16)) & lowHand;
-
-    // Exclude melds that were rejected at a higher level in the recursive search.
-    plays.runCenters &= ~rejected->runCenters;
-    plays.runExtensions &= ~rejected->runExtensions;
-    plays.setCenters &= ~rejected->setCenters;
-    plays.setExtensions &= ~rejected->setExtensions;
-
-    // We must avoid tiling the same N-card run with different combinations
-    // of 3-card runs and 1-card extensions.  The canonical tiling consists
-    // of as many 3-card runs as possible, followed by 0, 1, or 2 single-card
-    // extensions.  To enforce this, we apply the following rules:
-    //   - Never add a 3-card-run immediately after a 1-card extension
-    //   - Never add a 1-card extension immediately before a 3-card-run
-    //   - Never add 3 consecutive 1-card extensions
-    plays.runExtensions &= ~(accepted->runCenters >> 2);
-    plays.runCenters &= ~(accepted->runExtensions << 2);
-    plays.runExtensions &= ~((accepted->runExtensions << 1) & (accepted->runExtensions << 2));
-
-    // Similarly, we must avoid tiling a four-of-a-kind in four
-    // different ways.  The only permitted tiling is AD AH AS + AC.
-    // When looking at a specific card as a possible set extension, we
-    // check to see if the "opposite" card of the same value is the center
-    // of an accepted set.  If so, then this specific card can only be
-    // an extension if it is clubs.
-    plays.setExtensions &= ~(((accepted->setCenters >> 32) | (accepted->setCenters << 32)) & 0xFFFFFFFFFFFF0000ULL);
+    Plays_findAll(&plays, meld, hand, accepted, rejected);
 
     // We'll now find the first possible play (run, set, or extension) and
     // consider both accepting and rejecting it, recursively exploring

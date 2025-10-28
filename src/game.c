@@ -11,7 +11,7 @@ void Game_init(Game *game) {
     }
     Pile_fullDeck(&game->drawPile);
     Pile_init(&game->discardPile);
-    Meld_init(&game->Meld);
+    Meld_init(&game->meld);
     game->discarded = 0;
 
     // Shuffle the draw pile
@@ -68,7 +68,7 @@ void Game_print(Game *game) {
     printf("\nDiscard pile: ");
     Pile_print(&game->discardPile);
     printf("\n");
-    Meld_print(&game->Meld);
+    Meld_print(&game->meld);
 }
 
 void Player_init(Player *player, Game *game, int id) {
@@ -132,7 +132,7 @@ void Player_undoMeld(Player *player, Meld *meld) {
 
 void Player_playRun(Player *player, Cards run) {
     assert(Cards_has(player->hand, Cards_raiseAces(run)));
-    Meld_addRun(&player->game->Meld, run);
+    Meld_addRun(&player->game->meld, run);
     Meld_addRun(&player->turn.meld, run);
     Cards_remove(&player->hand, Cards_raiseAces(run));
     int points = Cards_points(run);
@@ -141,7 +141,7 @@ void Player_playRun(Player *player, Cards run) {
 
 void Player_undoRun(Player *player, Cards run) {
     Cards_add(&player->hand, Cards_raiseAces(run));
-    Meld_removeRun(&player->game->Meld, run);
+    Meld_removeRun(&player->game->meld, run);
     Meld_removeRun(&player->turn.meld, run);
     int points = Cards_points(run);
     player->score -= points;
@@ -149,7 +149,7 @@ void Player_undoRun(Player *player, Cards run) {
 
 void Player_playSet(Player *player, Cards set) {
     assert(Cards_has(player->hand, set));
-    Meld_addSet(&player->game->Meld, set);
+    Meld_addSet(&player->game->meld, set);
     Meld_addSet(&player->turn.meld, set);
     Cards_remove(&player->hand, set);
     int points = Cards_points(set);
@@ -158,7 +158,7 @@ void Player_playSet(Player *player, Cards set) {
 
 void Player_undoSet(Player *player, Cards set) {
     Cards_add(&player->hand, set);
-    Meld_removeSet(&player->game->Meld, set);
+    Meld_removeSet(&player->game->meld, set);
     Meld_removeSet(&player->turn.meld, set);
     int points = Cards_points(set);
     player->score -= points;
