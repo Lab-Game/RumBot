@@ -141,10 +141,19 @@ void AI_test(void) {
     puts("\nTesting AI...");
     Game game;
     Game_init(&game);
+    Player *player = Game_currentPlayer(&game);
+    player->hand = Cards_fromString("3C QC 8D 9D 2H QS AS 4H KS");
+
     AI ai;
     AI_init(&ai, &game, Game_currentPlayer(&game));
-    AI_go(&ai);
-}   
+    AI_generatePlays(&ai);
+    assert(ai.numPlays == 2);
+
+    player->hand = Cards_fromString("4C 4D TD AD 6H 7H 2S 3S 7S AS");
+    AI_init(&ai, &game, Game_currentPlayer(&game));
+    AI_generatePlays(&ai);
+    assert(ai.numPlays == 2);
+}
 
 int main(void) {
     Cards_test();

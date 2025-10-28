@@ -115,7 +115,7 @@ void Player_undoDiscard(Player *player) {
 }
 
 void Player_playRun(Player *player, Cards run) {
-    assert(Cards_has(Cards_raiseAces(player->hand), run));
+    assert(Cards_has(player->hand, Cards_raiseAces(run)));
     Table_addRun(&player->game->table, run);
     Table_addRun(&player->turn.meld, run);
     Cards_remove(&player->hand, Cards_raiseAces(run));

@@ -31,6 +31,8 @@ void AI_generatePlays(AI *ai) {
     Plays accepted, rejected;
     Plays_init(&accepted);
     Plays_init(&rejected);
+
+    ai->numPlays = 0;
     AI_generatePlaysRec(ai, &accepted, &rejected);
 }
 
@@ -143,6 +145,7 @@ void AI_generatePlaysRec(AI *ai, Plays *accepted, Plays *rejected) {
         AI_generatePlaysRec(ai, accepted, rejected);
         rejected->setExtensions &= ~c;
     } else {
+        // No more cards can be played.  Store the accepted plays.
         ai->plays[ai->numPlays++] = *accepted;
     }
 }
