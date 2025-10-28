@@ -18,5 +18,6 @@ typedef struct PlayListStruct {
 extern PlayList playList;
 
 void PlayGen_generate(Cards hand, Table *table);
+void PlayGen_print(void);
 
 #endif // PLAYGEN_H

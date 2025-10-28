@@ -5,6 +5,7 @@
 #include "table.h"
 #include "game.h"
 #include "turn.h"
+#include "ai.h"
 
 // While searching for the best turn, we need to consider:
 // - The best turn that involves initially taking cards from the discard pile.
@@ -53,6 +54,8 @@ int Eval(Game *game) {
 
     // Player has not gone out.  Points in hand may be positive or negative,
     // depending on the stage of the game.  In particular, if 
+
+    return 0;
 }
 
 void Search_meld(Game *game, Turn *bestTurn) {
@@ -77,9 +80,15 @@ int main(void) {
     Game_init(&game);
     Game_print(&game);
 
-    Turn bestTakeTurn;
-    Turn_init(&bestTakeTurn);
-    Search_take(&game, &bestTakeTurn);
+    // Turn up a few cards so we can experiment with drawing from the discard pile.
+    Pile_push(&game.discardPile, Pile_pop(&game.drawPile));
+    Pile_push(&game.discardPile, Pile_pop(&game.drawPile));
+    Pile_push(&game.discardPile, Pile_pop(&game.drawPile));
+    Pile_push(&game.discardPile, Pile_pop(&game.drawPile));
+    Pile_push(&game.discardPile, Pile_pop(&game.drawPile));
+    Game_print(&game);
     
+    AI_go(&game);
+
     return 0;
 }

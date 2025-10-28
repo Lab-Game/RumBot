@@ -24,6 +24,7 @@ void Turn_print(Turn *turn) {
     Cards_print(turn->draw);
     printf("\nDiscard: ");
     Cards_print(turn->discard);
+    printf("\n");
     Table_print(&turn->meld);
     printf("Eval: %d\n", turn->eval);
 }

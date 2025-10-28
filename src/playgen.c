@@ -7,6 +7,15 @@ PlayList playList;
 
 static int depth = 0;
 
+void PlayGen_print(void) {
+    printf("\nGenerated %d possible play sequences:\n", playList.size);
+    for (int i = 0; i < playList.size; ++i) {
+        printf("Play %d: ", i + 1);
+        Plays_print(&playList.plays[i]);
+        printf("\n");
+    }
+}
+
 // Given a table and hand, we'll recursively explore possible plays of runs,
 // sets, and extensions from the hand onto the table.  As we consider each
 // possible play, we either accept it (adding it to 'accepted') or reject it
@@ -133,17 +142,9 @@ static void generateRec(Table *table, Cards hand, Plays *accepted, Plays *reject
         generateRec(table, hand, accepted, rejected);
         rejected->setExtensions &= ~c;
     } else {
-
         playList.plays[playList.size++] = *accepted;
-
-        // No more possible plays.  Print the accepted plays.
-        for (int i = 0; i < depth; ++i) {
-            printf(" ");
-        }
-        Plays_print(accepted);
-        printf("     /     ");
-        Plays_print(rejected);
-        printf("\n");
+        // Print the accepted plays.
+        PlayGen_print();
     }
 
     depth -= 1;

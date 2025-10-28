@@ -48,9 +48,13 @@ void Game_nextTurn(Game *game) {
 }
 
 void Game_print(Game *game) {
-    printf("Player %d/%d\n", game->currentPlayer, game->numPlayers);
     for (int i = 0; i < game->numPlayers; ++i) {
         Player *player = Game_player(game, i);
+        if (i == game->currentPlayer) {
+            printf("-> ");
+        } else {
+            printf("   ");
+        }
         Player_print(player);
     }
     printf("Draw pile: ");
@@ -82,11 +86,12 @@ void Player_undoDraw(Player *player, Cards card) {
     player->turn.draw = 0;
 }
 
-void Player_take(Player *player) {
+Cards Player_take(Player *player) {
     assert(Pile_size(&player->game->discardPile) >= 1);
     Cards card = Pile_pop(&player->game->discardPile);
     Pile_push(&player->turn.taken, card);
     Cards_add(&player->hand, card);
+    return card;
 }
 
 void Player_undoTakes(Player *player) {

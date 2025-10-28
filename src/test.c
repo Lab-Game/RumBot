@@ -8,6 +8,7 @@
 #include "plays.h"
 #include "playgen.h"
 #include "game.h"
+#include "ai.h"
 
 void Cards_test(void) {
     puts("\nTesting Cards...");
@@ -145,12 +146,23 @@ void Game_test(void) {
     Game_print(&game);
 }
 
+void AI_test(void) {
+    puts("\nTesting AI...");
+    Game game;
+    Game_init(&game);
+    AI_go(&game);
+
+    Player *player = Game_currentPlayer(&game);
+    Turn_print(&player->turn);
+}   
+
 int main(void) {
     Cards_test();
     Pile_test();
     Table_test();
     PlayGen_test();
     Game_test();
+    AI_test();
     printf("\nAll tests passed.\n");
     return 0;
 }
