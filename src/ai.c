@@ -24,8 +24,10 @@ void AI_go(AI *ai) {
     printf("---generating plays---\n");
     AI_generatePlays(ai);
     AI_printPlays(ai);
-}
 
+    // Make a play!
+    Player_makePlays(player, &ai->plays[0]);
+}
 
 void AI_generatePlays(AI *ai) {
     Plays accepted, rejected;

@@ -31,6 +31,8 @@ void Game_init(Game *game) {
 
     // Clear the play for the first player
     Turn_init(&firstPlayer->turn);
+
+    game->isOver = false;
 }
 
 Player *Game_player(Game *game, int num) {
@@ -45,6 +47,10 @@ Player *Game_currentPlayer(Game *game) {
 void Game_nextTurn(Game *game) {
     game->currentPlayer = (game->currentPlayer + 1) % game->numPlayers;
     Turn_init(&game->players[game->currentPlayer].turn);
+
+    if (Pile_size(&game->drawPile) == 0) {
+        game->isOver = true;
+    }
 }
 
 void Game_print(Game *game) {
@@ -112,6 +118,22 @@ void Player_undoDiscard(Player *player) {
     Cards card = Pile_pop(&player->game->discardPile);
     Cards_add(&player->hand, card);
     player->turn.discard = 0;
+}
+
+void Player_makePlays(Player *player, Plays *plays) {
+    Cards runs = Plays_runCenterToCards(plays->runCenters) + plays->runExtensions;
+    Cards sets = Plays_setCenterToCards(plays->setCenters) + plays->setExtensions;
+
+    Player_playRun(player, runs);
+    Player_playSet(player, sets);
+}
+
+void Player_undoPlays(Player *player, Plays *plays) {
+    Cards runs = Plays_runCenterToCards(plays->runCenters) + plays->runExtensions;
+    Cards sets = Plays_setCenterToCards(plays->setCenters) + plays->setExtensions;
+
+    Player_undoRun(player, runs);
+    Player_undoSet(player, sets);
 }
 
 void Player_playRun(Player *player, Cards run) {

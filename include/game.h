@@ -4,6 +4,7 @@
 #include "turn.h"
 #include "cards.h"
 #include "pile.h"
+#include "plays.h"
 #include "table.h"
 
 #define NUM_PLAYERS 3
@@ -34,6 +35,7 @@ struct GameStruct {
     Pile discardPile;
     Table table;
     Cards discarded;
+    bool isOver;
 };
 
 void Game_init(Game *game);
@@ -49,6 +51,8 @@ Cards Player_take(Player *player);
 void Player_undoTakes(Player *player);
 void Player_discard(Player *player, Cards card);
 void Player_undoDiscard(Player *player);
+void Player_makePlays(Player *player, Plays *plays);
+void Player_undoPlays(Player *player, Plays *plays);
 void Player_playRun(Player *player, Cards run);
 void Player_undoRun(Player *player, Cards run);
 void Player_playSet(Player *player, Cards set);
