@@ -6,26 +6,43 @@
 void AI_init(AI *ai, Game *game, Player *player) {
     ai->game = game;
     ai->player = player;
-    ai->bestTurn = &player->turn;
 }
 
 void AI_go(AI *ai) {
-    Player *player = ai->player;
-
-    printf("=== AI for Player %d ===\n", player->id);
     Game_print(ai->game);
 
+    Player *player = ai->player;
+
     Cards draw = Player_draw(player);
-    printf("Drew ");
+    printf("draw: ");
     Cards_print(draw);
-    printf("\n");
 
-    printf("---generating melds---\n");
     AI_generateMelds(ai);
-    AI_printMelds(ai);
 
-    // Play a meld (possibly consisting of zero cards)
-    Player_meld(player, &ai->melds[0]);
+    Turn_init(&ai->bestTurn);
+    for (int i = 0; i < ai->numMelds; ++i) {
+        Player_meld(player, &ai->melds[i]);
+        // If there are any cards left, consider discarding one.
+        for (Cards c = Cards_first(player->hand); c != 0; c = Cards_next(player->hand, c)) {
+            Player_discard(player, c);
+            player->turn.eval = AI_evaluate(ai);
+            Turn_max(&ai->bestTurn, &player->turn);
+            Player_undoDiscard(player);
+        }
+        Player_undoMeld(player, &ai->melds[i]);
+    }
+    printf(" meld: ");
+    Meld_printCompact(&ai->bestTurn.meld);
+    Player_meld(player, &ai->bestTurn.meld);
+
+    Player_discard(player, ai->bestTurn.discard);
+    printf("discard: ");
+    Cards_print(ai->bestTurn.discard);
+    printf("\n");
+}
+
+int AI_evaluate(AI *ai) {
+    return ai->player->score;
 }
 
 void AI_generateMelds(AI *ai) {

@@ -7,7 +7,7 @@ void Turn_init(Turn *turn) {
     turn->draw = 0;
     turn->discard = 0;
     Meld_init(&turn->meld);
-    turn->eval = -1; // unevaluated
+    turn->eval = -9999;
 }
 
 int Turn_max(Turn *best, Turn *scratch) {

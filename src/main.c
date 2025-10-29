@@ -6,7 +6,6 @@
 int main(void) {
     Game game;
     Game_init(&game);
-    Game_print(&game);
 
     AI ais[NUM_PLAYERS];
     for (int i = 0; i < NUM_PLAYERS; ++i) {
@@ -17,6 +16,8 @@ int main(void) {
         AI_go(&ais[game.currentPlayer]);
         Game_nextTurn(&game);
     }
+
+    Game_print(&game);
 
     return 0;
 }
