@@ -10,7 +10,8 @@
 typedef struct AIStruct {
     Game *game;
     Player *player;
-    Turn bestTurn;
+    Turn bestTakeTurn;
+    Turn bestDrawTurn[64];
     int numMelds;
     Meld melds[MAX_MELDS];
 } AI;
@@ -19,6 +20,9 @@ typedef struct AIStruct {
 // and update the game state accordingly.
 void AI_init(AI *ai, Game *game, Player *player);
 void AI_go(AI *ai);
+double AI_findBestTakeTurn(AI *ai);
+double AI_findBestDrawTurns(AI *ai);
+void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn);
 int AI_evaluate(AI *ai);
 void AI_generateMelds(AI *ai);
 void AI_generateMeldsRec(AI *ai, Plays *accepted, Plays *rejected);

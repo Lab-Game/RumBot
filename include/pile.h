@@ -29,6 +29,11 @@ static inline Cards Pile_pop(Pile *pile) {
     return pile->cards[--pile->size];
 }
 
+static inline Cards Pile_peek(Pile *pile) {
+    assert(pile->size >= 1);
+    return pile->cards[pile->size - 1];
+}
+
 // Initialize the pile to be empty.
 static inline void Pile_init(Pile *pile) {
     pile->size = 0;

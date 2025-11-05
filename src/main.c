@@ -14,6 +14,7 @@ int main(void) {
 
     while (!game.isOver) {
         AI_go(&ais[game.currentPlayer]);
+        break;
         Game_nextTurn(&game);
     }
 

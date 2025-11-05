@@ -18,13 +18,18 @@ int Turn_max(Turn *best, Turn *scratch) {
 }
 
 void Turn_print(Turn *turn) {
-    printf("Taken: ");
-    Pile_print(&turn->taken);
-    printf("\nDraw: ");
-    Cards_print(turn->draw);
-    printf("\nDiscard: ");
+    if (Pile_size(&turn->taken) == 0) {
+        // This is a draw turn
+        printf("Draw: ");
+        Cards_print(turn->draw);
+    } else {
+        // This is a take turn
+        printf("Take: ");
+        Pile_print(&turn->taken);
+    }
+    printf("  Meld: ");
+    Meld_printCompact(&turn->meld);
+    printf("  Discard: ");
     Cards_print(turn->discard);
-    printf("\n");
-    Meld_print(&turn->meld);
-    printf("Eval: %d\n", turn->eval);
+    printf("  Eval: %d\n", turn->eval);
 }

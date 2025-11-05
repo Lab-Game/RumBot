@@ -86,7 +86,8 @@ Cards Player_draw(Player *player) {
     return card;
 }
 
-void Player_undoDraw(Player *player, Cards card) {
+void Player_undoDraw(Player *player) {
+    Cards card = player->turn.draw;
     Pile_push(&player->game->drawPile, card);
     Cards_remove(&player->hand, card);
     player->turn.draw = 0;
