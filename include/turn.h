@@ -14,7 +14,7 @@ typedef struct TurnStruct {
     Pile taken;      // cards taken from discard pile
     Cards draw;      // card drawn (0 if none)
     Cards discard;   // card discarded (0 if none)
-    Meld meld;      // cards melded
+    Meld meld;       // cards melded
     int eval;        // evaluation of resulting position
 } Turn;
 

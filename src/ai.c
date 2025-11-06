@@ -7,7 +7,19 @@ int AI_evaluate(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
-    return player->score * 100;
+    int score = player->score * 100;
+
+    if (Cards_isEmpty(player->hand)) {
+        // Each other player loses maybe 700 centipoints per card in hand
+        int negativePoints = 0;
+        for (int i = 0; i < game->numPlayers; ++i) {
+            negativePoints += Cards_size(Game_player(game, i)->hand) * 700;
+        }
+        return score + negativePoints / (game->numPlayers - 1);        
+    } else {
+        int handScore = AI_evaluateHand(player->hand, &game->meld, Player_couldDraw(player));
+        return score + handScore / 2;
+    }
 }
 
 int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable) {
@@ -17,35 +29,18 @@ int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable) {
     // So, for each drawable card, we'll estimate the number of
     // points that can be played from the hand into the meld.
     // Then we'll average over all playable cards.
-
-    // Print the hand and meld for debugging.
-    printf("Evaluating hand: ");
-    Cards_print(hand);
-    printf("\nwith meld: ");
-    Meld_printCompact(meld);
-    printf("\nDrawable cards: ");
-    Cards_print(drawable);
-    printf("\n");
-
-    // Iterate over playable cards
     int totalPoints = 0;
-    int numPlayable = 0;
     for (Cards c = Cards_first(drawable); c != 0; c = Cards_next(drawable, c)) {
         // Simulate adding this card to the hand
         Cards simulatedHand = hand | c;
         Cards playable = Plays_findPlayableCards(simulatedHand, meld);
         int points = Cards_points(playable);
-
-        Cards_print(c);
-        printf(" => ");
-        Cards_print(playable);
-        printf("  (%d pts)\n", points);
         
         totalPoints += points;
-        numPlayable++;
     }
 
     // Return the average points per playable card
+    int numPlayable = Cards_size(drawable);
     return numPlayable > 0 ? 100 * totalPoints / numPlayable : 0;
 }
 
@@ -58,28 +53,35 @@ void AI_init(AI *ai, int mode, Game *game, Player *player) {
 void AI_go(AI *ai) {
     Game_print(ai->game);
 
-    double averageDrawEval = AI_findBestDrawTurns(ai);
-    double bestTakeEval = AI_findBestTakeTurn(ai);
+    int averageDrawEval = AI_findBestDrawTurns(ai);
+    printf("Draw avg:  %d\n", averageDrawEval);
+    int bestTakeEval = AI_findBestTakeTurn(ai);
+    printf("Take best: %d\n", bestTakeEval);
 
     printf("=> ");
     if (bestTakeEval > averageDrawEval) {
         // Execute the best take turn
-        Player_take(ai->player);
-        Player_meld(ai->player, &ai->bestTakeTurn.meld);
-        Player_discard(ai->player, ai->bestTakeTurn.discard);
         Turn_print(&ai->bestTakeTurn);
+        Player_takeNum(ai->player, ai->bestTakeTurn.taken.size);
+        Player_meld(ai->player, &ai->bestTakeTurn.meld);
+        if (!Cards_isEmpty(ai->bestTakeTurn.discard)) {
+            Player_discard(ai->player, ai->bestTakeTurn.discard);
+        }
+
     } else {
         // Execute the best draw turn
         Cards drawnCard = Player_draw(ai->player);
         Card drawnCardIndex = Cards_toCard(drawnCard);
         Turn *bestDrawTurn = &ai->bestDrawTurn[drawnCardIndex];
-        Player_meld(ai->player, &bestDrawTurn->meld);
-        Player_discard(ai->player, bestDrawTurn->discard);
         Turn_print(bestDrawTurn);
+        Player_meld(ai->player, &bestDrawTurn->meld);
+        if (!Cards_isEmpty(bestDrawTurn->discard)) {
+            Player_discard(ai->player, bestDrawTurn->discard);
+        }
     }
 }
 
-double AI_findBestTakeTurn(AI *ai) {
+int AI_findBestTakeTurn(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
@@ -93,7 +95,7 @@ double AI_findBestTakeTurn(AI *ai) {
     return ai->bestTakeTurn.eval;
 }
 
-double AI_findBestDrawTurns(AI *ai) {
+int AI_findBestDrawTurns(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
@@ -141,7 +143,7 @@ void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn) {
 
         Player_undoMeld(player, &ai->melds[i]);
     }
-    Turn_print(bestTurn );
+    // Turn_print(bestTurn );
 }
 
 void AI_generateMelds(AI *ai) {

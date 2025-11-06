@@ -22,8 +22,8 @@ typedef struct AIStruct {
 // centipoints (1/100 of a point).
 void AI_init(AI *ai, int mode, Game *game, Player *player);
 void AI_go(AI *ai);
-double AI_findBestTakeTurn(AI *ai);
-double AI_findBestDrawTurns(AI *ai);
+int AI_findBestTakeTurn(AI *ai);
+int AI_findBestDrawTurns(AI *ai);
 void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn);
 int AI_evaluate(AI *ai);
 void AI_generateMelds(AI *ai);

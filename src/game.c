@@ -47,13 +47,19 @@ Player *Game_currentPlayer(Game *game) {
 void Game_nextTurn(Game *game) {
     Turn *turn = &Game_currentPlayer(game)->turn;
     game->exposed |= Meld_allCards(&turn->meld) | turn->discard;
-
+    if (Cards_isEmpty(Game_currentPlayer(game)->hand) ||
+        Pile_size(&game->drawPile) == 0) {
+        // Reduce the score of each player by the points in their hand
+        for (int i = 0; i < game->numPlayers; ++i) {
+            Player *player = Game_player(game, i);
+            int handPoints = Cards_points(player->hand);
+            player->score -= handPoints;
+        }
+        game->isOver = true;
+        return;
+    }
     game->currentPlayer = (game->currentPlayer + 1) % game->numPlayers;
     Turn_init(&game->players[game->currentPlayer].turn);
-
-    if (Pile_size(&game->drawPile) == 0) {
-        game->isOver = true;
-    }
 }
 
 void Game_print(Game *game) {
@@ -104,6 +110,14 @@ Cards Player_take(Player *player) {
     return card;
 }
 
+Cards Player_takeNum(Player *player, int count) {
+    Cards taken = 0;
+    for (int i = 0; i < count; ++i) {
+        taken |= Player_take(player);
+    }
+    return taken;
+}
+
 void Player_undoTakes(Player *player) {
     while (Pile_size(&player->turn.taken) > 0) {
         Cards card = Pile_pop(&player->turn.taken);
@@ -113,6 +127,7 @@ void Player_undoTakes(Player *player) {
 }
 
 void Player_discard(Player *player, Cards card) {
+    assert(Cards_size(card) == 1);
     Cards_remove(&player->hand, card);
     Pile_push(&player->game->discardPile, card);
     player->turn.discard = card;

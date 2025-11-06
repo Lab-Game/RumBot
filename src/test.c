@@ -165,7 +165,7 @@ void Game_test(void) {
     assert(Pile_size(&game.discardPile) == 1);
     assert(game.meld.runs == 0);
     assert(game.meld.sets == 0);
-    assert(game.discarded == 0);
+    assert(game.exposed == 0);
     for (int i = 0; i < game.numPlayers; ++i) {
         Player *player = Game_player(&game, i);
         assert(player->game == &game);
@@ -208,7 +208,7 @@ void AI_test(void) {
         Meld_addRun(&meld, Cards_fromString("8S 9S TS"));
         Cards drawable = FULL_DECK & ~hand & ~Meld_allCards(&meld) & ~Cards_fromString("5H 8D JD");
         int eval = AI_evaluateHand(hand, &meld, drawable);
-        printf("eval = %d\n", eval);
+        assert(eval == 779);
     }
 
     {
@@ -220,7 +220,7 @@ void AI_test(void) {
         Meld_addRun(&meld, Cards_fromString("8S 9S TS"));
         Cards drawable = FULL_DECK & ~hand & ~Meld_allCards(&meld) & ~Cards_fromString("5H 8D JD");
         int eval = AI_evaluateHand(hand, &meld, drawable);
-        printf("eval = %d\n", eval);
+        assert(eval == 40);
     }
 }
 

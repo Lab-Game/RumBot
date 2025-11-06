@@ -48,6 +48,7 @@ void Player_init(Player *player, Game *game, int id);
 Cards Player_draw(Player *player);
 void Player_undoDraw(Player *player);
 Cards Player_take(Player *player);
+Cards Player_takeNum(Player *player, int count);
 void Player_undoTakes(Player *player);
 void Player_discard(Player *player, Cards card);
 void Player_undoDiscard(Player *player);
