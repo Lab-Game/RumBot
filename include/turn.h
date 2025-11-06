@@ -6,16 +6,18 @@
 // At a leaf of the search tree, we evaluate the turn and update the best turn if
 // the scratch turn is better.
 
+#include "rumbot.h"
 #include "cards.h"
 #include "pile.h"
 #include "meld.h"
 
 typedef struct TurnStruct {
-    Pile taken;      // cards taken from discard pile
-    Cards draw;      // card drawn (0 if none)
-    Cards discard;   // card discarded (0 if none)
-    Meld meld;       // cards melded
-    int eval;        // evaluation of resulting position
+    Pile taken;  // cards taken from discard pile
+    Cards draw;  // card drawn (0 if none)
+    Cards discard;  // card discarded (0 if none)
+    Meld meld;  // cards melded
+    Cards newDiscards;  // cards discarded for the first time this turn
+    int eval;  // evaluation of resulting game state after this turn
 } Turn;
 
 void Turn_init(Turn *play);

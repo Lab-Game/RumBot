@@ -5,14 +5,14 @@
 
 void Game_init(Game *game) {
     game->numPlayers = NUM_PLAYERS;
-    game->currentPlayer = 0;
+    game->currentPlayerId = 0;
     for (int i = 0; i < game->numPlayers; ++i) {
         Player_init(&game->players[i], game, i);
     }
     Pile_fullDeck(&game->drawPile);
     Pile_init(&game->discardPile);
     Meld_init(&game->meld);
-    game->exposed = 0;
+    game->everDiscarded = 0;
 
     // Shuffle the draw pile
     Pile_shuffle(&game->drawPile);
@@ -41,43 +41,39 @@ Player *Game_player(Game *game, int num) {
 }
 
 Player *Game_currentPlayer(Game *game) {
-    return &(game->players[game->currentPlayer]);
-}
-
-void Game_nextTurn(Game *game) {
-    Turn *turn = &Game_currentPlayer(game)->turn;
-    game->exposed |= Meld_allCards(&turn->meld) | turn->discard;
-    if (Cards_isEmpty(Game_currentPlayer(game)->hand) ||
-        Pile_size(&game->drawPile) == 0) {
-        // Reduce the score of each player by the points in their hand
-        for (int i = 0; i < game->numPlayers; ++i) {
-            Player *player = Game_player(game, i);
-            int handPoints = Cards_points(player->hand);
-            player->score -= handPoints;
-        }
-        game->isOver = true;
-        return;
-    }
-    game->currentPlayer = (game->currentPlayer + 1) % game->numPlayers;
-    Turn_init(&game->players[game->currentPlayer].turn);
+    return &(game->players[game->currentPlayerId]);
 }
 
 void Game_print(Game *game) {
+    if (Meld_cards(&game->meld)) {
+        printf("Meld: ");
+        Meld_printCompact(&game->meld);
+        printf("\n");
+    }
+
+    printf("Discard: ");
+    Pile_print(&game->discardPile);
+    printf("\n");
+
+    if (DEB >= 1) {
+        // Print all cards in the draw pile
+        printf("Draw: ");
+        Pile_print(&game->drawPile);
+        printf("\n");
+    } else {
+        // Print only the number of cards in the draw pile
+        printf("Draw: %d cards\n", Pile_size(&game->drawPile));
+    }
+
     for (int i = 0; i < game->numPlayers; ++i) {
         Player *player = Game_player(game, i);
-        if (i == game->currentPlayer) {
+        if (i == game->currentPlayerId) {
             printf("-> ");
         } else {
             printf("   ");
         }
         Player_print(player);
     }
-    printf("Draw pile: ");
-    Pile_print(&game->drawPile);
-    printf("\nDiscard pile: ");
-    Pile_print(&game->discardPile);
-    printf("\n");
-    Meld_print(&game->meld);
 }
 
 void Player_init(Player *player, Game *game, int id) {
@@ -86,6 +82,10 @@ void Player_init(Player *player, Game *game, int id) {
     player->score = 0;
     player->hand = 0;
     Turn_init(&player->turn);
+}
+
+bool Player_isCurrent(Player *player) {
+    return player->id == player->game->currentPlayerId;
 }
 
 Cards Player_draw(Player *player) {
@@ -110,14 +110,6 @@ Cards Player_take(Player *player) {
     return card;
 }
 
-Cards Player_takeNum(Player *player, int count) {
-    Cards taken = 0;
-    for (int i = 0; i < count; ++i) {
-        taken |= Player_take(player);
-    }
-    return taken;
-}
-
 void Player_undoTakes(Player *player) {
     while (Pile_size(&player->turn.taken) > 0) {
         Cards card = Pile_pop(&player->turn.taken);
@@ -128,15 +120,30 @@ void Player_undoTakes(Player *player) {
 
 void Player_discard(Player *player, Cards card) {
     assert(Cards_size(card) == 1);
+
+    Game *game = player->game;
+    Turn *turn = &player->turn;
+
     Cards_remove(&player->hand, card);
-    Pile_push(&player->game->discardPile, card);
-    player->turn.discard = card;
+    Pile_push(&game->discardPile, card); 
+
+    turn->discard = card;
+
+    turn->newDiscards |= (card & ~game->everDiscarded);
+    game->everDiscarded |= turn->newDiscards;
 }
 
 void Player_undoDiscard(Player *player) {
+    Game *game = player->game;
+    Turn *turn = &player->turn;
+
     Cards card = Pile_pop(&player->game->discardPile);
     Cards_add(&player->hand, card);
+
     player->turn.discard = 0;
+
+    game->everDiscarded &= ~turn->newDiscards;
+    turn->newDiscards = 0;
 }
 
 void Player_meld(Player *player, Meld *meld) {
@@ -183,19 +190,66 @@ void Player_undoSet(Player *player, Cards set) {
     player->score -= points;
 }
 
+void Player_play(Player *player, Turn *turn) {
+    Game *game = player->game;
+
+    // Handle draw or take
+    if (turn->draw) {
+        // Draw a card
+        Cards drawnCard = Player_draw(player);
+        assert(drawnCard == turn->draw);
+    } else {
+        // Take one or more cards from discard pile
+        int takeCount = Pile_size(&turn->taken);
+        for (int i = 0; i < takeCount; ++i) {
+            Player_take(player);
+        }
+    }
+
+    // Handle meld
+    Player_meld(player, &turn->meld);
+
+    // Handle discard
+    if (turn->discard) {
+        Player_discard(player, turn->discard);
+    }
+
+    if (!player->hand || Pile_size(&game->drawPile) == 0) {
+        game->isOver = true;
+
+        // Reduce the score of each player by the points in their hand
+        for (int i = 0; i < game->numPlayers; ++i) {
+            Player *p = Game_player(game, i);
+            int handPoints = Cards_points(p->hand);
+            p->score -= handPoints;
+        }
+    } else {
+        game->currentPlayerId = (game->currentPlayerId + 1) % game->numPlayers;
+        Turn_init(&game->players[game->currentPlayerId].turn);
+    }
+}
+
 Cards Player_couldDraw(Player *player) {
-    // This player could draw any card that was neither publicly exposed prior
-    // to this turn nor:
-    // - in their hand
-    // - in their meld
-    // - in their discard
-    Turn * turn = &player->turn;
-    Cards drawable = FULL_DECK & ~(player->game->exposed | player->hand | turn->discard | Meld_allCards(&turn->meld));
-    return drawable;
+    return FULL_DECK & ~(player->game->everDiscarded | player->hand | Meld_cards(&player->game->meld));
 }
 
 void Player_print(Player *player) {
+    Game *game = player->game;
     printf("Player %d (%3d pts)  ", player->id, player->score);
-    Cards_print(player->hand);
+    if (DEB >= 1 || player == Game_currentPlayer(game)) {
+        Cards_print(player->hand);
+    } else if (!player->hand) {
+        printf("(no cards)");
+    } else {
+        Cards exposed = player->hand & game->everDiscarded;
+        Cards hidden = player->hand & ~game->everDiscarded;
+        if (exposed) {
+            Cards_print(exposed);
+        }
+        if (hidden) {
+            printf(" +%d", Cards_size(hidden));
+        }   
+    }
+    
     printf("\n");
 }

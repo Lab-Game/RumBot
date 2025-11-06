@@ -433,7 +433,7 @@ struct PlayerStruct {
 
 struct GameStruct {
     int numPlayers;
-    int currentPlayer;
+    int currentPlayerId;
     Player *players;
     Pile drawPile;
     Pile discardPile;
@@ -524,12 +524,12 @@ Player *gamePlayer(Game *game, int playerIndex) {
 }
 
 Player *gameCurrentPlayer(Game *game) {
-    return &game->players[game->currentPlayer];
+    return &game->players[game->currentPlayerId];
 }
 
 Game *gameInit(Game *game, int numPlayers) {
     game->numPlayers = numPlayers;
-    game->currentPlayer = 0;
+    game->currentPlayerId = 0;
     game->discarded = 0;
 
     pileInitEmpty(&(game->drawPile));
@@ -562,7 +562,7 @@ Game *gameInit(Game *game, int numPlayers) {
 }
 
 void gamePrint(Game *game) {
-    printf("Player %d/%d\n", game->currentPlayer, game->numPlayers);
+    printf("Player %d/%d\n", game->currentPlayerId, game->numPlayers);
     for (int i = 0; i < game->numPlayers; ++i) {
         playerPrint(gamePlayer(game, i));
     }
@@ -578,7 +578,7 @@ void gameTest(void) {
     Game game;
     gameInit(&game, 3);
     assert(game.numPlayers == 3);
-    assert(game.currentPlayer == 0);
+    assert(game.currentPlayerId == 0);
     assert(game.drawPile.size == 52 - 3 * 7 - 1);
     assert(game.discardPile.size == 1);
     for (int i = 0; i < game.numPlayers; ++i) {

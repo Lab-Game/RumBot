@@ -48,6 +48,8 @@ typedef uint64_t Cards;
 
 // Full deck mask (all legal cards).  Only high aces are included.
 #define FULL_DECK 0x3FFE3FFE3FFE3FFEULL
+#define RED_CARDS 0x0000FFFF0000FFFFULL
+#define BLACK_CARDS 0x3FFF00003FFF0000ULL
 
 // Confirm that all cards in the Cards set are legal.
 static inline bool Cards_isLegal(Cards cards) {
@@ -68,10 +70,6 @@ static inline void Cards_add(Cards *cards, Cards c) {
 static inline void Cards_remove(Cards *cards, Cards c) {
     assert(Cards_has(*cards, c));
     *cards &= ~c;
-}
-
-static inline bool Cards_isEmpty(Cards cards) {
-    return cards == 0;
 }
 
 // Return the number of cards in the Cards set.
@@ -131,5 +129,6 @@ Cards Cards_fromString(const char *str);
 
 // Print the Cards set as a space-separated list of card codes.
 void Cards_print(Cards cards);
+void Cards_printExposed(Cards cards, Cards exposed);
 
 #endif // CARDS_H

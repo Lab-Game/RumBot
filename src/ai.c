@@ -9,7 +9,7 @@ int AI_evaluate(AI *ai) {
 
     int score = player->score * 100;
 
-    if (Cards_isEmpty(player->hand)) {
+    if (!player->hand) {
         // Each other player loses maybe 700 centipoints per card in hand
         int negativePoints = 0;
         for (int i = 0; i < game->numPlayers; ++i) {
@@ -50,34 +50,20 @@ void AI_init(AI *ai, int mode, Game *game, Player *player) {
     ai->player = player;
 }
 
-void AI_go(AI *ai) {
-    Game_print(ai->game);
+Turn *AI_go(AI *ai) {
+    Game *game = ai->game;
 
     int averageDrawEval = AI_findBestDrawTurns(ai);
-    printf("Draw avg:  %d\n", averageDrawEval);
     int bestTakeEval = AI_findBestTakeTurn(ai);
-    printf("Take best: %d\n", bestTakeEval);
 
-    printf("=> ");
+    if (DEB >= 1) {
+        printf("AI: draw = %d  take = %d\n", averageDrawEval, bestTakeEval);
+    }
+
     if (bestTakeEval > averageDrawEval) {
-        // Execute the best take turn
-        Turn_print(&ai->bestTakeTurn);
-        Player_takeNum(ai->player, ai->bestTakeTurn.taken.size);
-        Player_meld(ai->player, &ai->bestTakeTurn.meld);
-        if (!Cards_isEmpty(ai->bestTakeTurn.discard)) {
-            Player_discard(ai->player, ai->bestTakeTurn.discard);
-        }
-
+        return &ai->bestTakeTurn;
     } else {
-        // Execute the best draw turn
-        Cards drawnCard = Player_draw(ai->player);
-        Card drawnCardIndex = Cards_toCard(drawnCard);
-        Turn *bestDrawTurn = &ai->bestDrawTurn[drawnCardIndex];
-        Turn_print(bestDrawTurn);
-        Player_meld(ai->player, &bestDrawTurn->meld);
-        if (!Cards_isEmpty(bestDrawTurn->discard)) {
-            Player_discard(ai->player, bestDrawTurn->discard);
-        }
+        return &ai->bestDrawTurn[Cards_toCard(Pile_peek(&game->drawPile))];
     }
 }
 

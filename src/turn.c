@@ -27,9 +27,11 @@ void Turn_print(Turn *turn) {
         printf("Take: ");
         Pile_print(&turn->taken);
     }
-    printf("  Meld: ");
-    Meld_printCompact(&turn->meld);
-    printf("  Discard: ");
+    if (Meld_cards(&turn->meld)) {
+        printf(" Meld: ");
+        Meld_printCompact(&turn->meld);
+    }
+    printf(" Discard: ");
     Cards_print(turn->discard);
-    printf("  Eval: %d\n", turn->eval);
+    printf(" Eval: %d\n", turn->eval);
 }

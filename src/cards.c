@@ -17,7 +17,11 @@ const char *Card_name(Card i) {
 }
 
 void Card_print(Card c) {
-    printf("%s", Card_name(c));
+    if ((1 << c) & RED_CARDS) {
+        printf("\x1B[31m%s\x1B[0m", Card_name(c));  // print in red
+    } else {
+        printf("\x1B[34m%s\x1B[0m", Card_name(c));  // print in blue
+    }
 }
 
 Cards Cards_fromString(const char *str) {
@@ -54,10 +58,11 @@ void Cards_print(Cards cards) {
     for (Cards cs = Cards_first(cards); cs != 0; cs = Cards_next(cards, cs)) {
         Card c = Cards_toCard(cs);
         if (first) {
-            printf("%s", Card_name(c));
+            Card_print(c);
             first = false;
         } else {
-            printf(" %s", Card_name(c));
+            printf(" ");
+            Card_print(c);
         }
     }
     if (first) {

@@ -1,6 +1,7 @@
 #ifndef AI_H
 #define AI_H
 
+#include "rumbot.h"
 #include "game.h"
 #include "plays.h"
 
@@ -21,7 +22,7 @@ typedef struct AIStruct {
 // and update the game state accordingly.  Evaluations are in
 // centipoints (1/100 of a point).
 void AI_init(AI *ai, int mode, Game *game, Player *player);
-void AI_go(AI *ai);
+Turn *AI_go(AI *ai);
 int AI_findBestTakeTurn(AI *ai);
 int AI_findBestDrawTurns(AI *ai);
 void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn);

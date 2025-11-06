@@ -160,12 +160,12 @@ void Game_test(void) {
     Game game;
     Game_init(&game);
     assert(game.numPlayers == NUM_PLAYERS);
-    assert(game.currentPlayer == 0);
+    assert(game.currentPlayerId == 0);
     assert(Pile_size(&game.drawPile) == 52 - NUM_PLAYERS * 7 - 1);
     assert(Pile_size(&game.discardPile) == 1);
     assert(game.meld.runs == 0);
     assert(game.meld.sets == 0);
-    assert(game.exposed == 0);
+    assert(game.everDiscarded == 0);
     for (int i = 0; i < game.numPlayers; ++i) {
         Player *player = Game_player(&game, i);
         assert(player->game == &game);
@@ -206,7 +206,7 @@ void AI_test(void) {
         Meld_init(&meld);
         Meld_addSet(&meld, Cards_fromString("8C 8D 8H"));
         Meld_addRun(&meld, Cards_fromString("8S 9S TS"));
-        Cards drawable = FULL_DECK & ~hand & ~Meld_allCards(&meld) & ~Cards_fromString("5H 8D JD");
+        Cards drawable = FULL_DECK & ~hand & ~Meld_cards(&meld) & ~Cards_fromString("5H 8D JD");
         int eval = AI_evaluateHand(hand, &meld, drawable);
         assert(eval == 779);
     }
@@ -218,7 +218,7 @@ void AI_test(void) {
         Meld_init(&meld);
         Meld_addSet(&meld, Cards_fromString("8C 8D 8H"));
         Meld_addRun(&meld, Cards_fromString("8S 9S TS"));
-        Cards drawable = FULL_DECK & ~hand & ~Meld_allCards(&meld) & ~Cards_fromString("5H 8D JD");
+        Cards drawable = FULL_DECK & ~hand & ~Meld_cards(&meld) & ~Cards_fromString("5H 8D JD");
         int eval = AI_evaluateHand(hand, &meld, drawable);
         assert(eval == 40);
     }

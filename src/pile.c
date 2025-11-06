@@ -27,7 +27,7 @@ void Pile_print(Pile *pile) {
         if (printed) {
             printf(" ");
         }
-        printf("%s", Card_name(Cards_toCard(card)));
+        Card_print(Cards_toCard(card));
         printed = true;
     }
     if (!printed) {

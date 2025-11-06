@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "rumbot.h"
 #include "game.h"
 #include "ai.h"
 
@@ -13,12 +14,29 @@ int main(void) {
     }
 
     while (!game.isOver) {
-        AI_go(&ais[game.currentPlayer]);
+        AI *currentAI = &ais[game.currentPlayerId];
+
+        if (DEB >= 1) {
+            printf("\n=== Player %d ===\n", currentAI->player->id);
+            Game_print(&game);
+        }
+        
+        Turn *turn = AI_go(currentAI);
+
+        if (DEB >= 1) {
+            Turn_print(turn);
+        }
+
+        Player_play(currentAI->player, turn);
+
+        if (DEB >= 2) {
+            Game_print(&game);
+        }
+
         printf("\n");
-        //break;
-        Game_nextTurn(&game);
     }
 
+    printf("\n=== Game Over ===\n");
     Game_print(&game);
 
     return 0;

@@ -1,13 +1,12 @@
 #ifndef GAME_H
 #define GAME_H
 
+#include "rumbot.h"
 #include "turn.h"
 #include "cards.h"
 #include "pile.h"
 #include "plays.h"
 #include "meld.h"
-
-#define NUM_PLAYERS 3
 
 typedef struct GameStruct Game;
 
@@ -15,7 +14,6 @@ typedef struct PlayerStruct {
     Game *game;
     int id;
     Cards hand;
-    Cards known;
     int score;
     Turn turn;  // Records the player's actions during this turn to enable rewind.
 } Player;
@@ -29,12 +27,12 @@ typedef struct PlayerStruct {
 
 struct GameStruct {
     int numPlayers;
-    int currentPlayer;
+    int currentPlayerId;
     Player players[NUM_PLAYERS];
     Pile drawPile;
     Pile discardPile;
     Meld meld;
-    Cards exposed;
+    Cards everDiscarded;
     bool isOver;
 };
 
@@ -43,12 +41,13 @@ Player *Game_player(Game *game, int num);
 Player *Game_currentPlayer(Game *game);
 void Game_nextTurn(Game *game);
 void Game_print(Game *game);
+void Game_printExposed(Game *game);
 
 void Player_init(Player *player, Game *game, int id);
+bool Player_isCurrent(Player *player);
 Cards Player_draw(Player *player);
 void Player_undoDraw(Player *player);
 Cards Player_take(Player *player);
-Cards Player_takeNum(Player *player, int count);
 void Player_undoTakes(Player *player);
 void Player_discard(Player *player, Cards card);
 void Player_undoDiscard(Player *player);
@@ -58,6 +57,7 @@ void Player_playRun(Player *player, Cards run);
 void Player_undoRun(Player *player, Cards run);
 void Player_playSet(Player *player, Cards set);
 void Player_undoSet(Player *player, Cards set);
+void Player_play(Player *player, Turn *turn);
 Cards Player_couldDraw(Player *player);
 void Player_print(Player *player);
 
