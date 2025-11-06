@@ -180,21 +180,23 @@ void AI_test(void) {
     puts("\nTesting AI...");
     Game game;
     Game_init(&game);
-    Player *player = Game_currentPlayer(&game);
+    Player *player = game.currentPlayer;
     player->hand = Cards_fromString("3C QC 8D 9D 2H QS AS 4H KS");
 
     AI ai;
-    AI_init(&ai, 0, &game, Game_currentPlayer(&game));
+    AI_init(&ai, 0);
+    
+    AI_join(&ai, &game, game.currentPlayer);
     AI_generateMelds(&ai);
     assert(ai.numMelds == 2);
 
     player->hand = Cards_fromString("4C 4D TD AD 6H 7H 2S 3S 7S AS");
-    AI_init(&ai, 0, &game, Game_currentPlayer(&game));
+    AI_join(&ai, &game, game.currentPlayer);
     AI_generateMelds(&ai);
     assert(ai.numMelds == 2);
 
     player->hand = Cards_fromString("2C 9C TC QC AC 4D 3H 6H 9H TH 8S JS KS AS 3C");
-    AI_init(&ai, 0, &game, Game_currentPlayer(&game));
+    AI_join(&ai, &game, game.currentPlayer);
     AI_generateMelds(&ai);
     assert(ai.numMelds == 2);
 

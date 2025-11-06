@@ -10,6 +10,7 @@
 
 typedef struct AIStruct {
     int mode;
+    int totalScore;
     Game *game;
     Player *player;
     Turn bestTakeTurn;
@@ -21,7 +22,8 @@ typedef struct AIStruct {
 // Given a Game, determine the best Turn for the current player
 // and update the game state accordingly.  Evaluations are in
 // centipoints (1/100 of a point).
-void AI_init(AI *ai, int mode, Game *game, Player *player);
+void AI_init(AI *ai, int mode);
+void AI_join(AI *ai, Game *game, Player *player);
 Turn *AI_go(AI *ai);
 int AI_findBestTakeTurn(AI *ai);
 int AI_findBestDrawTurns(AI *ai);

@@ -7,6 +7,7 @@ void Turn_init(Turn *turn) {
     turn->draw = 0;
     turn->discard = 0;
     Meld_init(&turn->meld);
+    turn->newDiscards = 0;
     turn->eval = -9999;
 }
 

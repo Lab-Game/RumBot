@@ -6,6 +6,7 @@
 void Game_init(Game *game) {
     game->numPlayers = NUM_PLAYERS;
     game->currentPlayerId = 0;
+    game->currentPlayer = &game->players[0];
     for (int i = 0; i < game->numPlayers; ++i) {
         Player_init(&game->players[i], game, i);
     }
@@ -40,8 +41,24 @@ Player *Game_player(Game *game, int num) {
     return &(game->players[num]);
 }
 
-Player *Game_currentPlayer(Game *game) {
-    return &(game->players[game->currentPlayerId]);
+void Game_nextTurn(Game *game) {
+    Player *player = game->currentPlayer;
+
+    if (!player->hand || Pile_size(&game->drawPile) == 0) {
+        game->isOver = true;
+
+        // Reduce the score of each player by the points in their hand
+        for (int i = 0; i < game->numPlayers; ++i) {
+            Player *p = Game_player(game, i);
+            int handPoints = Cards_points(p->hand);
+            p->score -= handPoints;
+        }
+    } else {
+        // Advance to next player's turn
+        game->currentPlayerId = (game->currentPlayerId + 1) % game->numPlayers;
+        game->currentPlayer = &game->players[game->currentPlayerId];
+        Turn_init(&game->currentPlayer->turn);
+    }
 }
 
 void Game_print(Game *game) {
@@ -55,16 +72,6 @@ void Game_print(Game *game) {
     Pile_print(&game->discardPile);
     printf("\n");
 
-    if (DEB >= 1) {
-        // Print all cards in the draw pile
-        printf("Draw: ");
-        Pile_print(&game->drawPile);
-        printf("\n");
-    } else {
-        // Print only the number of cards in the draw pile
-        printf("Draw: %d cards\n", Pile_size(&game->drawPile));
-    }
-
     for (int i = 0; i < game->numPlayers; ++i) {
         Player *player = Game_player(game, i);
         if (i == game->currentPlayerId) {
@@ -73,6 +80,20 @@ void Game_print(Game *game) {
             printf("   ");
         }
         Player_print(player);
+    }
+
+    if (!POV && DEB >= 2) {
+        // Print all cards in the draw pile
+        printf("Draw: ");
+        Pile_print(&game->drawPile);
+        printf("\n");
+    } else {
+        // Print only the number of cards in the draw pile
+        // and only if there are few cards left.
+        int drawSize = Pile_size(&game->drawPile);
+        if (drawSize <= 5) {
+            printf("Draw: %d cards\n", drawSize);
+        }
     }
 }
 
@@ -191,8 +212,6 @@ void Player_undoSet(Player *player, Cards set) {
 }
 
 void Player_play(Player *player, Turn *turn) {
-    Game *game = player->game;
-
     // Handle draw or take
     if (turn->draw) {
         // Draw a card
@@ -213,20 +232,6 @@ void Player_play(Player *player, Turn *turn) {
     if (turn->discard) {
         Player_discard(player, turn->discard);
     }
-
-    if (!player->hand || Pile_size(&game->drawPile) == 0) {
-        game->isOver = true;
-
-        // Reduce the score of each player by the points in their hand
-        for (int i = 0; i < game->numPlayers; ++i) {
-            Player *p = Game_player(game, i);
-            int handPoints = Cards_points(p->hand);
-            p->score -= handPoints;
-        }
-    } else {
-        game->currentPlayerId = (game->currentPlayerId + 1) % game->numPlayers;
-        Turn_init(&game->players[game->currentPlayerId].turn);
-    }
 }
 
 Cards Player_couldDraw(Player *player) {
@@ -236,7 +241,7 @@ Cards Player_couldDraw(Player *player) {
 void Player_print(Player *player) {
     Game *game = player->game;
     printf("Player %d (%3d pts)  ", player->id, player->score);
-    if (DEB >= 1 || player == Game_currentPlayer(game)) {
+    if ((!POV && DEB >= 1) || player == game->currentPlayer) {
         Cards_print(player->hand);
     } else if (!player->hand) {
         printf("(no cards)");

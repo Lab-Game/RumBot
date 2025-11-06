@@ -7,19 +7,29 @@ int AI_evaluate(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
-    int score = player->score * 100;
+    int eval = player->score * 100;
 
     if (!player->hand) {
+        // I went out!
         // Each other player loses maybe 700 centipoints per card in hand
         int negativePoints = 0;
         for (int i = 0; i < game->numPlayers; ++i) {
             negativePoints += Cards_size(Game_player(game, i)->hand) * 700;
         }
-        return score + negativePoints / (game->numPlayers - 1);        
-    } else {
-        int handScore = AI_evaluateHand(player->hand, &game->meld, Player_couldDraw(player));
-        return score + handScore / 2;
+        return eval + negativePoints / (game->numPlayers - 1);        
     }
+
+    if (ai->mode == 1) {
+        int handScore = AI_evaluateHand(player->hand, &game->meld, Player_couldDraw(player));
+        eval += handScore;
+    }
+
+    if (ai->mode == 2) {
+        int handScore = AI_evaluateHand(player->hand, &game->meld, Player_couldDraw(player));
+        eval += handScore / 2;
+    }
+    
+    return eval;
 }
 
 int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable) {
@@ -44,8 +54,12 @@ int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable) {
     return numPlayable > 0 ? 100 * totalPoints / numPlayable : 0;
 }
 
-void AI_init(AI *ai, int mode, Game *game, Player *player) {
+void AI_init(AI *ai, int mode) {
     ai->mode = mode;
+    ai->totalScore = 0;
+}
+
+void AI_join(AI *ai, Game *game, Player *player) {
     ai->game = game;
     ai->player = player;
 }

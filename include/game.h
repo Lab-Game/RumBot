@@ -28,6 +28,7 @@ typedef struct PlayerStruct {
 struct GameStruct {
     int numPlayers;
     int currentPlayerId;
+    Player *currentPlayer;
     Player players[NUM_PLAYERS];
     Pile drawPile;
     Pile discardPile;
@@ -38,7 +39,6 @@ struct GameStruct {
 
 void Game_init(Game *game);
 Player *Game_player(Game *game, int num);
-Player *Game_currentPlayer(Game *game);
 void Game_nextTurn(Game *game);
 void Game_print(Game *game);
 void Game_printExposed(Game *game);
