@@ -33,13 +33,12 @@ static inline Card Card_fromSuitValue(int suit, int value) {
     return (suit << 4) | value;
 }
 
-extern const char *kCardName[64];
-
 // Return a two-letter code for legal cards, e.g. "8C" for the 8 of Clubs.
 // Low aces are represented as "a", high aces as "A".
 // Illegal cards are are represented as the number followed by "?", e.g. "14?".
 const char *Card_name(Card i);
 
+// Print the two-letter code for a legal card.
 void Card_print(Card c);
 
 // The Cards type is a bitmask used to represent a set of playing cards.
