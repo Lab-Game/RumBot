@@ -12,7 +12,7 @@ void Game_init(Game *game) {
     Pile_fullDeck(&game->drawPile);
     Pile_init(&game->discardPile);
     Meld_init(&game->meld);
-    game->discarded = 0;
+    game->exposed = 0;
 
     // Shuffle the draw pile
     Pile_shuffle(&game->drawPile);
@@ -45,6 +45,9 @@ Player *Game_currentPlayer(Game *game) {
 }
 
 void Game_nextTurn(Game *game) {
+    Turn *turn = &Game_currentPlayer(game)->turn;
+    game->exposed |= Meld_allCards(&turn->meld) | turn->discard;
+
     game->currentPlayer = (game->currentPlayer + 1) % game->numPlayers;
     Turn_init(&game->players[game->currentPlayer].turn);
 
@@ -163,6 +166,17 @@ void Player_undoSet(Player *player, Cards set) {
     Meld_removeSet(&player->turn.meld, set);
     int points = Cards_points(set);
     player->score -= points;
+}
+
+Cards Player_couldDraw(Player *player) {
+    // This player could draw any card that was neither publicly exposed prior
+    // to this turn nor:
+    // - in their hand
+    // - in their meld
+    // - in their discard
+    Turn * turn = &player->turn;
+    Cards drawable = FULL_DECK & ~(player->game->exposed | player->hand | turn->discard | Meld_allCards(&turn->meld));
+    return drawable;
 }
 
 void Player_print(Player *player) {

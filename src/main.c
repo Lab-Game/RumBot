@@ -9,7 +9,7 @@ int main(void) {
 
     AI ais[NUM_PLAYERS];
     for (int i = 0; i < NUM_PLAYERS; ++i) {
-        AI_init(&ais[i], &game, Game_player(&game, i));
+        AI_init(&ais[i], 0, &game, Game_player(&game, i));
     }
 
     while (!game.isOver) {

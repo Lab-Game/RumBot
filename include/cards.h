@@ -90,6 +90,11 @@ static inline Cards Cards_raiseAces(Cards cards) {
     return (cards | ((cards & kLowAceMask) << 13)) & FULL_DECK;
 }
 
+static inline Cards Cards_preferHighAces(Cards cards) {
+    const uint64_t kHighAceMask = 0x2000200020002000ULL;
+    return cards & ~((cards & kHighAceMask) >> 13);
+}
+
 // Return the Card corresponding to the lowest card in the Cards set.
 static inline Card Cards_toCard(Cards cards) {
     assert(cards != 0);

@@ -3,15 +3,54 @@
 #include "ai.h"
 #include "game.h"
 
-
 int AI_evaluate(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
-    return player->score;
+    return player->score * 100;
 }
 
-void AI_init(AI *ai, Game *game, Player *player) {
+int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable) {
+    // Evaluate the quality of a hand given the table meld and
+    // cards that could possibly be drawn.  In a good hand, there
+    // are many possible draws that enable many playable cards.
+    // So, for each drawable card, we'll estimate the number of
+    // points that can be played from the hand into the meld.
+    // Then we'll average over all playable cards.
+
+    // Print the hand and meld for debugging.
+    printf("Evaluating hand: ");
+    Cards_print(hand);
+    printf("\nwith meld: ");
+    Meld_printCompact(meld);
+    printf("\nDrawable cards: ");
+    Cards_print(drawable);
+    printf("\n");
+
+    // Iterate over playable cards
+    int totalPoints = 0;
+    int numPlayable = 0;
+    for (Cards c = Cards_first(drawable); c != 0; c = Cards_next(drawable, c)) {
+        // Simulate adding this card to the hand
+        Cards simulatedHand = hand | c;
+        Cards playable = Plays_findPlayableCards(simulatedHand, meld);
+        int points = Cards_points(playable);
+
+        Cards_print(c);
+        printf(" => ");
+        Cards_print(playable);
+        printf("  (%d pts)\n", points);
+        
+        totalPoints += points;
+        numPlayable++;
+    }
+
+    // Return the average points per playable card
+    return numPlayable > 0 ? 100 * totalPoints / numPlayable : 0;
+}
+
+void AI_init(AI *ai, int mode, Game *game, Player *player) {
+    ai->mode = mode;
     ai->game = game;
     ai->player = player;
 }
@@ -57,26 +96,10 @@ double AI_findBestTakeTurn(AI *ai) {
 double AI_findBestDrawTurns(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
-    double totalEval = 0;
 
-    // Here, we need to know what cards could possibly be in the draw pile.
-    // To a first order, this is all cards minus those in the player's hand +
-    // the discard pile + those melded on the table.
-    // A refinement is that we might have seen another player take a card
-    // from the discard pile, so we know that card is not in the draw pile.
-    // A further nuance is that we might have seen another player take a card
-    // from the discard pile, but then simulated the player discarding that
-    // card and then undoing that discard.  So across those simulations,
-    // we need to remember that this is still a non-drawable card.
-    // For starters, let's focus on the first-order model.
-    Cards drawable = FULL_DECK;
-    Cards_remove(&drawable, player->hand);
-    Cards_remove(&drawable, game->discarded);
-    Cards_remove(&drawable, game->meld.runs);
-    Cards_remove(&drawable, game->meld.sets);
+    Cards drawable = Player_couldDraw(player);
 
-    assert(Cards_size(drawable) > 0);
-
+    int totalEval = 0;
     for (Cards c = Cards_first(drawable); c != 0; c = Cards_next(drawable, c)) {
         Card card = Cards_toCard(c);
         Turn_init(&ai->bestDrawTurn[card]);

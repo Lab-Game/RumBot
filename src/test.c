@@ -49,6 +49,12 @@ void Cards_test(void) {
     Cards_print(handWithLowAces);
     printf("\n");
 
+    // Test preference for high aces.
+    Cards handMixedAces = Cards_fromString("aC AC aD AD aH 5H 6H AS");
+    Cards preferredAces = Cards_preferHighAces(handMixedAces);
+    Cards expectedPreferredAces = Cards_fromString("AC AD 5H 6H aH AS");
+    assert(preferredAces == expectedPreferredAces);
+
     // Test iteration over a Cards set.
     Cards hand = Cards_fromString("TC JC QC 5D 6D 2H JH 6S KS AS");
     int numCards = 0;
@@ -116,6 +122,39 @@ void Meld_test(void) {
     assert(Cards_size(Meld.sets) == 7);
 }
 
+void Plays_test(void) {
+    puts("\nTesting Plays...");
+
+    // Test Plays_findPlayableCards
+    {
+        Meld meld;
+        Meld_init(&meld);
+        Meld_addRun(&meld, Cards_fromString("5H 6H 7H"));
+        Cards hand = Cards_fromString("3H 4H 8H 9H JH");
+        Cards playable = Plays_findPlayableCards(hand, &meld);
+        assert(playable == Cards_fromString("3H 4H 8H 9H"));
+    }
+
+    {
+        Meld meld;
+        Meld_init(&meld);
+        Meld_addSet(&meld, Cards_fromString("9C 9D 9H"));
+        Cards hand = Cards_fromString("9S TC TD TH 2C");
+        Cards playable = Plays_findPlayableCards(hand, &meld);
+        assert(playable == Cards_fromString("9S TC TD TH"));
+    }
+
+    {
+        Meld meld;
+        Meld_init(&meld);
+        Meld_addRun(&meld, Cards_fromString("2C 3C 4C 2S 3S 4S JS QS KS"));
+        Cards hand = Cards_fromString("AC AS");
+        Cards playable = Plays_findPlayableCards(hand, &meld);
+        Cards_print(playable);
+        assert(playable == Cards_fromString("aC AS"));
+    }
+}
+
 void Game_test(void) {
     puts("\nTesting Game...");
     Game game;
@@ -145,25 +184,51 @@ void AI_test(void) {
     player->hand = Cards_fromString("3C QC 8D 9D 2H QS AS 4H KS");
 
     AI ai;
-    AI_init(&ai, &game, Game_currentPlayer(&game));
+    AI_init(&ai, 0, &game, Game_currentPlayer(&game));
     AI_generateMelds(&ai);
     assert(ai.numMelds == 2);
 
     player->hand = Cards_fromString("4C 4D TD AD 6H 7H 2S 3S 7S AS");
-    AI_init(&ai, &game, Game_currentPlayer(&game));
+    AI_init(&ai, 0, &game, Game_currentPlayer(&game));
     AI_generateMelds(&ai);
     assert(ai.numMelds == 2);
 
     player->hand = Cards_fromString("2C 9C TC QC AC 4D 3H 6H 9H TH 8S JS KS AS 3C");
-    AI_init(&ai, &game, Game_currentPlayer(&game));
+    AI_init(&ai, 0, &game, Game_currentPlayer(&game));
     AI_generateMelds(&ai);
     assert(ai.numMelds == 2);
+
+    // Test AI_evaluateHand
+    {
+        // Consider a pretty good hand
+        Cards hand = Cards_fromString("3C 5C 6C AD 6H 7H TC JC KC AC");
+        Meld meld;
+        Meld_init(&meld);
+        Meld_addSet(&meld, Cards_fromString("8C 8D 8H"));
+        Meld_addRun(&meld, Cards_fromString("8S 9S TS"));
+        Cards drawable = FULL_DECK & ~hand & ~Meld_allCards(&meld) & ~Cards_fromString("5H 8D JD");
+        int eval = AI_evaluateHand(hand, &meld, drawable);
+        printf("eval = %d\n", eval);
+    }
+
+    {
+        // Consider a weaker hand
+        Cards hand = Cards_fromString("3C 6H 9H 2D 5D 4S KS");
+        Meld meld;
+        Meld_init(&meld);
+        Meld_addSet(&meld, Cards_fromString("8C 8D 8H"));
+        Meld_addRun(&meld, Cards_fromString("8S 9S TS"));
+        Cards drawable = FULL_DECK & ~hand & ~Meld_allCards(&meld) & ~Cards_fromString("5H 8D JD");
+        int eval = AI_evaluateHand(hand, &meld, drawable);
+        printf("eval = %d\n", eval);
+    }
 }
 
 int main(void) {
     Cards_test();
     Pile_test();
     Meld_test();
+    Plays_test();
     Game_test();
     AI_test();
     printf("\nAll tests passed.\n");

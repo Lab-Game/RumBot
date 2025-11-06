@@ -35,6 +35,23 @@ void Plays_findAll(Plays *plays, Meld *meld, Cards hand, Plays *accepted, Plays 
     plays->setExtensions &= ~(((accepted->setCenters >> 32) | (accepted->setCenters << 32)) & 0xFFFFFFFFFFFF0000ULL);
 }
 
+Cards Plays_findPlayableCards(Cards hand, Meld *meld) {
+    Cards lowHand = Cards_lowerAces(hand);
+    Cards runCenters = hand & (lowHand << 1) & (hand >> 1);
+    Cards setCenters = (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48)));
+    Cards runExtensions = ((meld->runs << 1) | (meld->runs >> 1)) & lowHand;
+    Cards extendedMeldsRuns = meld->runs | runExtensions;
+    runExtensions = ((extendedMeldsRuns << 1) | (extendedMeldsRuns >> 1)) & lowHand;
+    Cards setExtensions = ((meld->sets << 16) | (meld->sets >> 16)) & lowHand;
+
+    // Find all playable cards from these plays
+    Cards playable = (Plays_runCenterToCards(runCenters) | runExtensions |
+                      Plays_setCenterToCards(setCenters) | setExtensions);
+
+    // Kick out low aces from playable cards if the corresponding high aces are playable.
+    return Cards_preferHighAces(playable);
+}
+
 void Plays_print(Plays *plays) {
     // Print the contents of the Plays structure compactly.
     for (Cards c = Cards_first(plays->runCenters); c != 0; c = Cards_next(plays->runCenters, c)) {

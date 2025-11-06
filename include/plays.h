@@ -20,6 +20,9 @@ static inline void Plays_init(Plays *plays) {
     plays->setExtensions = 0;
 }
 
+// Find all possible plays (runs, sets, and extensions) from the given hand
+// and meld, excluding any plays in the rejected set and avoiding any plays
+// that would duplicate previously accepted plays.
 void Plays_findAll(Plays *plays, Meld *meld, Cards hand, Plays *accepted, Plays *rejected);
 
 // Return true if there are no possible melds in the Plays.
@@ -46,6 +49,11 @@ static inline void Plays_toMeld(Plays *plays, Meld *meld) {
     meld->runs = Plays_runCenterToCards(plays->runCenters) | plays->runExtensions;
     meld->sets = Plays_setCenterToCards(plays->setCenters) | plays->setExtensions;
 }
+
+// Find all cards that can be played from the hand into the meld.
+// These cards may not all be simultaneously playable, however.
+// If a card is playable as either a low or high ace, only the high ace is returned.
+Cards Plays_findPlayableCards(Cards hand, Meld *meld);
 
 void Plays_print(Plays *plays);
 

@@ -8,6 +8,7 @@
 #define MAXMIN 3
 
 typedef struct AIStruct {
+    int mode;
     Game *game;
     Player *player;
     Turn bestTakeTurn;
@@ -17,8 +18,9 @@ typedef struct AIStruct {
 } AI;
 
 // Given a Game, determine the best Turn for the current player
-// and update the game state accordingly.
-void AI_init(AI *ai, Game *game, Player *player);
+// and update the game state accordingly.  Evaluations are in
+// centipoints (1/100 of a point).
+void AI_init(AI *ai, int mode, Game *game, Player *player);
 void AI_go(AI *ai);
 double AI_findBestTakeTurn(AI *ai);
 double AI_findBestDrawTurns(AI *ai);
@@ -27,5 +29,8 @@ int AI_evaluate(AI *ai);
 void AI_generateMelds(AI *ai);
 void AI_generateMeldsRec(AI *ai, Plays *accepted, Plays *rejected);
 void AI_printMelds(AI *ai);
+
+// Static function to evaluate hand quality given a meld.
+int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable);
 
 #endif // AI_H

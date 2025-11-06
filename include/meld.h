@@ -37,6 +37,11 @@ static inline void Meld_removeSet(Meld *Meld, Cards meld) {
     Meld->sets &= ~meld;
 }
 
+// Return all the cards in the Meld (both runs and sets).
+static inline Cards Meld_allCards(Meld *Meld) {
+    return Meld->runs | Meld->sets;
+}
+
 // Print the runs and sets currently on the Meld.
 void Meld_print(Meld *Meld);
 void Meld_printCompact(Meld *Meld);

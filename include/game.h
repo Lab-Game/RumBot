@@ -34,7 +34,7 @@ struct GameStruct {
     Pile drawPile;
     Pile discardPile;
     Meld meld;
-    Cards discarded;
+    Cards exposed;
     bool isOver;
 };
 
@@ -57,6 +57,7 @@ void Player_playRun(Player *player, Cards run);
 void Player_undoRun(Player *player, Cards run);
 void Player_playSet(Player *player, Cards set);
 void Player_undoSet(Player *player, Cards set);
+Cards Player_couldDraw(Player *player);
 void Player_print(Player *player);
 
 #endif // GAME_H
