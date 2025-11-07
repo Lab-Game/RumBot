@@ -48,8 +48,8 @@ typedef uint64_t Cards;
 
 // Full deck mask (all legal cards).  Only high aces are included.
 #define FULL_DECK 0x3FFE3FFE3FFE3FFEULL
-#define RED_CARDS 0x0000FFFF0000FFFFULL
-#define BLACK_CARDS 0x3FFF00003FFF0000ULL
+#define RED_CARDS 0x00003FFF3FFF0000ULL
+#define BLACK_CARDS 0x3FFF000000003FFFULL
 
 // Confirm that all cards in the Cards set are legal.
 static inline bool Cards_isLegal(Cards cards) {

@@ -17,10 +17,12 @@ const char *Card_name(Card i) {
 }
 
 void Card_print(Card c) {
-    if ((1 << c) & RED_CARDS) {
+    if ((1ULL << c) & RED_CARDS) {
         printf("\x1B[31m%s\x1B[0m", Card_name(c));  // print in red
-    } else {
+    } else if ((1ULL << c) & BLACK_CARDS) {
         printf("\x1B[34m%s\x1B[0m", Card_name(c));  // print in blue
+    } else {
+        printf("%s", Card_name(c));  // illegal card, print normally
     }
 }
 

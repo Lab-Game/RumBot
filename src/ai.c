@@ -7,29 +7,38 @@ int AI_evaluate(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
-    int eval = player->score * 100;
+    int base_centipoints = player->score * 100;
 
     if (!player->hand) {
-        // I went out!
-        // Each other player loses maybe 700 centipoints per card in hand
-        int negativePoints = 0;
+        // Player went out.  Give 700 centipoints per card remaining
+        // in opponents' hands.  TODO:  Use actual points for known cards.
+        int penaltyCentipoints = 0;
         for (int i = 0; i < game->numPlayers; ++i) {
-            negativePoints += Cards_size(Game_player(game, i)->hand) * 700;
+            penaltyCentipoints += Cards_size(Game_player(game, i)->hand) * 700;
         }
-        return eval + negativePoints / (game->numPlayers - 1);        
+        penaltyCentipoints /= (game->numPlayers - 1);
+
+        int eval = base_centipoints + penaltyCentipoints;
+
+        return eval;
     }
 
     if (ai->mode == 1) {
-        int handScore = AI_evaluateHand(player->hand, &game->meld, Player_couldDraw(player));
-        eval += handScore;
-    }
+        int handEval = AI_evaluateHand(player->hand, &game->meld, Player_couldDraw(player));
+        int handPoints = Cards_points(player->hand);
+        int eval = base_centipoints + handEval * 0.5 + handPoints * 2;
 
-    if (ai->mode == 2) {
-        int handScore = AI_evaluateHand(player->hand, &game->meld, Player_couldDraw(player));
-        eval += handScore / 2;
+        if (DEB >= 3) {
+            printf("AI_evaluate: base centipoints = %d\n", base_centipoints);
+            printf("AI_evaluate: handEval * 0.5 = %d\n", (int)(handEval * 0.5));
+            printf("AI_evaluate: handPoints * 2 = %d\n", handPoints * 2);
+            printf("AI_evaluate: eval = %d\n", eval);
+        }
+
+        return eval;
     }
     
-    return eval;
+    return base_centipoints;
 }
 
 int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable) {
@@ -37,21 +46,48 @@ int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable) {
     // cards that could possibly be drawn.  In a good hand, there
     // are many possible draws that enable many playable cards.
     // So, for each drawable card, we'll estimate the number of
-    // points that can be played from the hand into the meld.
+    // centipoints (cpts) that can be played from the hand into the meld.
     // Then we'll average over all playable cards.
-    int totalPoints = 0;
+
+    if (DEB >= 3) {
+        printf("AI_evaluateHand: hand = ");
+        Cards_print(hand);
+        printf("\nAI_evaluateHand: meld = ");
+        Meld_printCompact(meld);
+        printf("\nAI_evaluateHand: drawable = ");
+        Cards_print(drawable);
+        printf("\n");
+    }
+
+    int totalCentipoints = 0;
     for (Cards c = Cards_first(drawable); c != 0; c = Cards_next(drawable, c)) {
         // Simulate adding this card to the hand
         Cards simulatedHand = hand | c;
         Cards playable = Plays_findPlayableCards(simulatedHand, meld);
-        int points = Cards_points(playable);
-        
-        totalPoints += points;
+        int centipoints = Cards_points(playable) * 100;  // convert to cpts
+
+        if (DEB >= 4) {
+            if (playable) {
+                printf("AI_evaluateHand: ");
+                Card_print(Cards_toCard(c));
+                printf(" -> ");
+                Cards_print(playable);
+                printf(" (%d cpts)\n", centipoints);
+            }
+        }
+
+        totalCentipoints += centipoints;
     }
 
-    // Return the average points per playable card
+    // Return the average centipoints per playable card
     int numPlayable = Cards_size(drawable);
-    return numPlayable > 0 ? 100 * totalPoints / numPlayable : 0;
+    int averageCentipoints = numPlayable > 0 ? totalCentipoints / numPlayable : 0;
+
+    if (DEB >= 3) {
+        printf("AI_evaluateHand: avg = %d\n", averageCentipoints);
+    }
+
+    return averageCentipoints;
 }
 
 void AI_init(AI *ai, int mode) {
@@ -70,8 +106,18 @@ Turn *AI_go(AI *ai) {
     int averageDrawEval = AI_findBestDrawTurns(ai);
     int bestTakeEval = AI_findBestTakeTurn(ai);
 
+    if (DEB >= 2) {
+        printf("AI_go: ");
+        Turn_print(&ai->bestTakeTurn);
+        for (Cards c = Cards_first(Player_couldDraw(ai->player)); c != 0; c = Cards_next(Player_couldDraw(ai->player), c)) {
+            Card card = Cards_toCard(c);
+            printf("AI_go: ");
+            Turn_print(&ai->bestDrawTurn[card]);
+        }
+    }
+    
     if (DEB >= 1) {
-        printf("AI: draw = %d  take = %d\n", averageDrawEval, bestTakeEval);
+        printf("AI_go: average draw = %d  best take = %d\n", averageDrawEval, bestTakeEval);
     }
 
     if (bestTakeEval > averageDrawEval) {
@@ -134,6 +180,11 @@ void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn) {
         } else {
             // Try each possible discard
             for (Cards c = Cards_first(player->hand); c != 0; c = Cards_next(player->hand, c)) {
+                if (c == player->turn.taken.allCards && !Meld_cards(&player->turn.meld)) {
+                    // We can not discard a just-taken card without a meld.
+                    continue;
+                }
+                
                 Player_discard(player, c);
                 player->turn.eval = AI_evaluate(ai);
                 Turn_max(bestTurn, &player->turn);
@@ -143,7 +194,6 @@ void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn) {
 
         Player_undoMeld(player, &ai->melds[i]);
     }
-    // Turn_print(bestTurn );
 }
 
 void AI_generateMelds(AI *ai) {

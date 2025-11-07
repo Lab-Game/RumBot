@@ -9,6 +9,9 @@
 #include "game.h"
 #include "ai.h"
 
+int DEB = 0;  // Debug level (0=none, 1=some, 2=more, 3=lots)
+int POV = 0;  // Print debug from current player's point of view
+
 void Cards_test(void) {
     puts("\nTesting Cards...");
     Cards cards = Cards_fromString("aC TC 5D 6D 2H JH 6S KS AS");

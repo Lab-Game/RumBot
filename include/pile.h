@@ -10,6 +10,7 @@
 typedef struct {
     Cards cards[52];
     int size;
+    Cards allCards;
 } Pile;
 
 // Return the number of cards in the pile.
@@ -21,12 +22,15 @@ static inline int Pile_size(Pile *pile) {
 static inline void Pile_push(Pile *pile, Cards card) {
     assert(pile->size < 52);
     pile->cards[pile->size++] = card;
+    pile->allCards |= card;
 }
 
 // Remove and return the card from the top of the pile.
 static inline Cards Pile_pop(Pile *pile) {
     assert(pile->size >= 1);
-    return pile->cards[--pile->size];
+    Cards c = pile->cards[--pile->size];
+    pile->allCards &= ~c;
+    return c;
 }
 
 static inline Cards Pile_peek(Pile *pile) {
@@ -37,6 +41,7 @@ static inline Cards Pile_peek(Pile *pile) {
 // Initialize the pile to be empty.
 static inline void Pile_init(Pile *pile) {
     pile->size = 0;
+    pile->allCards = 0;
 }
 
 // Put a full deck of cards (with only high aces) into the pile in sorted order.
