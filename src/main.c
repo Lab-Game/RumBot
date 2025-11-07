@@ -5,50 +5,40 @@
 #include "game.h"
 #include "ai.h"
 
-int DEB = 1;  // Debug level (0=none, 1=some, 2=more, 3=lots)
+int DEB = 0;  // Debug level (0=none, 1=some, 2=more, 3=lots)
 int POV = 1;  // Print debug from current player's point of view
 
-void playGame(AI *ais[]) {
-    Game game;
-    Game_init(&game);
+void playGame(AI *ais[], Game *game) {
     for (int i = 0; i < NUM_PLAYERS; ++i) {
-        AI_join(ais[i], &game, Game_player(&game, i));
+        AI_join(ais[i], game, Game_player(game, i));
     }
 
     if (DEB >= 1) {
         printf("\n=== NEW GAME ===\n");
     }
 
-    while (!game.isOver) {
+    while (!game->isOver) {
         if (DEB >= 1) {
-            printf("\n=== Player %d ===\n", game.currentPlayer->id);
-            Game_print(&game);
+            printf("\n=== Player %d ===\n", game->currentPlayer->id);
+            Game_print(game);
         }
-        
-        AI *ai = ais[game.currentPlayerId];
 
-        int temp_DEB = DEB;
-        DEB = 2;
+        AI *ai = ais[game->currentPlayerId];
+
         Turn *turn = AI_go(ai);
-        DEB = temp_DEB;
 
         if (DEB >= 1) {
             printf("AI: ");
             Turn_print(turn);
         }
 
-        Player_play(game.currentPlayer, turn);
+        Player_play(game->currentPlayer, turn);
 
         if (DEB >= 2) {
-            Player_print(game.currentPlayer);
+            Player_print(game->currentPlayer);
         }
 
-        temp_DEB = DEB;
-        DEB = 4;
-        AI_evaluate(ai);
-        DEB = temp_DEB;
-
-        Game_nextTurn(&game);
+        Game_nextTurn(game);
 
         if (DEB >= 1) {
             printf("\n");
@@ -57,7 +47,7 @@ void playGame(AI *ais[]) {
 
     if (DEB >= 1) {
         printf("\n=== Game Over ===\n");
-        Game_print(&game);
+        Game_print(game);
     }
 
     // Add scores to AI total scores
@@ -68,32 +58,66 @@ void playGame(AI *ais[]) {
 
 int main(void) {
     AI ais[NUM_PLAYERS];
+    AI *shuffled_ais[NUM_PLAYERS];
 
     AI_init(&ais[0], 1);
     AI_init(&ais[1], 1);
-    AI_init(&ais[2], 1);
+    AI_init(&ais[2], 2);
+    
+    const int numGames = 100000;
 
-    AI *shuffled_ais[NUM_PLAYERS];
-    for (int i = 0; i < NUM_PLAYERS; ++i) {
-        shuffled_ais[i] = &ais[i];
-    }
+    Game game;
+    Game copy;
+    for (int i = 0; i < numGames; ++i) {
+        Game_init(&game);
 
-    for (int i = 0; i < 1; ++i) {
-        // Shuffle the ais
-        for (int j = NUM_PLAYERS - 1; j > 0; --j) {
-            int k = arc4random_uniform(j + 1);
-            AI *temp = shuffled_ais[j];
-            shuffled_ais[j] = shuffled_ais[k];
-            shuffled_ais[k] = temp;
+        // Play a copy of the game with each possible AI ordering
+        Game_copy(&game, &copy);
+        shuffled_ais[0] = &ais[0];
+        shuffled_ais[1] = &ais[1];
+        shuffled_ais[2] = &ais[2];
+        playGame(shuffled_ais, &copy);
+
+        Game_copy(&game, &copy);
+        shuffled_ais[0] = &ais[0];
+        shuffled_ais[1] = &ais[2];
+        shuffled_ais[2] = &ais[1];
+        playGame(shuffled_ais, &copy);
+
+        Game_copy(&game, &copy);
+        shuffled_ais[0] = &ais[1];
+        shuffled_ais[1] = &ais[0];
+        shuffled_ais[2] = &ais[2];
+        playGame(shuffled_ais, &copy);
+
+        Game_copy(&game, &copy);
+        shuffled_ais[0] = &ais[1];
+        shuffled_ais[1] = &ais[2];
+        shuffled_ais[2] = &ais[0];
+        playGame(shuffled_ais, &copy);
+
+        Game_copy(&game, &copy);
+        shuffled_ais[0] = &ais[2];
+        shuffled_ais[1] = &ais[0];
+        shuffled_ais[2] = &ais[1];
+        playGame(shuffled_ais, &copy);
+
+        Game_copy(&game, &copy);
+        shuffled_ais[0] = &ais[2];
+        shuffled_ais[1] = &ais[1];
+        shuffled_ais[2] = &ais[0];
+        playGame(shuffled_ais, &copy);
+
+        if (i % 1000 == 0) {
+            for (int j = 0; j < NUM_PLAYERS; ++j) {
+                printf("AI %d (mode %d): %8d %8.3f\n", j, ais[j].mode, ais[j].totalScore, ais[j].totalScore / (6.0 * (i + 1)));
+            }
+            printf("\n");
         }
-        playGame(shuffled_ais);
     }
 
     // Print final AI scores
-    printf("Final AI scores:\n");
-    for (int i = 0; i < NUM_PLAYERS; ++i) {
-        printf("AI %d (mode %d): %6d\n", i, ais[i].mode, ais[i].totalScore);
-    }
+
 
     return 0;
 }

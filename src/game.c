@@ -36,6 +36,15 @@ void Game_init(Game *game) {
     game->isOver = false;
 }
 
+void Game_copy(Game *original, Game *copy) {
+    *copy = *original;
+    // Fix up player->game pointers
+    for (int i = 0; i < copy->numPlayers; ++i) {
+        copy->players[i].game = copy;
+    }
+    copy->currentPlayer = &copy->players[copy->currentPlayerId];
+}
+
 Player *Game_player(Game *game, int num) {
     assert(num >= 0 && num < game->numPlayers);
     return &(game->players[num]);

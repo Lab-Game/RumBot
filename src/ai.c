@@ -14,7 +14,7 @@ int AI_evaluate(AI *ai) {
         // in opponents' hands.  TODO:  Use actual points for known cards.
         int penaltyCentipoints = 0;
         for (int i = 0; i < game->numPlayers; ++i) {
-            penaltyCentipoints += Cards_size(Game_player(game, i)->hand) * 700;
+            penaltyCentipoints += Cards_size(Game_player(game, i)->hand) * 700);
         }
         penaltyCentipoints /= (game->numPlayers - 1);
 
@@ -23,10 +23,10 @@ int AI_evaluate(AI *ai) {
         return eval;
     }
 
-    if (ai->mode == 1) {
+    if (ai->mode >= 1) {
         int handEval = AI_evaluateHand(player->hand, &game->meld, Player_couldDraw(player));
         int handPoints = Cards_points(player->hand);
-        int eval = base_centipoints + handEval * 0.5 + handPoints * 2;
+        int eval = base_centipoints + handEval * 0.5 + handPoints;
 
         if (DEB >= 3) {
             printf("AI_evaluate: base centipoints = %d\n", base_centipoints);
