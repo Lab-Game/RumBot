@@ -71,33 +71,42 @@ void Cards_test(void) {
 void Pile_test(void) {
     puts("\nTesting Pile...");
     Pile pile;
+
     Pile_init(&pile);
     assert(Pile_size(&pile) == 0);
+    assert(pile.allCards == 0);
+
     Pile_fullDeck(&pile);
-    printf("Expected:  2C 3C 4C 5C 6C 7C 8C 9C TC JC QC KC AC 2D 3D 4D 5D 6D 7D 8D 9D TD JD QD KD AD 2H 3H 4H 5H 6H 7H 8H 9H TH JH QH KH AH 2S 3S 4S 5S 6S 7S 8S 9S TS JS QS KS AS\n");
-    printf("Actual:    ");
-    Pile_print(&pile);
-    printf("\n");
+    assert(Pile_size(&pile) == 52);
+    assert(pile.allCards == FULL_DECK);
+
+    Pile_shuffle(&pile);
+    assert(Pile_size(&pile) == 52);
+    assert(pile.allCards == FULL_DECK);
+
     assert(pile.size == 52);
     for (int i = 0; i < 52; ++i) {
         Cards card = Pile_pop(&pile);
         assert(Cards_size(card) == 1);
     }
     assert(Pile_size(&pile) == 0);
-    printf("Expected:  (no cards)\n");
-    printf("Actual:    ");
-    Pile_print(&pile);
-    printf("\n");
+    assert(pile.allCards == 0);
+
     Pile_push(&pile, Cards_fromString("KD"));
     Pile_push(&pile, Cards_fromString("QS"));
     Pile_push(&pile, Cards_fromString("7H"));
     Pile_push(&pile, Cards_fromString("9H"));
     Pile_push(&pile, Cards_fromString("8C"));
-    printf("Expected:  KD QS 7H 9H 8C\n");
-    printf("Actual:    ");
-    Pile_print(&pile);
-    printf("\n");
     assert(Pile_size(&pile) == 5);
+    assert(pile.allCards == Cards_fromString("KD QS 7H 9H 8C"));
+
+    Cards peeked = Pile_peek(&pile);
+    assert(peeked == Cards_fromString("8C"));
+
+    Cards popped = Pile_pop(&pile); // remove 8C
+    assert(popped == Cards_fromString("8C"));
+    assert(Pile_size(&pile) == 4);
+    assert(pile.allCards == Cards_fromString("KD QS 7H 9H"));
 }
 
 void Meld_test(void) {
@@ -162,13 +171,14 @@ void Game_test(void) {
     puts("\nTesting Game...");
     Game game;
     Game_init(&game);
+
     assert(game.numPlayers == NUM_PLAYERS);
     assert(game.currentPlayerId == 0);
     assert(Pile_size(&game.drawPile) == 52 - NUM_PLAYERS * 7 - 1);
     assert(Pile_size(&game.discardPile) == 1);
     assert(game.meld.runs == 0);
     assert(game.meld.sets == 0);
-    assert(game.everDiscarded == 0);
+    assert(game.everDiscarded == Pile_peek(&game.discardPile));
     for (int i = 0; i < game.numPlayers; ++i) {
         Player *player = Game_player(&game, i);
         assert(player->game == &game);

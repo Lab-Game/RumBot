@@ -10,12 +10,12 @@ void Game_init(Game *game) {
     for (int i = 0; i < game->numPlayers; ++i) {
         Player_init(&game->players[i], game, i);
     }
-    Pile_fullDeck(&game->drawPile);
     Pile_init(&game->discardPile);
     Meld_init(&game->meld);
     game->everDiscarded = 0;
 
     // Shuffle the draw pile
+    Pile_fullDeck(&game->drawPile);
     Pile_shuffle(&game->drawPile);
 
     // Deal 7 cards to each player

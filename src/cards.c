@@ -28,7 +28,7 @@ void Card_print(Card c) {
 
 Cards Cards_fromString(const char *str) {
     const char *values = "a23456789TJQKA";
-    const char *suits = "CDHS";
+    const char *suits = "CDSH";
     Cards cards = 0;
 
     if (!*str) {

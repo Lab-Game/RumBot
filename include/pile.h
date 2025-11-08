@@ -18,9 +18,12 @@ static inline int Pile_size(Pile *pile) {
     return pile->size;
 }
 
+void Pile_print(Pile *pile);
+
 // Add a card to the top of the pile.
 static inline void Pile_push(Pile *pile, Cards card) {
-    assert(pile->size < 52);
+    assert(!(card & ~FULL_DECK)); // card is legal
+    assert(!(pile->allCards & card)); // card not already in pile
     pile->cards[pile->size++] = card;
     pile->allCards |= card;
 }
@@ -47,7 +50,7 @@ static inline void Pile_init(Pile *pile) {
 // Put a full deck of cards (with only high aces) into the pile in sorted order.
 void Pile_fullDeck(Pile *pile);
 
-// Shuffle the cards in the pile randomly.
+// Shuffle the cards in the pile.
 void Pile_shuffle(Pile *pile);
 
 // Print the cards in the pile as a space-separated list of card codes.

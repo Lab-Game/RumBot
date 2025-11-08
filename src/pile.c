@@ -4,7 +4,7 @@
 #include "pile.h"
 
 void Pile_fullDeck(Pile *pile) {
-    pile->size = 0;
+    Pile_init(pile);
     for (Cards c = Cards_first(FULL_DECK); c != 0; c = Cards_next(FULL_DECK, c)) {
         Pile_push(pile, c);
     }
@@ -30,6 +30,7 @@ void Pile_print(Pile *pile) {
         Card_print(Cards_toCard(card));
         printed = true;
     }
+
     if (!printed) {
         printf("(empty pile)");
     }
