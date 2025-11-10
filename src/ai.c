@@ -1,25 +1,27 @@
+#include <stdlib.h>
 #include <stdio.h>
 
 #include "ai.h"
 #include "game.h"
 
-int AI_evaluate(AI *ai) {
+const int unknownCardCentipoints = 700;
+
+int AI_evaluateGame(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
     int base_centipoints = player->score * 100;
 
     if (!player->hand) {
+        // Player went out
         // Player went out.  Give 700 centipoints per card remaining
         // in opponents' hands.  TODO:  Use actual points for known cards.
-        int penaltyCentipoints = 0;
+        int penaltyTotal = 0;
         for (int i = 0; i < game->numPlayers; ++i) {
-            penaltyCentipoints += Cards_size(Game_player(game, i)->hand) * 700;
+            penaltyTotal += Cards_size(Game_player(game, i)->hand) * unknownCardCentipoints;
         }
-        penaltyCentipoints /= (game->numPlayers - 1);
-
-        int eval = base_centipoints + penaltyCentipoints;
-
+        int penaltyAverage = penaltyTotal / (game->numPlayers - 1);
+        int eval = base_centipoints + penaltyAverage;
         return eval;
     }
 
@@ -28,15 +30,14 @@ int AI_evaluate(AI *ai) {
     }
 
     if (ai->mode == 1) {
-        int handEval = AI_evaluateHand(player->hand, &game->meld, Player_couldDraw(player));
+        Cards drawableCards = Player_couldDraw(player);
+        int handPlayability = AI_evaluateHandPlayability(player->hand, &game->meld, drawableCards);
         int handPoints = Cards_points(player->hand);
-        int eval = base_centipoints + handEval * 0.5 + handPoints;
+        int eval = base_centipoints + handPlayability * 0.5 + handPoints;
 
         if (DEB >= 3) {
-            printf("AI_evaluate: base centipoints = %d\n", base_centipoints);
-            printf("AI_evaluate: handEval * 0.5 = %d\n", (int)(handEval * 0.5));
-            printf("AI_evaluate: handPoints * 2 = %d\n", handPoints * 2);
-            printf("AI_evaluate: eval = %d\n", eval);
+            printf("AI_evaluateGame: %d base + handPlayability %d * 0.5 + handPoints %d = eval %d\n",
+                     base_centipoints, handPlayability, handPoints, eval);
         }
 
         return eval;
@@ -45,20 +46,19 @@ int AI_evaluate(AI *ai) {
     return base_centipoints;
 }
 
-int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable) {
+int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
     // Evaluate the quality of a hand given the table meld and
     // cards that could possibly be drawn.  In a good hand, there
     // are many possible draws that enable many playable cards.
     // So, for each drawable card, we'll estimate the number of
     // centipoints (cpts) that can be played from the hand into the meld.
     // Then we'll average over all playable cards.
-
     if (DEB >= 3) {
-        printf("AI_evaluateHand: hand = ");
+        printf("AI_evaluateHandPlayability: hand = ");
         Cards_print(hand);
-        printf("\nAI_evaluateHand: meld = ");
+        printf(" meld = ");
         Meld_printCompact(meld);
-        printf("\nAI_evaluateHand: drawable = ");
+        printf(" drawable = ");
         Cards_print(drawable);
         printf("\n");
     }
@@ -72,7 +72,7 @@ int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable) {
 
         if (DEB >= 4) {
             if (playable) {
-                printf("AI_evaluateHand: ");
+                printf("AI_evaluateHandPlayability:   draw: ");
                 Card_print(Cards_toCard(c));
                 printf(" -> ");
                 Cards_print(playable);
@@ -83,12 +83,12 @@ int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable) {
         totalCentipoints += centipoints;
     }
 
-    // Return the average centipoints per playable card
-    int numPlayable = Cards_size(drawable);
-    int averageCentipoints = numPlayable > 0 ? totalCentipoints / numPlayable : 0;
+    // Return the average centipoints per drawable cards
+    int numDrawable = Cards_size(drawable);
+    int averageCentipoints = numDrawable > 0 ? totalCentipoints / numDrawable : 0;
 
     if (DEB >= 3) {
-        printf("AI_evaluateHand: avg = %d\n", averageCentipoints);
+        printf("AI_evaluateHandPlayability: avg = %d\n", averageCentipoints);
     }
 
     return averageCentipoints;
@@ -107,8 +107,8 @@ void AI_join(AI *ai, Game *game, Player *player) {
 Turn *AI_go(AI *ai) {
     Game *game = ai->game;
 
-    int averageDrawEval = AI_findBestDrawTurns(ai);
     int bestTakeEval = AI_findBestTakeTurn(ai);
+    int averageDrawEval = AI_findBestDrawTurns(ai);
 
     if (DEB >= 2) {
         printf("AI_go: ");
@@ -149,26 +149,65 @@ int AI_findBestDrawTurns(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
-    Cards drawable = Player_couldDraw(player);
-
+    // Go through all cards in the draw pile.
+    // Swap each card to the top of the draw pile,
+    // evaluate the scenario, and swap back.
     int totalEval = 0;
-    for (Cards c = Cards_first(drawable); c != 0; c = Cards_next(drawable, c)) {
-        Card card = Cards_toCard(c);
-        Turn_init(&ai->bestDrawTurn[card]);
+    int numEvals = 0;
+    Pile *drawPile = &game->drawPile;
+    for (int i = 0; i < Pile_size(drawPile); ++i) {
+        Pile_swapToTop(drawPile, i);
+        totalEval += AI_tryDrawTurn(ai);
+        numEvals += 1;
+        Pile_swapToTop(drawPile, i);
+    }
 
-        // Here, we'll crudely simulate drawing this card by simply adding
-        // a copy to the top of the deck.  This won't work if we simulate
-        // subsequent turns, because there are two copies of the card in play.
-        Pile_push(&game->drawPile, c);
-        Player_draw(player);
-        AI_bestMeldAndDiscard(ai, &ai->bestDrawTurn[card]);
-        totalEval += ai->bestDrawTurn[card].eval;
-        Player_undoDraw(player);
-        Pile_pop(&game->drawPile);
+    // Now go through all other players' hands.
+    // Swap each card that was not previously discarded
+    // into the draw pile, evaluate the scenario,
+    // and swap back.
+    for (int p = 0; p < game->numPlayers; ++p) {
+        Player *otherPlayer = Game_player(game, p);
+        if (otherPlayer == player) {
+            continue;
+        }
+        for (Cards c = Cards_first(otherPlayer->hand); c != 0; c = Cards_next(otherPlayer->hand, c)) {
+            if (Cards_has(game->everDiscarded, c)) {
+                // This card has been discarded before.
+                continue;
+            }
+
+            // Swap this card into the draw pile.
+            Pile_push(drawPile, c);
+            Cards_remove(&otherPlayer->hand, c);
+
+            totalEval += AI_tryDrawTurn(ai);
+            numEvals += 1;
+
+            // Swap the card back.
+            Cards_add(&otherPlayer->hand, c);
+            Pile_pop(drawPile);
+        }
     }
 
     // Return the average evaluation across all possible draws.
-    return totalEval / Cards_size(drawable);
+    return totalEval / numEvals;
+}
+
+int AI_tryDrawTurn(AI *ai) {
+    // Simulate drawing the top card of the draw pile,
+    // find the best meld and discard for that scenario,
+    // and return the evaluation of that turn.
+    // This is used when the deck has been fixed to place
+    // a specific card on top.
+    Player *player = ai->player;
+    Cards drawCard = Player_draw(player);
+    Card card = Cards_toCard(drawCard);
+    Turn *bestTurn = &ai->bestDrawTurn[card];
+    Turn_init(bestTurn);
+    AI_bestMeldAndDiscard(ai, bestTurn);
+    Player_undoDraw(player);
+    return bestTurn->eval;
 }
 
 void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn) {
@@ -179,7 +218,7 @@ void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn) {
 
         if (Cards_size(player->hand) == 0) {
             // No discard possible
-            player->turn.eval = AI_evaluate(ai);
+            player->turn.eval = AI_evaluateGame(ai);
             Turn_max(bestTurn, &player->turn);
         } else {
             // Try each possible discard
@@ -190,7 +229,7 @@ void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn) {
                 }
                 
                 Player_discard(player, c);
-                player->turn.eval = AI_evaluate(ai);
+                player->turn.eval = AI_evaluateGame(ai);
                 Turn_max(bestTurn, &player->turn);
                 Player_undoDiscard(player);
             }

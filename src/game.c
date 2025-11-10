@@ -132,6 +132,11 @@ void Player_undoDraw(Player *player) {
     player->turn.draw = 0;
 }
 
+Cards Player_couldDraw(Player *player) {
+    Game *game = player->game;
+    return FULL_DECK & ~(game->everDiscarded | player->hand | Meld_cards(&game->meld));
+}
+
 Cards Player_take(Player *player) {
     assert(Pile_size(&player->game->discardPile) >= 1);
     Cards card = Pile_pop(&player->game->discardPile);
@@ -241,10 +246,6 @@ void Player_play(Player *player, Turn *turn) {
     if (turn->discard) {
         Player_discard(player, turn->discard);
     }
-}
-
-Cards Player_couldDraw(Player *player) {
-    return FULL_DECK & ~(player->game->everDiscarded | player->hand | Meld_cards(&player->game->meld));
 }
 
 void Player_print(Player *player) {

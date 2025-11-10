@@ -36,6 +36,8 @@ static inline Cards Pile_pop(Pile *pile) {
     return c;
 }
 
+void Pile_swapToTop(Pile *pile, int index);
+
 static inline Cards Pile_peek(Pile *pile) {
     assert(pile->size >= 1);
     return pile->cards[pile->size - 1];

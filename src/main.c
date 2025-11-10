@@ -5,7 +5,7 @@
 #include "game.h"
 #include "ai.h"
 
-int DEB = 1;  // Debug level (0=none, 1=some, 2=more, 3=lots)
+int DEB = 2;  // Debug level (0=none, 1=some, 2=more, 3=lots)
 int POV = 1;  // Print debug from current player's point of view
 
 void playGame(AI *ais[], Game *game) {
@@ -24,7 +24,6 @@ void playGame(AI *ais[], Game *game) {
         }
 
         AI *ai = ais[game->currentPlayerId];
-
         Turn *turn = AI_go(ai);
 
         if (DEB >= 1) {
@@ -101,7 +100,7 @@ int main(void) {
     AI ais[NUM_PLAYERS];
     AI *ai_ptrs[NUM_PLAYERS];
 
-    AI_init(&ais[0], 0);
+    AI_init(&ais[0], 1);
     AI_init(&ais[1], 1);
     AI_init(&ais[2], 1);
     

@@ -19,6 +19,13 @@ void Pile_shuffle(Pile *pile) {
     }
 }
 
+void Pile_swapToTop(Pile *pile, int index) {
+    assert(index >= 0 && index < pile->size);
+    Cards temp = pile->cards[index];
+    pile->cards[index] = pile->cards[pile->size - 1];
+    pile->cards[pile->size - 1] = temp;
+}
+
 void Pile_print(Pile *pile) {
     bool printed = false;
     for (int i = 0; i < pile->size; ++i) {

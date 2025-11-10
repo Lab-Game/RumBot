@@ -9,7 +9,7 @@
 #include "game.h"
 #include "ai.h"
 
-int DEB = 0;  // Debug level (0=none, 1=some, 2=more, 3=lots)
+int DEB = 4;  // Debug level (0=none, 1=some, 2=more, 3=lots)
 int POV = 0;  // Print debug from current player's point of view
 
 void Cards_test(void) {
@@ -206,7 +206,7 @@ void AI_test(void) {
     AI_generateMelds(&ai);
     assert(ai.numMelds == 2);
 
-    // Test AI_evaluateHand
+    // Test AI_evaluateHandPlayability
     {
         // Consider a pretty good hand
         Cards hand = Cards_fromString("3C 5C 6C AD 6H 7H TC JC KC AC");
@@ -215,7 +215,7 @@ void AI_test(void) {
         Meld_addSet(&meld, Cards_fromString("8C 8D 8H"));
         Meld_addRun(&meld, Cards_fromString("8S 9S TS"));
         Cards drawable = FULL_DECK & ~hand & ~Meld_cards(&meld) & ~Cards_fromString("5H 8D JD");
-        int eval = AI_evaluateHand(hand, &meld, drawable);
+        int eval = AI_evaluateHandPlayability(hand, &meld, drawable);
         assert(eval == 779);
     }
 
@@ -227,7 +227,7 @@ void AI_test(void) {
         Meld_addSet(&meld, Cards_fromString("8C 8D 8H"));
         Meld_addRun(&meld, Cards_fromString("8S 9S TS"));
         Cards drawable = FULL_DECK & ~hand & ~Meld_cards(&meld) & ~Cards_fromString("5H 8D JD");
-        int eval = AI_evaluateHand(hand, &meld, drawable);
+        int eval = AI_evaluateHandPlayability(hand, &meld, drawable);
         assert(eval == 40);
     }
 }
