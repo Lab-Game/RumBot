@@ -25,6 +25,7 @@ typedef struct AIStruct {
 void AI_init(AI *ai, int mode);
 void AI_join(AI *ai, Game *game, Player *player);
 Turn *AI_go(AI *ai);
+Turn *AI_goDeep(AI *ai);
 int AI_findBestTakeTurn(AI *ai);
 int AI_findBestDrawTurns(AI *ai);
 int AI_tryDrawTurn(AI *ai);
@@ -34,7 +35,6 @@ int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable);
 int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable);
 void AI_generateMelds(AI *ai);
 void AI_generateMeldsRec(AI *ai, Plays *accepted, Plays *rejected);
-void AI_printMelds(AI *ai);
 
 // Static function to evaluate hand quality given a meld.
 int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable);

@@ -45,6 +45,44 @@ void Game_copy(Game *original, Game *copy) {
     copy->currentPlayer = &copy->players[copy->currentPlayerId];
 }
 
+void Game_permute(Game *game, Game *permuted) {
+    // Make a copy of the current game, but with all cards
+    // unknown to the current player permuted.
+    Game_copy(game, permuted);
+    Player *player = permuted->currentPlayer;
+
+    int handSize[NUM_PLAYERS];
+    for (int i = 0; i < permuted->numPlayers; ++i) {
+        if (i != player->id) {
+            // Take all cards out of other players' hands that were never discarded.
+            Player *other = &permuted->players[i];
+            handSize[i] = Cards_size(other->hand);
+            Cards withdrawn = other->hand & ~game->everDiscarded;
+            Cards_remove(&other->hand, withdrawn);
+
+            // Put them into the draw pile
+            for (Cards c = Cards_first(withdrawn); c != 0; c = Cards_next(withdrawn, c)) {
+                Pile_push(&permuted->drawPile, c);
+            }
+        }
+    }
+
+    // Shuffle the draw pile
+    Pile_shuffle(&permuted->drawPile);
+
+    // Deal back to other players
+    for (int i = 0; i < permuted->numPlayers; ++i) {
+        if (i != player->id) {
+            Player *other = &permuted->players[i];
+            int numToDeal = handSize[i] - Cards_size(other->hand);
+            for (int j = 0; j < numToDeal; ++j) {
+                Cards card = Pile_pop(&permuted->drawPile);
+                Cards_add(&other->hand, card);
+            }
+        }
+    }
+}
+
 Player *Game_player(Game *game, int num) {
     assert(num >= 0 && num < game->numPlayers);
     return &(game->players[num]);

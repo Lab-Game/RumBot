@@ -6,6 +6,16 @@
 
 const int unknownCardCentipoints = 700;
 
+void AI_init(AI *ai, int mode) {
+    ai->mode = mode;
+    ai->totalScore = 0;
+}
+
+void AI_join(AI *ai, Game *game, Player *player) {
+    ai->game = game;
+    ai->player = player;
+}
+
 int AI_evaluateGame(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
@@ -13,7 +23,6 @@ int AI_evaluateGame(AI *ai) {
     int base_centipoints = player->score * 100;
 
     if (!player->hand) {
-        // Player went out
         // Player went out.  Give 700 centipoints per card remaining
         // in opponents' hands.  TODO:  Use actual points for known cards.
         int penaltyTotal = 0;
@@ -94,15 +103,7 @@ int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
     return averageCentipoints;
 }
 
-void AI_init(AI *ai, int mode) {
-    ai->mode = mode;
-    ai->totalScore = 0;
-}
 
-void AI_join(AI *ai, Game *game, Player *player) {
-    ai->game = game;
-    ai->player = player;
-}
 
 Turn *AI_go(AI *ai) {
     Game *game = ai->game;
@@ -127,6 +128,9 @@ Turn *AI_go(AI *ai) {
     if (bestTakeEval > averageDrawEval) {
         return &ai->bestTakeTurn;
     } else {
+        // While cute, this is sort of problematic.  The AI shouldn't actually be
+        // able to see the top card in the draw pile.  Seems like the caller
+        // should be doing this lookup.
         return &ai->bestDrawTurn[Cards_toCard(Pile_peek(&game->drawPile))];
     }
 }
@@ -337,11 +341,3 @@ void AI_generateMeldsRec(AI *ai, Plays *accepted, Plays *rejected) {
     }
 }
 
-void AI_printMelds(AI *ai) {
-    printf("\nGenerated %d possible melds:\n", ai->numMelds);
-    for (int i = 0; i < ai->numMelds; ++i) {
-        printf("%d: ", i + 1);
-        Meld_printCompact(&ai->melds[i]);
-        printf("\n");
-    }
-}

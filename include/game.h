@@ -39,6 +39,7 @@ struct GameStruct {
 
 void Game_init(Game *game);
 void Game_copy(Game *original, Game *copy);
+void Game_permute(Game *game, Game *permuted);
 Player *Game_player(Game *game, int num);
 void Game_nextTurn(Game *game);
 void Game_print(Game *game);
