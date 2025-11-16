@@ -67,8 +67,8 @@ static inline void Cards_add(Cards *cards, Cards c) {
 }
 
 // Remove all cards in set c from the Cards set pointed to by cards.
+// Cards in c are not required to be present in the hand.
 static inline void Cards_remove(Cards *cards, Cards c) {
-    assert(Cards_has(*cards, c));
     *cards &= ~c;
 }
 

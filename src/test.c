@@ -5,6 +5,7 @@
 #include "cards.h"
 #include "pile.h"
 #include "meld.h"
+#include "meldlist.h"
 #include "plays.h"
 #include "game.h"
 #include "ai.h"
@@ -127,6 +128,26 @@ void Meld_test(void) {
     assert(Cards_size(Meld.sets) == 7);
 }
 
+void MeldList_test(void) {
+    puts("\nTesting MeldList...");
+
+    MeldList list;
+    Cards hand = Cards_fromString("2C 5C 6C 9H TH JH QH");
+
+    Meld tableMeld;
+    Meld_init(&tableMeld);
+    Meld_addRun(&tableMeld, Cards_fromString("aC 7C"));
+    Cards mustMeld = 0;
+
+    MeldList_fill(&list, hand, &tableMeld, mustMeld);
+    printf("Generated %d melds:\n", list.size);
+    for (int i = 0; i < list.size; ++i) {
+        printf("Meld %d: ", i + 1);
+        Meld_print(&list.melds[i]);
+    }
+    assert(list.size > 0);
+}
+
 void Plays_test(void) {
     puts("\nTesting Plays...");
 
@@ -236,6 +257,7 @@ int main(void) {
     Cards_test();
     Pile_test();
     Meld_test();
+    MeldList_test();
     Plays_test();
     Game_test();
     AI_test();
