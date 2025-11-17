@@ -29,9 +29,10 @@ int AI_findBestTakeTurn(AI *ai);
 int AI_findBestDrawTurns(AI *ai);
 int AI_tryDrawTurn(AI *ai);
 void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn);
-int AI_evaluate(AI *ai);
-int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable);
+int AI_evaluateGame(AI *ai);
 int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable);
+int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable);
+
 
 // Static function to evaluate hand quality given a meld.
 int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable);

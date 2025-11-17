@@ -25,7 +25,9 @@ typedef struct {
     Cards handExt;
     Cards noRun;
     Cards noSet;
+    Meld *oldTable;
     Meld table;
+    Meld meld;
     Cards mustMeld;
     MeldList *list;
 } MeldData;
@@ -33,22 +35,19 @@ typedef struct {
 void MeldList_fillRec(MeldData *data) {
     if (MeldList_isFull(data->list)) {
         // No space for additional meld options.  Stop recursing.
-        printf("Overflow!\n");
         return;
     }
 
     if (data->handExt == 0 ) {
-        // No more cards in hand.
-        Meld_printCompact(&data->table);
+        assert(Cards_has(Meld_cards(&data->table), data->mustMeld));
 
         if (Cards_has(Meld_cards(&data->table), data->mustMeld)) {
-            // The must-be-played card has been played.  Add this meld to the list.
-            MeldList_add(data->list, &data->table);
-            printf(" - accept\n");
-        } else {
-            printf(" - reject\n");
+            // The must-be-played card has been played.  Add all cards
+            // newly-added to the table to the meld option list.
+            data->meld.runs = data->table.runs & ~data->oldTable->runs;
+            data->meld.sets = data->table.sets & ~data->oldTable->sets;
+            MeldList_add(data->list, &data->meld);
         }
-
         return;
     }
 
@@ -198,6 +197,7 @@ void MeldList_fill(MeldList *list, Cards hand, Meld *table, Cards mustMeld) {
     data.handExt = Cards_addLowAces(hand);
     data.noRun = 0;
     data.noSet = 0;
+    data.oldTable = table;
     data.table = *table;
     data.mustMeld = mustMeld;
     data.list = list;

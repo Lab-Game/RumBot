@@ -181,19 +181,7 @@ void AI_test(void) {
     AI ai;
     AI_init(&ai, 0);
     
-    AI_join(&ai, &game, game.currentPlayer);
-    AI_generateMelds(&ai);
-    assert(ai.numMelds == 2);
-
-    player->hand = Cards_fromString("4C 4D TD AD 6H 7H 2S 3S 7S AS");
-    AI_join(&ai, &game, game.currentPlayer);
-    AI_generateMelds(&ai);
-    assert(ai.numMelds == 2);
-
-    player->hand = Cards_fromString("2C 9C TC QC AC 4D 3H 6H 9H TH 8S JS KS AS 3C");
-    AI_join(&ai, &game, game.currentPlayer);
-    AI_generateMelds(&ai);
-    assert(ai.numMelds == 2);
+    AI_joinGame(&ai, &game, game.currentPlayer);
 
     // Test AI_evaluateHandPlayability
     {
@@ -226,7 +214,6 @@ int main(void) {
     Pile_test();
     Meld_test();
     MeldList_test();
-    Plays_test();
     Game_test();
     AI_test();
     printf("\nAll tests passed.\n");

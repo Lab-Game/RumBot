@@ -6,7 +6,6 @@
 #include "ai.h"
 
 int DEB = 2;  // Debug level (0=none, 1=some, 2=more, 3=lots)
-int POV = 1;  // Print debug from current player's point of view
 
 void playGame(AI *ais[], Game *game) {
     for (int i = 0; i < NUM_PLAYERS; ++i) {

@@ -8,7 +8,7 @@ BUILD_DIR = build
 BIN_DIR   = bin
 
 # entry points (each makes a program)
-PROGS = main test
+PROGS = rumbot test
 
 # discover all .c files under src
 SRCS  := $(wildcard $(SRC_DIR)/*.c)
@@ -17,12 +17,12 @@ SRCS  := $(wildcard $(SRC_DIR)/*.c)
 OBJS  := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 
 # per-program object lists: link each entry point with the common modules
-COMMON_OBJS := $(filter-out $(BUILD_DIR)/main.o $(BUILD_DIR)/test.o, $(OBJS))
+COMMON_OBJS := $(filter-out $(BUILD_DIR)/rumbot.o $(BUILD_DIR)/test.o, $(OBJS))
 
 all: $(addprefix $(BIN_DIR)/,$(PROGS))
 
 # Link rules
-$(BIN_DIR)/main: $(BUILD_DIR)/main.o $(COMMON_OBJS) | $(BIN_DIR)
+$(BIN_DIR)/rumbot: $(BUILD_DIR)/rumbot.o $(COMMON_OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 $(BIN_DIR)/test: $(BUILD_DIR)/test.o $(COMMON_OBJS) | $(BIN_DIR)

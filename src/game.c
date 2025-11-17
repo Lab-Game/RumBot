@@ -129,7 +129,7 @@ void Game_print(Game *game) {
         Player_print(player);
     }
 
-    if (!POV && DEB >= 2) {
+    if (DEB >= 2) {
         // Print all cards in the draw pile
         printf("Draw: ");
         Pile_print(&game->drawPile);
@@ -289,7 +289,7 @@ void Player_play(Player *player, Turn *turn) {
 void Player_print(Player *player) {
     Game *game = player->game;
     printf("Player %d (%3d pts)  ", player->id, player->score);
-    if ((!POV && DEB >= 1) || player == game->currentPlayer) {
+    if (DEB >= 1) {
         Cards_print(player->hand);
     } else if (!player->hand) {
         printf("(no cards)");
