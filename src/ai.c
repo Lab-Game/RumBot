@@ -3,6 +3,7 @@
 
 #include "ai.h"
 #include "game.h"
+#include "scoreboard.h"
 
 const int unknownCardCentipoints = 700;
 
@@ -16,8 +17,26 @@ void AI_joinGame(AI *ai, Game *game, Player *player) {
     ai->player = player;
 }
 
+Turn *AI_goDeep(AI *ai) {
+    // For now, just call AI_go.
+    return AI_go(ai);
+
+    /*
+
+    We'll create a Scoreboard structure that outlines all possible turns
+    from the current game state, evaluate each turn deeply by simulating
+    the resulting game state after that turn, and pick the best turn.
+
+
+
+    */
+}
+
 Turn *AI_go(AI *ai) {
     Game *game = ai->game;
+
+    Scoreboard_fromGame(game);
+    exit(0);
 
     int bestTakeEval = AI_findBestTakeTurn(ai);
     int averageDrawEval = AI_findBestDrawTurns(ai);

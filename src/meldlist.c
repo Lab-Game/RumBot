@@ -194,6 +194,15 @@ void MeldList_fillRec(MeldData *data) {
 void MeldList_fill(MeldList *list, Cards hand, Meld *table, Cards mustMeld) {
     MeldData data;
 
+    /*
+    printf("MeldList_fill: hand = ");
+    Cards_print(hand);
+    printf(" table = ");
+    Meld_printCompact(table);
+    printf(" mustMeld = ");
+    Cards_print(mustMeld);
+    printf("\n"); */
+
     data.handExt = Cards_addLowAces(hand);
     data.noRun = 0;
     data.noSet = 0;
