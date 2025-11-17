@@ -3,7 +3,7 @@
 #include "plays.h"
 
 void Plays_findAll(Plays *plays, Meld *meld, Cards hand, Plays *accepted, Plays *rejected) {
-    Cards lowHand = Cards_lowerAces(hand);
+    Cards lowHand = Cards_addLowAces(hand);
     plays->runCenters = hand & (lowHand << 1) & (hand >> 1);
     plays->setCenters = (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48)));
     plays->runExtensions = ((meld->runs << 1) | (meld->runs >> 1)) & lowHand;
@@ -36,7 +36,7 @@ void Plays_findAll(Plays *plays, Meld *meld, Cards hand, Plays *accepted, Plays 
 }
 
 Cards Plays_findPlayableCards(Cards hand, Meld *meld) {
-    Cards lowHand = Cards_lowerAces(hand);
+    Cards lowHand = Cards_addLowAces(hand);
     Cards runCenters = hand & (lowHand << 1) & (hand >> 1);
     Cards setCenters = (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48)));
     Cards runExtensions = ((meld->runs << 1) | (meld->runs >> 1)) & lowHand;

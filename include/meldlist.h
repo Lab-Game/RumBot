@@ -16,6 +16,5 @@ typedef struct {
 void MeldList_init(MeldList *list);
 bool MeldList_add(MeldList *list, Meld *meld);
 void MeldList_fill(MeldList *list, Cards hand, Meld *tableMeld, Cards mustMeld);
-void MeldList_fillRec(MeldList *list, Cards hand, Cards kept, Meld *tableMeld, Cards mustMeld);
 
 #endif // MELDLIST_H

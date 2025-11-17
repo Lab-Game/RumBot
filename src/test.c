@@ -16,7 +16,7 @@ int POV = 0;  // Print debug from current player's point of view
 void Cards_test(void) {
     puts("\nTesting Cards...");
     Cards cards = Cards_fromString("aC TC 5D 6D 6S KS AS 2H JH");
-    printf("Expected:  aC TC 5D 6D 2H JH 6S KS AS\n");
+    printf("Expected:  aC TC 5D 6D 6S KS AS AH JH\n");
     printf("Actual:    ");
     Cards_print(cards);
     printf("\n");
@@ -40,7 +40,7 @@ void Cards_test(void) {
 
     // Test adding low aces.
     Cards handWithHighAces = Cards_fromString("AC AD AH AS 5H 6H");
-    Cards handWithLowAces = Cards_lowerAces(handWithHighAces);
+    Cards handWithLowAces = Cards_addLowAces(handWithHighAces);
     printf("Expected:  aC AC aD AD aS AS aH 5H 6H AH\n");
     printf("Actual:    ");
     Cards_print(handWithLowAces);
@@ -132,20 +132,26 @@ void MeldList_test(void) {
     puts("\nTesting MeldList...");
 
     MeldList list;
-    Cards hand = Cards_fromString("2C 5C 6C 9H TH JH QH");
+    Cards hand = Cards_fromString("4C 5C 7C 8C 9H TH JH QH 8D JD JC JS");
 
     Meld tableMeld;
     Meld_init(&tableMeld);
-    Meld_addRun(&tableMeld, Cards_fromString("aC 7C"));
+    Meld_addRun(&tableMeld, Cards_fromString("aC 2C 3C"));
+    Meld_addSet(&tableMeld, Cards_fromString("TD TC TS"));
     Cards mustMeld = 0;
 
     MeldList_fill(&list, hand, &tableMeld, mustMeld);
     printf("Generated %d melds:\n", list.size);
     for (int i = 0; i < list.size; ++i) {
-        printf("Meld %d: ", i + 1);
-        Meld_print(&list.melds[i]);
+        printf("Meld %d: ", i);
+        Meld_printCompact(&list.melds[i]);
+        printf("\n");
     }
     assert(list.size > 0);
+
+    Meld_init(&tableMeld);
+    hand = Cards_fromString("2H 3H 4H 5H 6H 7H 8H 9H TH JH QH KH AH");
+    MeldList_fill(&list, hand, &tableMeld, 0);
 }
 
 void Plays_test(void) {

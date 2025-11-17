@@ -46,8 +46,8 @@ void Card_print(Card c);
 // representings runs, the sole place where low aces are meaningful.
 typedef uint64_t Cards;
 
-// Full deck mask (all legal cards).  Only high aces are included.
-#define FULL_DECK 0x3FFE3FFE3FFE3FFEULL
+#define FULL_DECK 0x3FFE3FFE3FFE3FFEULL  // Full deck (high aces only)
+#define LEGAL_CARDS 0x3FFF3FFEFFFF3FFFULL  // All legal cards (high and low aces)
 #define RED_CARDS 0x3FFF00003FFF0000ULL
 #define BLACK_CARDS 0x00003FFF00003FFFULL
 
@@ -77,8 +77,15 @@ static inline int Cards_size(Cards cards) {
     return __builtin_popcountll(cards);
 }
 
+// If there is a low or high ace, add the other ace to the Cards set.
+static inline Cards Cards_extendAces(Cards cards) {
+    const uint64_t kLowAceMask = 0x0001000100010001ULL;
+    const uint64_t kHighAceMask = 0x2000200020002000ULL;
+    return (cards | ((cards & kLowAceMask) << 13) | ((cards & kHighAceMask) >> 13));
+}
+
 // Return a Cards set with a low ace added for every high ace present.
-static inline Cards Cards_lowerAces(Cards cards) {
+static inline Cards Cards_addLowAces(Cards cards) {
     const uint64_t kHighAceMask = 0x2000200020002000ULL;
     return cards | ((cards & kHighAceMask) >> 13);
 }
@@ -92,6 +99,13 @@ static inline Cards Cards_raiseAces(Cards cards) {
 static inline Cards Cards_preferHighAces(Cards cards) {
     const uint64_t kHighAceMask = 0x2000200020002000ULL;
     return cards & ~((cards & kHighAceMask) >> 13);
+}
+
+static inline Cards Cards_sameValue(Cards card) {
+    assert(card != 0);
+    card |= (card << 32) | (card >> 32);
+    card |= (card << 16) | (card >> 16);
+    return card;
 }
 
 // Return the Card corresponding to the lowest card in the Cards set.
