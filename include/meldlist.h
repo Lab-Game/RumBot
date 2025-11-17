@@ -5,7 +5,7 @@
 #include "meld.h"
 #include "plays.h"
 
-#define MELDLIST_MAX_SIZE 100
+#define MELDLIST_MAX_SIZE 1000
 #define MELDLIST_MAXMIN 2
 
 typedef struct {
@@ -15,6 +15,7 @@ typedef struct {
 
 void MeldList_init(MeldList *list);
 bool MeldList_add(MeldList *list, Meld *meld);
+bool MeldList_isFull(MeldList *list);
 void MeldList_fill(MeldList *list, Cards hand, Meld *tableMeld, Cards mustMeld);
 
 #endif // MELDLIST_H

@@ -132,26 +132,22 @@ void MeldList_test(void) {
     puts("\nTesting MeldList...");
 
     MeldList list;
-    Cards hand = Cards_fromString("4C 5C 7C 8C 9H TH JH QH 8D JD JC JS");
 
     Meld tableMeld;
     Meld_init(&tableMeld);
     Meld_addRun(&tableMeld, Cards_fromString("aC 2C 3C"));
     Meld_addSet(&tableMeld, Cards_fromString("TD TC TS"));
-    Cards mustMeld = 0;
+    Cards hand = Cards_fromString("4C 5C 7C 8C 9H TH JH QH 8D JD JC JS");
+    Cards mustMeld = Cards_fromString("JC");
 
     MeldList_fill(&list, hand, &tableMeld, mustMeld);
-    printf("Generated %d melds:\n", list.size);
-    for (int i = 0; i < list.size; ++i) {
-        printf("Meld %d: ", i);
-        Meld_printCompact(&list.melds[i]);
-        printf("\n");
-    }
-    assert(list.size > 0);
+    assert(list.size == MELDLIST_MAX_SIZE || list.size == 33);
 
     Meld_init(&tableMeld);
     hand = Cards_fromString("2H 3H 4H 5H 6H 7H 8H 9H TH JH QH KH AH");
-    MeldList_fill(&list, hand, &tableMeld, 0);
+    mustMeld = Cards_fromString("7H");
+    MeldList_fill(&list, hand, &tableMeld, mustMeld);
+    assert(list.size == MELDLIST_MAX_SIZE || list.size == 258);
 }
 
 void Plays_test(void) {

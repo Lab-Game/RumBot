@@ -77,6 +77,12 @@ static inline int Cards_size(Cards cards) {
     return __builtin_popcountll(cards);
 }
 
+// Return true of the set of cards includes any low aces.
+static inline bool Cards_isLowAce(Cards card) {
+    const uint64_t kLowAceMask = 0x0001000100010001ULL;
+    return (card & kLowAceMask) != 0;
+}
+
 // If there is a low or high ace, add the other ace to the Cards set.
 static inline Cards Cards_extendAces(Cards cards) {
     const uint64_t kLowAceMask = 0x0001000100010001ULL;
