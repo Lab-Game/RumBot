@@ -3,7 +3,7 @@
 
 #include "rumbot.h"
 #include "game.h"
-#include "plays.h"
+#include "meldlist.h"
 
 #define MAX_MELDS 100
 #define MAXMIN 3
@@ -15,15 +15,14 @@ typedef struct AIStruct {
     Player *player;
     Turn bestTakeTurn;
     Turn bestDrawTurn[64];
-    int numMelds;
-    Meld melds[MAX_MELDS];
+    MeldList meldList;
 } AI;
 
 // Given a Game, determine the best Turn for the current player
 // and update the game state accordingly.  Evaluations are in
 // centipoints (1/100 of a point).
 void AI_init(AI *ai, int mode);
-void AI_join(AI *ai, Game *game, Player *player);
+void AI_joinGame(AI *ai, Game *game, Player *player);
 Turn *AI_go(AI *ai);
 Turn *AI_goDeep(AI *ai);
 int AI_findBestTakeTurn(AI *ai);
@@ -33,8 +32,6 @@ void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn);
 int AI_evaluate(AI *ai);
 int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable);
 int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable);
-void AI_generateMelds(AI *ai);
-void AI_generateMeldsRec(AI *ai, Plays *accepted, Plays *rejected);
 
 // Static function to evaluate hand quality given a meld.
 int AI_evaluateHand(Cards hand, Meld *meld, Cards drawable);

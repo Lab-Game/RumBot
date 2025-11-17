@@ -10,7 +10,7 @@ int POV = 1;  // Print debug from current player's point of view
 
 void playGame(AI *ais[], Game *game) {
     for (int i = 0; i < NUM_PLAYERS; ++i) {
-        AI_join(ais[i], game, Game_player(game, i));
+        AI_joinGame(ais[i], game, Game_player(game, i));
     }
 
     if (DEB >= 1) {

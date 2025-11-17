@@ -6,7 +6,6 @@
 #include "pile.h"
 #include "meld.h"
 #include "meldlist.h"
-#include "plays.h"
 #include "game.h"
 #include "ai.h"
 
@@ -148,39 +147,6 @@ void MeldList_test(void) {
     mustMeld = Cards_fromString("7H");
     MeldList_fill(&list, hand, &tableMeld, mustMeld);
     assert(list.size == MELDLIST_MAX_SIZE || list.size == 258);
-}
-
-void Plays_test(void) {
-    puts("\nTesting Plays...");
-
-    // Test Plays_findPlayableCards
-    {
-        Meld meld;
-        Meld_init(&meld);
-        Meld_addRun(&meld, Cards_fromString("5H 6H 7H"));
-        Cards hand = Cards_fromString("3H 4H 8H 9H JH");
-        Cards playable = Plays_findPlayableCards(hand, &meld);
-        assert(playable == Cards_fromString("3H 4H 8H 9H"));
-    }
-
-    {
-        Meld meld;
-        Meld_init(&meld);
-        Meld_addSet(&meld, Cards_fromString("9C 9D 9H"));
-        Cards hand = Cards_fromString("9S TC TD TH 2C");
-        Cards playable = Plays_findPlayableCards(hand, &meld);
-        assert(playable == Cards_fromString("9S TC TD TH"));
-    }
-
-    {
-        Meld meld;
-        Meld_init(&meld);
-        Meld_addRun(&meld, Cards_fromString("2C 3C 4C 2S 3S 4S JS QS KS"));
-        Cards hand = Cards_fromString("AC AS");
-        Cards playable = Plays_findPlayableCards(hand, &meld);
-        Cards_print(playable);
-        assert(playable == Cards_fromString("aC AS"));
-    }
 }
 
 void Game_test(void) {

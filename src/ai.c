@@ -11,10 +11,41 @@ void AI_init(AI *ai, int mode) {
     ai->totalScore = 0;
 }
 
-void AI_join(AI *ai, Game *game, Player *player) {
+void AI_joinGame(AI *ai, Game *game, Player *player) {
     ai->game = game;
     ai->player = player;
 }
+
+Turn *AI_go(AI *ai) {
+    Game *game = ai->game;
+
+    int bestTakeEval = AI_findBestTakeTurn(ai);
+    int averageDrawEval = AI_findBestDrawTurns(ai);
+
+    if (DEB >= 2) {
+        printf("AI_go: ");
+        Turn_print(&ai->bestTakeTurn);
+        for (Cards c = Cards_first(Player_couldDraw(ai->player)); c != 0; c = Cards_next(Player_couldDraw(ai->player), c)) {
+            Card card = Cards_toCard(c);
+            printf("AI_go: ");
+            Turn_print(&ai->bestDrawTurn[card]);
+        }
+    }
+    
+    if (DEB >= 1) {
+        printf("AI_go: average draw = %d  best take = %d\n", averageDrawEval, bestTakeEval);
+    }
+
+    if (bestTakeEval > averageDrawEval) {
+        return &ai->bestTakeTurn;
+    } else {
+        // While cute, this is sort of problematic.  The AI shouldn't actually be
+        // able to see the top card in the draw pile.  Seems like the caller
+        // should be doing this lookup.
+        return &ai->bestDrawTurn[Cards_toCard(Pile_peek(&game->drawPile))];
+    }
+}
+
 
 int AI_evaluateGame(AI *ai) {
     Game *game = ai->game;
@@ -103,38 +134,6 @@ int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
     return averageCentipoints;
 }
 
-
-
-Turn *AI_go(AI *ai) {
-    Game *game = ai->game;
-
-    int bestTakeEval = AI_findBestTakeTurn(ai);
-    int averageDrawEval = AI_findBestDrawTurns(ai);
-
-    if (DEB >= 2) {
-        printf("AI_go: ");
-        Turn_print(&ai->bestTakeTurn);
-        for (Cards c = Cards_first(Player_couldDraw(ai->player)); c != 0; c = Cards_next(Player_couldDraw(ai->player), c)) {
-            Card card = Cards_toCard(c);
-            printf("AI_go: ");
-            Turn_print(&ai->bestDrawTurn[card]);
-        }
-    }
-    
-    if (DEB >= 1) {
-        printf("AI_go: average draw = %d  best take = %d\n", averageDrawEval, bestTakeEval);
-    }
-
-    if (bestTakeEval > averageDrawEval) {
-        return &ai->bestTakeTurn;
-    } else {
-        // While cute, this is sort of problematic.  The AI shouldn't actually be
-        // able to see the top card in the draw pile.  Seems like the caller
-        // should be doing this lookup.
-        return &ai->bestDrawTurn[Cards_toCard(Pile_peek(&game->drawPile))];
-    }
-}
-
 int AI_findBestTakeTurn(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
@@ -216,9 +215,9 @@ int AI_tryDrawTurn(AI *ai) {
 
 void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn) {
     Player *player = ai->player;
-    AI_generateMelds(ai);
-    for (int i = 0; i < ai->numMelds; ++i) {
-        Player_meld(player, &ai->melds[i]);
+    MeldList_fill(&ai->meldList, player->hand, &ai->game->meld);
+    for (int i = 0; i < ai->meldList.size; ++i) {
+        Player_meld(player, &ai->meldList.melds[i]);
 
         if (Cards_size(player->hand) == 0) {
             // No discard possible
@@ -243,101 +242,5 @@ void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn) {
     }
 }
 
-void AI_generateMelds(AI *ai) {
-    Plays accepted, rejected;
-    Plays_init(&accepted);
-    Plays_init(&rejected);
 
-    ai->numMelds = 0;
-    AI_generateMeldsRec(ai, &accepted, &rejected);
-}
-
-void AI_generateMeldsRec(AI *ai, Plays *accepted, Plays *rejected) {
-    if (ai->numMelds >= MAX_MELDS) {
-        // We've already found the maximum number of plays we can store.
-        return;
-    }
-
-    if (Plays_count(accepted) > MAXMIN && Plays_count(rejected) > MAXMIN) {
-        // We've both accepted and rejected lots of possible plays.
-        // We're heading toward a combinatorial explosion.  Stop exploring.
-        return;
-    }
-
-    Player *player = ai->player;
-    Cards hand = player->hand;
-    Meld *meld = &ai->game->meld;
-
-    // Find all possible runs, sets, and extensions, given the current Meld and hand.
-    Plays plays;
-    Plays_findAll(&plays, meld, hand, accepted, rejected);
-
-    // We'll now find the first possible play (run, set, or extension) and
-    // consider both accepting and rejecting it, recursively exploring
-    // each choice.  Note that we only consider accepting and rejecting
-    // one play per involcation of this function.
-
-    // Consider each possible run.
-    Cards c;
-    if ((c = Cards_first(plays.runCenters))) {
-        Cards run = Plays_runCenterToCards(c);
-
-        // Accept this run
-        accepted->runCenters |= c;
-        Player_playRun(player, run);
-        AI_generateMeldsRec(ai, accepted, rejected);
-        Player_undoRun(player, run);
-        accepted->runCenters &= ~c;
-        
-        // Reject this run
-        rejected->runCenters |= c;
-        AI_generateMeldsRec(ai, accepted, rejected);
-        rejected->runCenters &= ~c;
-    } else if ((c = Cards_first(plays.setCenters))) {
-        Cards set = Plays_setCenterToCards(c);
-
-        // Accept this set
-        accepted->setCenters |= c;
-        Player_playSet(player, set);
-        AI_generateMeldsRec(ai, accepted, rejected);
-        Player_undoSet(player, set);
-        accepted->setCenters &= ~c;
-
-        // Reject this set
-        rejected->setCenters |= c;
-        AI_generateMeldsRec(ai, accepted, rejected);
-        rejected->setCenters &= ~c;
-    } else if ((c = Cards_first(plays.runExtensions))) {
-        // Accept this run extension
-        accepted->runExtensions |= c;
-        Player_playRun(player, c);
-        AI_generateMeldsRec(ai, accepted, rejected);
-        Player_undoRun(player, c);
-        accepted->runExtensions &= ~c;
-
-        // Reject this run extension
-        rejected->runExtensions |= c;
-        AI_generateMeldsRec(ai, accepted, rejected);
-        rejected->runExtensions &= ~c;
-    } else if ((c = Cards_first(plays.setExtensions))) {
-        // Accept this set extension
-        accepted->setExtensions |= c;
-        Player_playSet(player, c);
-        AI_generateMeldsRec(ai, accepted, rejected);
-        Player_undoSet(player, c);
-        accepted->setExtensions &= ~c;
-
-        // Reject this set extension
-        rejected->setExtensions |= c;
-        AI_generateMeldsRec(ai, accepted, rejected);
-        rejected->setExtensions &= ~c;
-    } else {
-        // A meld is valid only if the player took at most one card or
-        // played the deepest taken card.
-        if (Pile_size(&player->turn.taken) <= 1 ||
-            !Cards_has(player->hand, Pile_peek(&player->turn.taken))) {
-            Plays_toMeld(accepted, &ai->melds[ai->numMelds++]);
-        }
-    }
-}
 

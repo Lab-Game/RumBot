@@ -3,7 +3,6 @@
 
 #include <stdbool.h>
 #include "meld.h"
-#include "plays.h"
 
 #define MELDLIST_MAX_SIZE 1000
 #define MELDLIST_MAXMIN 2

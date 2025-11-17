@@ -5,7 +5,6 @@
 #include "turn.h"
 #include "cards.h"
 #include "pile.h"
-#include "plays.h"
 #include "meld.h"
 
 typedef struct GameStruct Game;
