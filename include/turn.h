@@ -17,7 +17,7 @@ typedef struct TurnStruct {
     Cards discard;  // card discarded (0 if none)
     Meld meld;  // cards melded
     Cards newDiscards;  // cards discarded for the first time this turn
-    int eval;  // evaluation of resulting game state after this turn
+    int eval;
 } Turn;
 
 void Turn_init(Turn *play);

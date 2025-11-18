@@ -18,25 +18,17 @@ void AI_joinGame(AI *ai, Game *game, Player *player) {
 }
 
 Turn *AI_goDeep(AI *ai) {
-    // For now, just call AI_go.
-    return AI_go(ai);
+    Scoreboard *scoreboard = Scoreboard_fromGame(ai->game);
+    Scoreboard_print(scoreboard);
 
-    /*
+    // Run lots of simulations on every leaf of the scoreboard tree
+    // to determine the best turn.
 
-    We'll create a Scoreboard structure that outlines all possible turns
-    from the current game state, evaluate each turn deeply by simulating
-    the resulting game state after that turn, and pick the best turn.
-
-
-
-    */
+    Scoreboard_free(scoreboard);
 }
 
 Turn *AI_go(AI *ai) {
     Game *game = ai->game;
-
-    Scoreboard_fromGame(game);
-    exit(0);
 
     int bestTakeEval = AI_findBestTakeTurn(ai);
     int averageDrawEval = AI_findBestDrawTurns(ai);

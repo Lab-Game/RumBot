@@ -201,9 +201,9 @@ void Player_discard(Player *player, Cards card) {
     Pile_push(&game->discardPile, card); 
 
     turn->discard = card;
-
     turn->newDiscards |= (card & ~game->everDiscarded);
     game->everDiscarded |= turn->newDiscards;
+    turn->eval = -9999;
 }
 
 void Player_undoDiscard(Player *player) {
