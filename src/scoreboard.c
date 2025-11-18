@@ -134,7 +134,6 @@ ScoreboardDiscard *Scoreboard_discards(Game *game) {
         discard->next = discards;
         discard->discard = player->turn.discard;
         discard->turn = player->turn;
-        discard->result = *game;
         discard->numGames = 0;
         for (int i = 0; i < NUM_PLAYERS; ++i) {
             discard->totalScore[i] = 0;
@@ -258,3 +257,63 @@ void Scoreboard_free(Scoreboard *scoreboard) {
     // Free scoreboard itself
     free(scoreboard);
 }
+
+void Scoreboard_simulate(Scoreboard *scoreboard, Game *game) {
+    // The caller is responsible for supplying games to simulate,
+    // probably by calling Game_permute() on the current game.
+
+    Player *player = game->currentPlayer;
+
+    // For each take
+    ScoreboardTake *take = scoreboard->takes;
+    while (take) {
+        Player_take(player);
+
+        // For each meld
+        ScoreboardMeld *meld = take->melds;
+        while (meld) {
+            Player_meld(player, &meld->meld);
+
+            // For each discard
+            ScoreboardDiscard *discard = meld->discards;
+            while (discard) {
+                Player_discard(player, discard->discard);
+
+                printf("Simulating from: ");
+                Game_printCompact(game);
+                
+                Player_undoDiscard(player);
+                discard = discard->next;
+            }
+
+            Player_undoMeld(player, &meld->meld);
+            meld = meld->next;
+        }
+        take = take->next;
+    }
+    Player_undoTakes(player);
+
+    // For each draw
+    ScoreboardDraw *draw = scoreboard->draws;
+    while (draw) {
+        // The problem here is that I'm going to draw the wrong card.  :-/
+        Player_draw(player);
+
+        // For each meld
+        ScoreboardMeld *meld = draw->melds;
+        while (meld) {
+            Player_meld(player, &meld->meld);
+            // For each discard
+            ScoreboardDiscard *discard = meld->discards;
+            while (discard) {
+                Player_discard(player, discard->discard);
+                printf("Simulating from: ");
+                Game_printCompact(game);
+                Player_undoDiscard(player);
+                discard = discard->next;
+            }
+            Player_undoMeld(player, &meld->meld);
+            meld = meld->next;
+        }
+        draw = draw->next;
+    }

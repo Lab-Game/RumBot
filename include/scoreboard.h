@@ -30,7 +30,6 @@ typedef struct ScoreboardDiscardStruct {
     struct ScoreboardDiscardStruct *next;
     Cards discard;
     Turn turn;
-    Game result;
     int numGames;
     int totalScore[NUM_PLAYERS];
 } ScoreboardDiscard;
@@ -38,7 +37,7 @@ typedef struct ScoreboardDiscardStruct {
 Scoreboard *Scoreboard_fromGame(Game *game);
 void Scoreboard_free(Scoreboard *scoreboard);
 ScoreboardTake *Scoreboard_takes(Game *game);
-ScoreboardDraw *Scoreboard_draws(Game *game);
+ScoreboardDraw *Scoreboard_draws(Game *game);  // This is an array of size 64, indexed by the drawn card.
 ScoreboardMeld *Scoreboard_melds(Game *game);
 ScoreboardDiscard *Scoreboard_discards(Game *game);
 
