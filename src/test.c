@@ -139,13 +139,13 @@ void MeldList_test(void) {
     Cards hand = Cards_fromString("4C 5C 7C 8C 9H TH JH QH 8D JD JC JS");
     Cards mustMeld = Cards_fromString("JC");
 
-    MeldList_fill(&list, hand, &tableMeld, mustMeld);
+    MeldList_generate(&list, hand, &tableMeld, mustMeld);
     assert(list.size == MELDLIST_MAX_SIZE || list.size == 33);
 
     Meld_init(&tableMeld);
     hand = Cards_fromString("2H 3H 4H 5H 6H 7H 8H 9H TH JH QH KH AH");
     mustMeld = Cards_fromString("7H");
-    MeldList_fill(&list, hand, &tableMeld, mustMeld);
+    MeldList_generate(&list, hand, &tableMeld, mustMeld);
     assert(list.size == MELDLIST_MAX_SIZE || list.size == 258);
 }
 

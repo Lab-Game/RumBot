@@ -1,5 +1,5 @@
 CC      = clang
-CFLAGS  = -Wall -Wextra -O2 -MMD -MP -Iinclude # -DNDEBUG
+CFLAGS  = -Wall -Wextra -MMD -MP -Iinclude -g # -O2 -DNDEBUG
 LDFLAGS =
 
 SRC_DIR   = src

@@ -87,7 +87,7 @@ void Meld_print(Meld *meld) {
     prevPrinted = 0;
     for (int value = 0; value <= 13; ++value) {
         for (int suit = 0; suit < 4; ++suit) {
-            Cards c = Cards_fromCard(value + (suit << 4));
+            Cards c = Cards_fromCard(Card_fromSuitValue(suit, value));
             if (Cards_has(meld->sets, c)) {
                 if (prevPrinted != 0) {                        
                     if ((Cards_toCard(prevPrinted) & 0xF) == value) {

@@ -12,10 +12,10 @@ typedef struct {
     int size;
 } MeldList;
 
-void MeldList_init(MeldList *list);
-bool MeldList_add(MeldList *list, Meld *meld);
-bool MeldList_isFull(MeldList *list);
-void MeldList_fill(MeldList *list, Cards hand, Meld *tableMeld, Cards mustMeld);
+void MeldList_generate(MeldList *list, Cards hand, Meld *tableMeld, Cards mustMeld);
+void MeldList_genRec(MeldList *list, Meld *table, Cards mustMeld,
+                     Cards mayRun, Cards maySet,
+                     Cards newRuns, Cards newSets);
 void MeldList_print(MeldList *list);
 
 #endif // MELDLIST_H

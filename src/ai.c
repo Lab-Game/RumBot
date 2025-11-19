@@ -22,7 +22,6 @@ void AI_resetForTurn(AI *ai) {
         Turn_init(&ai->bestDrawTurn[i]);
     }
     ai->averageDrawEval = 0;
-    MeldList_init(&ai->meldList);
 }
 
 void AI_joinGame(AI *ai, Game *game, Player *player) {
@@ -191,7 +190,7 @@ void AI_findBestMeld(AI *ai, Turn *bestTurn) {
     // Generate a list of possible melds
     Cards mustMeld = player->turn.taken.size > 1 ? Pile_peek(&player->turn.taken) : 0;
 
-    MeldList_fill(&ai->meldList, player->hand, &ai->game->meld, mustMeld);
+    MeldList_generate(&ai->meldList, player->hand, &ai->game->meld, mustMeld);
 
     // Try all of the possible melds.
     for (int i = 0; i < ai->meldList.size; ++i) {

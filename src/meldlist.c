@@ -3,46 +3,167 @@
 
 #include "meldlist.h"
 
-bool MeldList_add(MeldList *list, Meld *meld) {
-    if (list->size >= MELDLIST_MAX_SIZE) {
-        return false;
-    } else {
-        assert(Meld_isValidPlay(meld));
-        list->melds[list->size++] = *meld;
-        return true;
-    }
-}
+/*
+ *  A MeldList is a list of possible melds plays by the current player.
+ *  This module provides functions to generate a list of possible
+ *  meld plays from a given hand and table state.
+ * 
+ *  There are several complexities:
+ *
+ *  - When generating possible melds, care must be taken to avoid
+ *    generating duplicate melds.  For example, if the hand contains
+ *    a long run of hearts, then many different card combinations
+ *    can be played on the table, and each must be generated exactly
+ *    once for efficiency.  This is implicitly enforced by the
+ *    structure of the recursion.
+ * 
+ *  - There can be a "combinatorial explosion" of possible melds.
+ *    So we cap the length of a meld list to MELDLIST_MAX_SIZE,
+ *    and prefer melds that lay down lots of cards.  While
+ *    not optimal play, this reduces the combinations in
+ *    subsequent rounds.  That prevents us from wasting too
+ *    much time on a rare scenario.
+ * 
+ *  - Aces in the hand represented as "high", but aces in a run
+ *    can be either "low" or "high".  This transition is an
+ *    awkward detail running throughout meld generation.
+ * 
+ *  - The meld may be required to include a certain card.  This
+ *    happens when the player takes more than one card from
+ *    the discard pile.  This membership requirement is enforced
+ *    somewhat late, potentially causing some wasted work,
+ *    to avoid adding still more complexity to the recursive
+ *    meld generation.
+ */
 
-bool MeldList_isFull(MeldList *list) {
-    return list->size >= MELDLIST_MAX_SIZE;
-};
-
-// This structure holds state used during the recursive meld generation.
-typedef struct {
-    Cards handExt;
-    Cards noRun;
-    Cards noSet;
-    Meld *oldTable;
-    Meld table;
-    Meld meld;
-    Cards mustMeld;
-    MeldList *list;
-} MeldData;
-
-
-void MeldList_fill(MeldList *list, Cards hand, Meld *table, Cards mustMeld) {
-    MeldData data;
-
-    data.handExt = Cards_addLowAces(hand);
-    data.noRun = 0;
-    data.noSet = 0;
-    data.oldTable = table;
-    data.table = *table;
-    data.mustMeld = mustMeld;
-    data.list = list;
+void MeldList_generate(MeldList *list, Cards hand, Meld *table, Cards mustMeld) {
+    // Initialize the meld list to be empty.
     list->size = 0;
 
-    MeldList_fillRec(&data);
+    Cards lowHand = Cards_addLowAces(hand);
+
+    // Find cards that can be played in a run.
+    Cards mayRun = (hand & (lowHand << 1) & (hand >> 1)) | table->runs;
+    mayRun |= ((mayRun << 1) | (mayRun >> 1)) & lowHand;
+    mayRun |= ((mayRun << 1) | (mayRun >> 1)) & lowHand;
+
+    // Find cards that can be played in a set.
+    Cards maySet = (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48))) | table->sets;
+    maySet |= ((maySet << 16) | (maySet >> 16)) & hand;
+
+    Cards mayMeld = mayRun | maySet;
+    if (!Cards_has(mayMeld, mustMeld)) {
+        // Early exit:  if the mustMeld card is not in the set of playable cards,
+        // then there are no possible melds.
+        return;
+    }
+
+    MeldList_genRec(list, table, mustMeld, mayRun, maySet, table->runs, table->sets);
+}
+
+// Consider cards in mayRun and maySet one at a time, in increasing order.
+// For each card, consider all possible ways to play it in a run, in a set,
+// or not at all, and recurse to consider the remaining cards.
+void MeldList_genRec(MeldList *list, Meld *table, Cards mustMeld,
+                     Cards mayRun, Cards maySet,
+                     Cards newRuns, Cards newSets) {
+    // If the meld list is full, stop recursing.
+    if (list->size >= MELDLIST_MAX_SIZE) {
+        return;
+    }
+
+    // These are all cards that might be added to the meld.
+    Cards mayMeld = mayRun | maySet;
+
+    // If no more cards can be played, we are are at a recursion leaf.
+    // Add this meld to the MeldList.
+    if (mayMeld == 0 ) {
+        Meld *meld = &list->melds[list->size++];
+        meld->runs = newRuns & ~table->runs;
+        meld->sets = newSets & ~table->sets;
+        return;
+    }
+
+    // Get the next card that might be added to the meld.
+    Cards card = Cards_first(mayMeld);
+
+    // Consider playing this card (possibly a low ace!) in a run.
+    if (Cards_has(mayRun, card)) {
+        // Generate nearby cards in the deck sequence.  These
+        // might be illegal and are therefore definitely not in
+        // the hand and not on the table.
+        Cards prev = card >> 1;
+        Cards next = card << 1;
+        Cards nextNext = card << 2;
+
+        // Consider paying a three-card run.
+        Cards run3 = card | next | nextNext;
+        if (Cards_has(mayRun, run3)) {
+            Cards played = Cards_addAllAces(run3);
+            MeldList_genRec(list, table, mustMeld,
+                mayRun & ~played, maySet & ~played, newRuns | run3, newSets);
+        }
+
+        // Consider playing a two-card sequence joined to an existing run.
+        Cards run2 = card | next;
+        if (Cards_has(mayRun, run2) &&
+            (Cards_has(newRuns, prev) || Cards_has(newRuns, nextNext))) {
+            Cards played = Cards_addAllAces(run2);
+            MeldList_genRec(list, table, mustMeld,
+                mayRun & ~played, maySet & ~played, newRuns | run2, newSets);
+        }
+
+        // Consider a single card joined to an existing run.
+        if (Cards_has(newRuns, prev) || Cards_has(newRuns, next)) {
+            Cards played = Cards_addAllAces(card);
+            MeldList_genRec(list, table, mustMeld,
+                mayRun & ~played, maySet & ~played, newRuns | card, newSets);
+        }
+    }
+
+    // Consider playing this card in a set.
+    if (Cards_has(maySet, card)) {
+        // Form the set of all cards with the same value.
+        Cards sameValue = Cards_sameValue(card);
+
+        // Find all cards of this value playable from the hand and on the table.
+        Cards inHand = maySet & sameValue;
+        Cards onTable = newSets & sameValue;
+
+        // Count cards of the same value in hand and on table.
+        int numInHand = Cards_size(inHand);
+        int numOnTable = Cards_size(onTable);
+
+        // Try playing all the cards of this value from the hand, provided that
+        // puts at least three cards on the table.  Scenarios are:
+        //   - 1 in hand + 3 on table
+        //   - 3 in hand (no cards on table)
+        //   - 4 in hand (no cards on table)
+        if (numInHand + numOnTable >= 3) {
+            Cards played = Cards_addAllAces(inHand);
+            MeldList_genRec(list, table, mustMeld,
+                mayRun & ~played, maySet & ~played, newRuns, newSets | inHand);
+        }
+
+        // If there are four cards of this value in hand, also try
+        // playing exactly three and barring the fourth.
+        if (numInHand == 4) {
+            for (Cards x = Cards_first(inHand); x != 0; x = Cards_next(inHand, x)) {
+                Cards triple = inHand & ~x;
+                Cards played = Cards_addAllAces(triple);
+
+                MeldList_genRec(list, table, mustMeld,
+                    mayRun & ~played, maySet & ~played, newRuns, newSets | triple);
+            }
+        }
+    }
+
+    // Consider not playing this card, unless it is a mustMeld.  A decision
+    // not to play one ace variant does not rule out playing the other.
+    if (!Cards_has(mustMeld, card) ) {
+        MeldList_genRec(list, table, mustMeld,
+            mayRun & ~card, maySet & ~card, newRuns, newSets);
+    }
 }
 
 void MeldList_print(MeldList *list) {
@@ -51,183 +172,5 @@ void MeldList_print(MeldList *list) {
         printf("Meld %d: ", i);
         Meld_printCompact(&list->melds[i]);
         printf("\n");
-    }
-}
-
-void MeldList_fillRec(MeldData *data) {
-    // Confirm that the handExt is in a good state; specifically,
-    // every ace present in the hand is present in both low
-    // and high forms.
-    assert(Meld_isValidTable(&data->table));
-
-    if (MeldList_isFull(data->list)) {
-        // No space for additional meld options.  Stop recursing.
-        return;
-    }
-
-    if (data->handExt == 0 ) {
-        // No more cards in hand to consider.  Check that the must-be-played
-        // card has been played.
-        assert(Cards_has(Meld_cards(&data->table), data->mustMeld));
-
-        if (Cards_has(Meld_cards(&data->table), data->mustMeld)) {
-            // The must-be-played card has been played.  Add all cards
-            // newly-added to the table to the meld option list.
-            data->meld.runs = data->table.runs & ~data->oldTable->runs;
-            data->meld.sets = data->table.sets & ~data->oldTable->sets;
-            MeldList_add(data->list, &data->meld);
-        }
-        return;
-    }
-
-    // Get the first card in the hand.  This could be a low ace.
-    Cards card = Cards_first(data->handExt);
-
-    // Generate nearby cards in the deck.  These may be illegal.
-    Cards prev = card >> 1;
-    Cards next = card << 1;
-    Cards nextNext = card << 2;
-
-    // Handle low aces as a special case.  Can only appear in runs.
-    if (Cards_isLowAce(card)) {
-        Cards highAce = card << 13;
-
-        Cards run = card | next | nextNext;
-        if (Cards_has(data->handExt, run)) {
-            Cards runExt = run | highAce;
-            data->handExt ^= runExt;
-            data->table.runs ^= run;
-            MeldList_fillRec(data);
-            data->table.runs ^= run;
-            data->handExt ^= runExt;
-        }
-
-        // Play two cards by prepending to an existing run.
-        Cards twoCards = card | next;
-        if (Cards_has(data->handExt, twoCards) && Cards_has(data->table.runs, nextNext)) {
-            Cards twoCardsExt = twoCards | highAce;
-            data->handExt ^= twoCardsExt;
-            data->table.runs ^= twoCards;
-            MeldList_fillRec(data);
-            data->table.runs ^= twoCards;
-            data->handExt ^= twoCardsExt;
-        }
-
-        // Play one card by prepending to an existing run.
-        if (Cards_has(data->table.runs, next)) {
-            Cards cardExt = card | highAce;
-            printf("Prepending a low ace run\n"); // DEBUG
-            printf("Card: "); Cards_print(card); printf("\n"); // DEBUG
-            printf("Card ext: "); Cards_print(cardExt); printf("\n"); // DEBUG
-            printf("handExt before: "); Cards_print(data->handExt); printf("\n"); // DEBUG
-            data->handExt ^= cardExt;
-            printf("handExt after: "); Cards_print(data->handExt); printf("\n"); // DEBUG
-            printf("table.runs before: "); Cards_print(data->table.runs); printf("\n"); // DEBUG
-            data->table.runs ^= card;
-            printf("table.runs after: "); Cards_print(data->table.runs); printf("\n"); // DEBUG
-            MeldList_fillRec(data);
-            data->table.runs ^= card;
-            data->handExt ^= cardExt;
-        }
-    } else {
-        // This could be any card other than a low ace.  (The low ace
-        // from this suit is now gone from the hand, either played
-        // or set aside.)
-
-        // Consider playing this card in a run, unless we previoiusly
-        // ruled out that possibility to avoid duplicate melds.
-        if (!Cards_has(data->noRun, card)) {
-
-            // Consider playing a three-card run.
-            Cards run = card | next | nextNext;
-            if (Cards_has(data->handExt, run)) {
-                data->handExt ^= run;
-                data->table.runs ^= run;
-                MeldList_fillRec(data);
-                data->table.runs ^= run;
-                data->handExt ^= run;
-            }
-
-            // Consider playing a two-card sequence.
-            Cards twoCards = card | next;
-            if (Cards_has(data->handExt, twoCards) &&
-                (Cards_has(data->table.runs, prev) || Cards_has(data->table.runs, nextNext))) {
-                data->noRun ^= nextNext;
-                data->handExt ^= twoCards;
-                data->table.runs ^= twoCards;
-                MeldList_fillRec(data);
-                data->table.runs ^= twoCards;
-                data->handExt ^= twoCards;
-                data->noRun ^= nextNext;
-            }
-
-            // Consider playing a single-card run.
-            if (Cards_has(data->table.runs, prev) || Cards_has(data->table.runs, next)) {
-                data->noRun ^= next;
-                data->handExt ^= card;
-                data->table.runs ^= card;
-                MeldList_fillRec(data);
-                data->table.runs ^= card;
-                data->handExt ^= card;
-                data->noRun ^= next;
-            }
-        }
-
-        // Consider playing this card in a set, unless we ruled that out earlier.
-        if (!Cards_has(data->noSet, card)) {
-
-            // Form the set of all cards with the same value.
-            Cards sameValue = Cards_sameValue(card);
-
-            // Find all cards of this value in hand and in a set on the table.
-            Cards sameValueInHand = sameValue & data->handExt;
-            Cards sameValueOnTable = sameValue & data->table.sets;
-
-            // Count cards of the same value in hand and on table.
-            int numSameValueInHand = Cards_size(sameValueInHand);
-            int numSameValueOnTable = Cards_size(sameValueOnTable);
-
-            // Play all the cards of this value from the hand, provided that
-            // puts at least three cards on the table.  Scenarios are:
-            //   - 1 in hand + 3 on table
-            //   - 3 in hand (no cards on table)
-            //   - 4 in hand (no cards on table)
-            if (numSameValueInHand + numSameValueOnTable >= 3) {
-                // If we are playing aces, then we need to remove the
-                // corresponding low aces from the hand as well.
-                Cards lowAces = ((sameValueInHand & 0x2000200020002000ULL) >> 13) &
-                                 data->handExt;
-                data->handExt ^= sameValueInHand ^ lowAces;
-                data->table.sets ^= sameValueInHand;
-                MeldList_fillRec(data);
-                data->table.sets ^= sameValueInHand;
-                data->handExt ^= sameValueInHand ^ lowAces;
-            }
-
-            // If there are four cards of this value in hand, try
-            // playing exactly three.  Bar playing the fourth in a set.
-            if (numSameValueInHand == 4) {
-                for (Cards x = Cards_first(sameValueInHand); x != 0; x = Cards_next(sameValueInHand, x)) {
-                    Cards triple = sameValueInHand & ~x;
-                    Cards lowAces = ((triple & 0x2000200020002000ULL) >> 13) & data->handExt;
-                    data->handExt ^= triple ^ lowAces;
-                    data->table.sets ^= triple;
-                    data->noSet ^= x;
-                    MeldList_fillRec(data);
-                    data->noSet ^= x;
-                    data->table.sets ^= triple;
-                    data->handExt ^= triple ^ lowAces;
-                }
-            }
-        }
-    }
-
-    // Consider not playing this card, unless it is a mustMeld.  If this is a low ace,
-    // then do not enforce the mustMeld restriction, since the high ace may still be played.
-    // Also, remove only the low variant from the hand, for the same reason.
-    if (!Cards_has(data->mustMeld, card)) {
-        data->handExt ^= card;
-        MeldList_fillRec(data);
-        data->handExt ^= card;
     }
 }

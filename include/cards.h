@@ -5,6 +5,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define FULL_DECK   0x3FFE3FFE3FFE3FFEULL  // Full deck (high aces only)
+#define LEGAL_CARDS 0x3FFF3FFF3FFF3FFFULL  // All legal cards (high and low aces)
+#define RED_CARDS   0x3FFF00003FFF0000ULL
+#define BLACK_CARDS 0x00003FFF00003FFFULL
+#define LOW_ACES    0x0001000100010001ULL
+#define HIGH_ACES   0x2000200020002000ULL
+
 // A "Card" is a single playing card, represented as a number from 0 to 63.
 // The low 4 bits are the value (0=low Ace, 1=2, ..., 12=King, 13=high Ace).
 // The high 4 bits are the suit (0=Clubs, 1=Diamonds, 2=Hearts, 3=Spades).
@@ -14,7 +21,7 @@ typedef uint8_t Card;
 #define ILLEGAL_CARD 255
 
 static inline bool Card_isLegal(Card i) {
-    return (1ULL << i) & 0x3FFF3FFF3FFF3FFF;
+    return (1ULL << i) & LEGAL_CARDS;
 }
 
 static inline int Card_value(Card c) {
@@ -46,11 +53,6 @@ void Card_print(Card c);
 // representings runs, the sole place where low aces are meaningful.
 typedef uint64_t Cards;
 
-#define FULL_DECK 0x3FFE3FFE3FFE3FFEULL  // Full deck (high aces only)
-#define LEGAL_CARDS 0x3FFF3FFEFFFF3FFFULL  // All legal cards (high and low aces)
-#define RED_CARDS 0x3FFF00003FFF0000ULL
-#define BLACK_CARDS 0x00003FFF00003FFFULL
-
 // Confirm that all cards in the Cards set are legal.
 static inline bool Cards_isLegal(Cards cards) {
     return (cards & ~FULL_DECK) == 0;
@@ -79,32 +81,26 @@ static inline int Cards_size(Cards cards) {
 
 // Return true of the set of cards includes any low aces.
 static inline bool Cards_isLowAce(Cards card) {
-    const uint64_t kLowAceMask = 0x0001000100010001ULL;
-    return (card & kLowAceMask) != 0;
+    return (card & LOW_ACES) != 0;
 }
 
 // If there is a low or high ace, add the other ace to the Cards set.
-static inline Cards Cards_extendAces(Cards cards) {
-    const uint64_t kLowAceMask = 0x0001000100010001ULL;
-    const uint64_t kHighAceMask = 0x2000200020002000ULL;
-    return (cards | ((cards & kLowAceMask) << 13) | ((cards & kHighAceMask) >> 13));
+static inline Cards Cards_addAllAces(Cards cards) {
+    return (cards | ((cards & LOW_ACES) << 13) | ((cards & HIGH_ACES) >> 13));
 }
 
 // Return a Cards set with a low ace added for every high ace present.
 static inline Cards Cards_addLowAces(Cards cards) {
-    const uint64_t kHighAceMask = 0x2000200020002000ULL;
-    return cards | ((cards & kHighAceMask) >> 13);
+    return cards | ((cards & HIGH_ACES) >> 13);
 }
 
-// Return a Cards set with a high ace added for every low ace present.
+// Return a Cards set with all aces moved high.  Low aces are removed.
 static inline Cards Cards_raiseAces(Cards cards) {
-    const uint64_t kLowAceMask = 0x0001000100010001ULL;
-    return (cards | ((cards & kLowAceMask) << 13)) & FULL_DECK;
+    return (cards | ((cards & LOW_ACES) << 13)) & FULL_DECK;
 }
 
 static inline Cards Cards_preferHighAces(Cards cards) {
-    const uint64_t kHighAceMask = 0x2000200020002000ULL;
-    return cards & ~((cards & kHighAceMask) >> 13);
+    return cards & ~((cards & HIGH_ACES) >> 13);
 }
 
 static inline Cards Cards_sameValue(Cards card) {

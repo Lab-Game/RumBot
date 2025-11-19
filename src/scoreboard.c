@@ -55,11 +55,11 @@ ScoreboardDraw *Scoreboard_initDraws(Game *game) {
 ScoreboardMeld *Scoreboard_initMelds(Game *game) {
     ScoreboardMeld *melds = NULL;
 
-    // Generate many possible melds from the current hand.
+    // Generate possible melds from the current hand.
     Player *player = game->currentPlayer;
     MeldList meldList;
     Cards mustMeld = player->turn.taken.size > 1 ? Pile_peek(&player->turn.taken) : 0;
-    MeldList_fill(&meldList, player->hand, &game->meld, mustMeld);
+    MeldList_generate(&meldList, player->hand, &game->meld, mustMeld);
 
     for (int i = 0; i < meldList.size; ++i) {
         Player_meld(player, &meldList.melds[i]);

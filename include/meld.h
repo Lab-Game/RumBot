@@ -38,12 +38,16 @@ static inline void Meld_removeSet(Meld *Meld, Cards meld) {
 }
 
 // Return all the cards in the Meld (both runs and sets).
+// Aces are raised to high.
 static inline Cards Meld_cards(Meld *Meld) {
     return Cards_raiseAces(Meld->runs | Meld->sets);
 }
 
+// Meld can refer to either a play, given cards already on the table,
+// or to the current state of the table.  These functions check
+// validity in those two cases.
 bool Meld_isValidTable(Meld *Meld);
-bool Meld_isValidPlay(Meld *Meld);
+bool Meld_isValidPlay(Meld *Meld);  // Should I include the table?
 
 // Print the runs and sets currently on the Meld.
 void Meld_print(Meld *Meld);
