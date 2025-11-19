@@ -3,10 +3,6 @@
 
 #include "meldlist.h"
 
-void MeldList_init(MeldList *list) {
-    list->size = 0;
-}
-
 bool MeldList_add(MeldList *list, Meld *meld) {
     if (list->size >= MELDLIST_MAX_SIZE) {
         return false;
@@ -32,6 +28,31 @@ typedef struct {
     Cards mustMeld;
     MeldList *list;
 } MeldData;
+
+
+void MeldList_fill(MeldList *list, Cards hand, Meld *table, Cards mustMeld) {
+    MeldData data;
+
+    data.handExt = Cards_addLowAces(hand);
+    data.noRun = 0;
+    data.noSet = 0;
+    data.oldTable = table;
+    data.table = *table;
+    data.mustMeld = mustMeld;
+    data.list = list;
+    list->size = 0;
+
+    MeldList_fillRec(&data);
+}
+
+void MeldList_print(MeldList *list) {
+    printf("MeldList with %d melds:\n", list->size);
+    for (int i = 0; i < list->size; ++i) {
+        printf("Meld %d: ", i);
+        Meld_printCompact(&list->melds[i]);
+        printf("\n");
+    }
+}
 
 void MeldList_fillRec(MeldData *data) {
     // Confirm that the handExt is in a good state; specifically,
@@ -208,29 +229,5 @@ void MeldList_fillRec(MeldData *data) {
         data->handExt ^= card;
         MeldList_fillRec(data);
         data->handExt ^= card;
-    }
-}
-
-void MeldList_fill(MeldList *list, Cards hand, Meld *table, Cards mustMeld) {
-    MeldData data;
-
-    data.handExt = Cards_addLowAces(hand);
-    data.noRun = 0;
-    data.noSet = 0;
-    data.oldTable = table;
-    data.table = *table;
-    data.mustMeld = mustMeld;
-    data.list = list;
-
-    MeldList_init(list);
-    MeldList_fillRec(&data);
-}
-
-void MeldList_print(MeldList *list) {
-    printf("MeldList with %d melds:\n", list->size);
-    for (int i = 0; i < list->size; ++i) {
-        printf("Meld %d: ", i);
-        Meld_printCompact(&list->melds[i]);
-        printf("\n");
     }
 }
