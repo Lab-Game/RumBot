@@ -5,7 +5,7 @@
 #include "game.h"
 #include "ai.h"
 
-int DEB = 2;  // Debug level (0=none, 1=some, 2=more, 3=lots)
+int DEB = 1;  // Debug level (0=none, 1=some, 2=more, 3=lots)
 
 void playGame(AI *ais[], Game *game) {
     for (int i = 0; i < NUM_PLAYERS; ++i) {
@@ -112,7 +112,6 @@ int main(void) {
     Game game;
     for (int i = 0; i < numGames; ++i) {
         Game_init(&game);
-
         playGame(ai_ptrs, &game);
     }
 

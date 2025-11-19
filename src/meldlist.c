@@ -67,6 +67,19 @@ void MeldList_generate(MeldList *list, Cards hand, Meld *table, Cards mustMeld) 
 void MeldList_genRec(MeldList *list, Meld *table, Cards mustMeld,
                      Cards mayRun, Cards maySet,
                      Cards newRuns, Cards newSets) {
+
+    Meld meld;
+    meld.runs = newRuns;
+    meld.sets = newSets;
+    Meld_printCompact(&meld);
+    printf(" mayRun = ");
+    Cards_print(mayRun);
+    printf(" maySet = ");
+    Cards_print(maySet);
+    printf(" mustMeld = ");
+    Cards_print(mustMeld);
+    printf("\n");
+
     // If the meld list is full, stop recursing.
     if (list->size >= MELDLIST_MAX_SIZE) {
         return;

@@ -228,7 +228,7 @@ int AI_evaluateGame(AI *ai) {
 
     int base_centipoints = player->score * 100;
 
-    if (!player->hand) {
+    if (player->hand == 0) {
         // Player went out.  Give 700 centipoints per card remaining
         // in opponents' hands.  TODO:  Use actual points for known cards.
         int penaltyTotal = 0;
@@ -247,8 +247,8 @@ int AI_evaluateGame(AI *ai) {
     if (ai->mode == 1) {
         Cards drawableCards = Player_couldDraw(player);
         int handPlayability = AI_evaluateHandPlayability(player->hand, &game->meld, drawableCards);
-        int handPoints = Cards_points(player->hand);
-        int eval = base_centipoints + handPlayability * 0.5 + handPoints;
+        int handCentipoints = 100 * Cards_points(player->hand);
+        int eval = base_centipoints + handPlayability * 0.5 + handCentipoints / 100;
 
         return eval;
     }

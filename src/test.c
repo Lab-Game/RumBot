@@ -9,7 +9,7 @@
 #include "game.h"
 #include "ai.h"
 
-int DEB = 4;  // Debug level (0=none, 1=some, 2=more, 3=lots)
+int DEB = 2;  // Debug level (0=none, 1=some, 2=more, 3=lots)
 int POV = 0;  // Print debug from current player's point of view
 
 void Cards_test(void) {
@@ -210,11 +210,24 @@ void AI_test(void) {
 }
 
 int main(void) {
-    printf("sizeof Game = %zu bytes\n", sizeof(Game));
-    printf("sizeof Player = %zu bytes\n", sizeof(Player));
-    printf("sizeof Pile = %zu bytes\n", sizeof(Pile));
-    printf("sizeof Meld = %zu bytes\n", sizeof(Meld));
+    printf("Hand = ");
+    Cards hand = 0x02c82840088000c0;
+    Cards_print(hand);
 
+    printf("\nMeld = ");
+    Meld table;
+    table.runs = 0x0000000000003e1e;
+    table.sets = 0x1536153615360120;
+    Meld_printCompact(&table);
+
+    printf("\nMustMeld = ");
+    Cards mustMeld = 0x0040000000000000;
+    Cards_print(mustMeld);
+    printf("\n");
+
+    MeldList list;
+    MeldList_generate(&list, hand, &table, mustMeld);
+    MeldList_print(&list);
 
     Cards_test();
     Pile_test();
