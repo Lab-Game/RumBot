@@ -42,6 +42,9 @@ static inline Cards Meld_cards(Meld *Meld) {
     return Cards_raiseAces(Meld->runs | Meld->sets);
 }
 
+bool Meld_isValidTable(Meld *Meld);
+bool Meld_isValidPlay(Meld *Meld);
+
 // Print the runs and sets currently on the Meld.
 void Meld_print(Meld *Meld);
 void Meld_printCompact(Meld *Meld);

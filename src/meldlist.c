@@ -11,10 +11,7 @@ bool MeldList_add(MeldList *list, Meld *meld) {
     if (list->size >= MELDLIST_MAX_SIZE) {
         return false;
     } else {
-        // Check to ensure this is a valid Meld.
-        assert(Cards_raiseAces(meld->sets) == meld->sets);
-        assert((Cards_raiseAces(meld->runs) & meld->sets) == 0);
-
+        assert(Meld_isValidPlay(meld));
         list->melds[list->size++] = *meld;
         return true;
     }
@@ -40,10 +37,7 @@ void MeldList_fillRec(MeldData *data) {
     // Confirm that the handExt is in a good state; specifically,
     // every ace present in the hand is present in both low
     // and high forms.
-
-    printf("handExt: ");
-    Cards_print(data->handExt); // DEBUG
-    printf("\n");               // DEBUG
+    assert(Meld_isValidTable(&data->table));
 
     if (MeldList_isFull(data->list)) {
         // No space for additional meld options.  Stop recursing.
@@ -60,26 +54,6 @@ void MeldList_fillRec(MeldData *data) {
             // newly-added to the table to the meld option list.
             data->meld.runs = data->table.runs & ~data->oldTable->runs;
             data->meld.sets = data->table.sets & ~data->oldTable->sets;
-
-            // Verify that the meld is legal.
-            assert(Cards_raiseAces(data->meld.sets) == data->meld.sets);
-            assert((Cards_raiseAces(data->meld.runs) & data->meld.sets) == 0);
-            for (int value = 0; value <= 13; ++value) {
-                Cards sameValue = Cards_sameValue(Cards_fromCard(value));
-                int count = Cards_size(data->table.sets & sameValue);
-                if (!(count == 0 || count == 3 || count == 4)) {
-                    printf("Illegal meld detected in MeldList_fillRec\n");
-                    MeldList_print(data->list);
-                    printf("New table meld:\n");
-                    Meld_printCompact(&data->table);
-                    printf("\nOld table meld:\n");
-                    Meld_printCompact(data->oldTable);
-                    printf("\nDerived meld:\n");
-                    Meld_printCompact(&data->meld);
-                    exit(1);
-                }
-            }
-
             MeldList_add(data->list, &data->meld);
         }
         return;
@@ -121,8 +95,15 @@ void MeldList_fillRec(MeldData *data) {
         // Play one card by prepending to an existing run.
         if (Cards_has(data->table.runs, next)) {
             Cards cardExt = card | highAce;
+            printf("Prepending a low ace run\n"); // DEBUG
+            printf("Card: "); Cards_print(card); printf("\n"); // DEBUG
+            printf("Card ext: "); Cards_print(cardExt); printf("\n"); // DEBUG
+            printf("handExt before: "); Cards_print(data->handExt); printf("\n"); // DEBUG
             data->handExt ^= cardExt;
+            printf("handExt after: "); Cards_print(data->handExt); printf("\n"); // DEBUG
+            printf("table.runs before: "); Cards_print(data->table.runs); printf("\n"); // DEBUG
             data->table.runs ^= card;
+            printf("table.runs after: "); Cards_print(data->table.runs); printf("\n"); // DEBUG
             MeldList_fillRec(data);
             data->table.runs ^= card;
             data->handExt ^= cardExt;
@@ -191,14 +172,15 @@ void MeldList_fillRec(MeldData *data) {
             //   - 3 in hand (no cards on table)
             //   - 4 in hand (no cards on table)
             if (numSameValueInHand + numSameValueOnTable >= 3) {
-                printf("Playing set ");   // DEBUG
-                Cards_print(sameValueInHand); // DEBUG
-                printf("\n");                 // DEBUG
-                data->handExt ^= sameValueInHand;
+                // If we are playing aces, then we need to remove the
+                // corresponding low aces from the hand as well.
+                Cards lowAces = ((sameValueInHand & 0x2000200020002000ULL) >> 13) &
+                                 data->handExt;
+                data->handExt ^= sameValueInHand ^ lowAces;
                 data->table.sets ^= sameValueInHand;
                 MeldList_fillRec(data);
                 data->table.sets ^= sameValueInHand;
-                data->handExt ^= sameValueInHand;
+                data->handExt ^= sameValueInHand ^ lowAces;
             }
 
             // If there are four cards of this value in hand, try
@@ -206,13 +188,14 @@ void MeldList_fillRec(MeldData *data) {
             if (numSameValueInHand == 4) {
                 for (Cards x = Cards_first(sameValueInHand); x != 0; x = Cards_next(sameValueInHand, x)) {
                     Cards triple = sameValueInHand & ~x;
-                    data->handExt ^= triple;
+                    Cards lowAces = ((triple & 0x2000200020002000ULL) >> 13) & data->handExt;
+                    data->handExt ^= triple ^ lowAces;
                     data->table.sets ^= triple;
                     data->noSet ^= x;
                     MeldList_fillRec(data);
                     data->noSet ^= x;
                     data->table.sets ^= triple;
-                    data->handExt ^= triple;
+                    data->handExt ^= triple ^ lowAces;
                 }
             }
         }

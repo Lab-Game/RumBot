@@ -2,6 +2,65 @@
 
 #include "meld.h"
 
+bool Meld_isValidPlay(Meld *meld) {
+    // The union of runs and sets must be disjoint.
+    if ((meld->runs & meld->sets) != 0) {
+        return false;
+    }
+
+    // An ace must appear high or low, but not both.
+    Cards allCards = (meld->runs | meld->sets);
+    Cards lowAces = allCards & 0x0001000100010001ULL;
+    Cards highAces = allCards & 0x2000200020002000ULL;
+    if (((lowAces << 13) & highAces) != 0) {
+        return false;
+    }
+
+    // A set must contain 0, 1, 3, or 4 cards of the same value.
+    for (int value = 0; value <= 13; ++value) {
+        Cards sameValue = Cards_sameValue(Cards_fromCard(value));
+        int count = Cards_size(meld->sets & sameValue);
+        if (!(count == 0 || count == 1 || count == 3 || count == 4)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool Meld_isValidTable(Meld *meld) {
+    // The union of runs and sets must be disjoint.
+    if ((meld->runs & meld->sets) != 0) {
+        return false;
+    }
+
+    // An ace must appear high or low, but not both.
+    Cards allCards = (meld->runs | meld->sets);
+    Cards lowAces = allCards & 0x0001000100010001ULL;
+    Cards highAces = allCards & 0x2000200020002000ULL;
+    if (((lowAces << 13) & highAces) != 0) {
+        return false;
+    }
+
+    // Every run card must be adjacent to a card that is itself
+    // adjacent to two cards.
+    Cards runCenters = meld->runs & (meld->runs << 1) & (meld->runs >> 1);
+    if (!(meld->runs == (runCenters | (runCenters << 1) | (runCenters >> 1)))) {
+        return false;
+    }
+
+    // Every set card card must be adjacent in suit to a card of the same value
+    // that is itself adjacent in suit to two cards of the same value.
+    Cards setCenters = (meld->sets & ((meld->sets << 16) | (meld->sets >> 48)) &
+                        ((meld->sets >> 16) | (meld->sets << 48)));
+    if (!(meld->sets == (setCenters | (setCenters << 16) | (setCenters >> 16) |
+                         (setCenters << 48) | (setCenters >> 48)))) {
+        return false;
+    }
+
+    return true;
+}
+
 void Meld_print(Meld *meld) {
     printf("+---------------------------------------------------\n");
     // Print all the runs in the Meld.  Separate cards in the same run by spaces,
