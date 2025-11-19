@@ -16,5 +16,6 @@ void MeldList_init(MeldList *list);
 bool MeldList_add(MeldList *list, Meld *meld);
 bool MeldList_isFull(MeldList *list);
 void MeldList_fill(MeldList *list, Cards hand, Meld *tableMeld, Cards mustMeld);
+void MeldList_print(MeldList *list);
 
 #endif // MELDLIST_H

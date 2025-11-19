@@ -3,18 +3,36 @@
 
 #include "ai.h"
 #include "game.h"
-#include "scoreboard.h"
 
 const int unknownCardCentipoints = 700;
 
 void AI_init(AI *ai, int mode) {
     ai->mode = mode;
+    ai->subMode = 0;
     ai->totalScore = 0;
+    ai->game = NULL;
+    ai->player = NULL;
+    AI_resetForTurn(ai);
+}
+
+void AI_resetForTurn(AI *ai) {
+    Turn_init(&ai->bestTakeTurn);
+    ai->possibleDraws = 0;
+    for (int i = 0; i < 64; ++i) {
+        Turn_init(&ai->bestDrawTurn[i]);
+    }
+    ai->averageDrawEval = 0;
+    MeldList_init(&ai->meldList);
 }
 
 void AI_joinGame(AI *ai, Game *game, Player *player) {
     ai->game = game;
     ai->player = player;
+}
+
+void AI_exitGame(AI *ai) {
+    ai->game = NULL;
+    ai->player = NULL;
 }
 
 Turn *AI_goDeep(AI *ai) {
@@ -23,179 +41,187 @@ Turn *AI_goDeep(AI *ai) {
 
     // Run lots of simulations on every leaf of the scoreboard tree
     // to determine the best turn.
+    for (int i = 0; i < 1; ++i) {
+        Game permuted;
+        Game_permute(ai->game, &permuted);
+        AI_simulate(ai, scoreboard);
+    }
+    Scoreboard_print(scoreboard);
+
+    // Pick out the best line of play from the scoreboard.
+    // ScoreboardTake *bestTake = NULL;
 
     Scoreboard_free(scoreboard);
+    return NULL;
+}
+
+
+void AI_simulate(AI *ai, Scoreboard *scoreboard) {
+    // The caller is responsible for supplying games to simulate,
+    // probably by calling Game_permute() on the current game.
+
+    AI_simulateTakes(ai, scoreboard->takes);
+    AI_simulateDraws(ai, scoreboard->draws);
+}
+
+void AI_simulateTakes(AI *ai, ScoreboardTake *take) {
+    Player *player = ai->player;
+
+    while (take) {
+        Player_take(player);
+        assert(take->numTaken == Pile_size(&player->turn.taken));
+        AI_simulateMelds(ai, take->melds);
+        take = take->next;
+    }
+    Player_undoTakes(player);
+}
+
+void AI_simulateDraws(AI *ai, ScoreboardDraw *draws) {
+    Player *player = ai->player;
+    Game *game = ai->game;
+
+    while (draws) {
+        Cards swapped = Game_swapToTop(game, draws->drawn);
+        Player_draw(player);
+        AI_simulateMelds(ai, draws->melds);
+        Player_undoDraw(player);
+        Game_swapToTop(game, swapped);
+        draws = draws->next;
+    }
+}
+
+void AI_simulateMelds(AI *ai, ScoreboardMeld *meld) {
+    Player *player = ai->player;
+
+    while (meld) {
+        Player_meld(player, &meld->meld);
+        AI_simulateDiscards(ai, meld->discards);
+        Player_undoMeld(player, &meld->meld);
+        meld = meld->next;
+    }
+}
+
+void AI_simulateDiscards(AI *ai, ScoreboardDiscard *discards) {
+    Player *player = ai->player;
+
+    while (discards) {
+        Player_discard(player, discards->discard);
+        AI_simulateGame(ai, &discards->score);
+        Player_undoDiscard(player);
+        discards = discards->next;
+    }
+}
+
+void AI_simulateGame(AI *ai, ScoreboardScore *score) {
+    // Play out the rest of the game from the current state.
+    // Update the ScoreboardScore structure with the results.
+
+    // Make a copy of the game, which we'll use for simulation.
+    Game simGame;
+    Game_copy(ai->game, &simGame);
+
+    // Set up AIs to play the simulated game.
+    AI simAIs[NUM_PLAYERS];
+    for (int i = 0; i < NUM_PLAYERS; ++i) {
+        AI_init(&simAIs[i], ai->mode);
+        AI_joinGame(&simAIs[i], &simGame, Game_player(&simGame, i));
+    }
+
+    // Play out the game until it's over.
+    while (!simGame.isOver) {
+        Turn *turn = AI_go(&simAIs[simGame.currentPlayerId]);
+        Player_play(simGame.currentPlayer, turn);
+        Game_nextTurn(&simGame);
+    }
+
+    // Record the outcome in the ScoreboardScore structure.
+    score->numGames += 1;
+    for (int i = 0; i < NUM_PLAYERS; ++i) {
+        score->totalScore[i] += simGame.players[i].score;
+    }
 }
 
 Turn *AI_go(AI *ai) {
-    Game *game = ai->game;
+    AI_resetForTurn(ai);
+    AI_findBestTakeTurn(ai);
+    AI_findBestDrawTurns(ai);
 
-    int bestTakeEval = AI_findBestTakeTurn(ai);
-    int averageDrawEval = AI_findBestDrawTurns(ai);
-
-    if (DEB >= 2) {
-        printf("AI_go: ");
-        Turn_print(&ai->bestTakeTurn);
-        for (Cards c = Cards_first(Player_couldDraw(ai->player)); c != 0; c = Cards_next(Player_couldDraw(ai->player), c)) {
-            Card card = Cards_toCard(c);
-            printf("AI_go: ");
-            Turn_print(&ai->bestDrawTurn[card]);
-        }
-    }
-    
-    if (DEB >= 1) {
-        printf("AI_go: best take = %d, average draw = %d  \n", bestTakeEval, averageDrawEval);
-    }
-
-    if (bestTakeEval > averageDrawEval) {
+    if (ai->bestTakeTurn.eval > ai->averageDrawEval) {
         return &ai->bestTakeTurn;
     } else {
-        // While cute, this is sort of problematic.  The AI shouldn't actually be
-        // able to see the top card in the draw pile.  Seems like the caller
-        // should be doing this lookup.
-        return &ai->bestDrawTurn[Cards_toCard(Pile_peek(&game->drawPile))];
+        Card drawCard = Cards_toCard(Pile_peek(&ai->game->drawPile));
+        return &ai->bestDrawTurn[drawCard];
     }
 }
 
-int AI_findBestTakeTurn(AI *ai) {
+void AI_findBestTakeTurn(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
-    if (DEB >= 3) {
-        printf("AI_findBestTakeTurn: evaluating take turns...\n");
-    }
-
-    Turn_init(&ai->bestTakeTurn);
     while (Pile_size(&game->discardPile) > 0) {
         Player_take(player);
-        AI_bestMeldAndDiscard(ai, &ai->bestTakeTurn);
+        AI_findBestMeld(ai, &ai->bestTakeTurn);
     }
     Player_undoTakes(player);
-
-    return ai->bestTakeTurn.eval;
 }
 
-int AI_findBestDrawTurns(AI *ai) {
+void AI_findBestDrawTurns(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
-    if (DEB >= 3) {
-        printf("AI_findBestDrawTurns: evaluating draw turns...\n");
-    }
-
-    // Go through all cards in the draw pile.
-    // Swap each card to the top of the draw pile,
-    // evaluate the scenario, and swap back.
     int totalEval = 0;
-    int numEvals = 0;
-    Pile *drawPile = &game->drawPile;
-    for (int i = 0; i < Pile_size(drawPile); ++i) {
-        Pile_swapToTop(drawPile, i);
-        totalEval += AI_tryDrawTurn(ai);
-        numEvals += 1;
-        Pile_swapToTop(drawPile, i);
+    ai->possibleDraws = Player_couldDraw(player);
+    for (Cards c = Cards_first(ai->possibleDraws); c != 0; c = Cards_next(ai->possibleDraws, c)) {
+        Turn *turn = &ai->bestDrawTurn[Cards_toCard(c)];
+
+        Cards swapped = Game_swapToTop(game, c);
+        Player_draw(player);
+        AI_findBestMeld(ai, turn);
+        totalEval += turn->eval;
+        Player_undoDraw(player);
+        Game_swapToTop(game, swapped);
     }
 
-    // Now go through all other players' hands.
-    // Swap each card that was not previously discarded
-    // into the draw pile, evaluate the scenario,
-    // and swap back.
-    for (int p = 0; p < game->numPlayers; ++p) {
-        Player *otherPlayer = Game_player(game, p);
-        if (otherPlayer == player) {
-            continue;
-        }
-        for (Cards c = Cards_first(otherPlayer->hand); c != 0; c = Cards_next(otherPlayer->hand, c)) {
-            if (Cards_has(game->everDiscarded, c)) {
-                // This card has been discarded before.
-                continue;
-            }
-
-            // Swap this card into the draw pile.
-            Pile_push(drawPile, c);
-            Cards_remove(&otherPlayer->hand, c);
-
-            totalEval += AI_tryDrawTurn(ai);
-            numEvals += 1;
-
-            // Swap the card back.
-            Cards_add(&otherPlayer->hand, c);
-            Pile_pop(drawPile);
-        }
-    }
-
-    // Return the average evaluation across all possible draws.
-    return totalEval / numEvals;
+    ai->averageDrawEval = totalEval / Cards_size(ai->possibleDraws);
 }
 
-int AI_tryDrawTurn(AI *ai) {
-    // Simulate drawing the top card of the draw pile,
-    // find the best meld and discard for that scenario,
-    // and return the evaluation of that turn.
-    // This is used when the deck has been fixed to place
-    // a specific card on top.
-    Player *player = ai->player;
-    Cards drawCard = Player_draw(player);
-
-    if (DEB >= 3) {
-        printf("AI_tryDrawTurn: trying draw ");
-        Cards_print(drawCard);
-        printf("\n");
-    }
-
-    Card card = Cards_toCard(drawCard);
-    Turn *bestTurn = &ai->bestDrawTurn[card];
-    Turn_init(bestTurn);
-    AI_bestMeldAndDiscard(ai, bestTurn);
-    Player_undoDraw(player);
-    return bestTurn->eval;
-}
-
-void AI_bestMeldAndDiscard(AI *ai, Turn *bestTurn) {
+void AI_findBestMeld(AI *ai, Turn *bestTurn) {
     Player *player = ai->player;
 
-    if (DEB >= 3) {
-        printf("AI_bestMeldAndDiscard: evaluating melds and discards...\n");
-    }
+    // Generate a list of possible melds
+    Cards mustMeld = player->turn.taken.size > 1 ? Pile_peek(&player->turn.taken) : 0;
 
-    Cards mustMeld = player->turn.taken.size > 0 ? Pile_peek(&player->turn.taken) : 0;
     MeldList_fill(&ai->meldList, player->hand, &ai->game->meld, mustMeld);
 
-    if (DEB >= 4) {
-        printf("AI_bestMeldAndDiscard: generated %d meld options:\n", ai->meldList.size);
-        for (int i = 0; i < ai->meldList.size; ++i) {
-            printf("  Option %d: ", i);
-            Meld_printCompact(&ai->meldList.melds[i]);
-            printf("\n");
-        }
-    }
-
+    // Try all of the possible melds.
     for (int i = 0; i < ai->meldList.size; ++i) {
         Player_meld(player, &ai->meldList.melds[i]);
-
-        if (Cards_size(player->hand) == 0) {
-            // No discard possible
-            player->turn.eval = AI_evaluateGame(ai);
-            Turn_max(bestTurn, &player->turn);
-        } else {
-            // Try each possible discard
-            for (Cards c = Cards_first(player->hand); c != 0; c = Cards_next(player->hand, c)) {
-                if (c == player->turn.taken.allCards && !Meld_cards(&player->turn.meld)) {
-                    // We can not discard a just-taken card without a meld.
-                    continue;
-                }
-                
-                Player_discard(player, c);
-                player->turn.eval = AI_evaluateGame(ai);
-                Turn_max(bestTurn, &player->turn);
-                Player_undoDiscard(player);
-            }
-        }
-
+        AI_findBestDiscard(ai, bestTurn);
         Player_undoMeld(player, &ai->meldList.melds[i]);
     }
 }
 
+void AI_findBestDiscard(AI *ai, Turn *bestTurn) {
+    Player *player = ai->player;
+
+    // If you took 1 card and didn't meld, then you must discard a different card.
+    // This rule helps prevent infinite loops, where each player keeps taking
+    // and discarding the same card over and over.
+    Cards illegalDiscard = 0;
+    if (Meld_cards(&player->turn.meld) == 0 && player->turn.taken.size == 1) {
+        illegalDiscard = player->turn.taken.allCards;
+    }
+    
+    // Consider all legal discards.
+    for (Cards c = Cards_first(player->hand); c != 0; c = Cards_next(player->hand, c)) {
+        if (c != illegalDiscard) {
+            Player_discard(player, c);
+            player->turn.eval = AI_evaluateGame(ai);
+            Turn_max(bestTurn, &player->turn);
+            Player_undoDiscard(player);
+        }
+    }
+}
 
 int AI_evaluateGame(AI *ai) {
     Game *game = ai->game;
@@ -225,34 +251,10 @@ int AI_evaluateGame(AI *ai) {
         int handPoints = Cards_points(player->hand);
         int eval = base_centipoints + handPlayability * 0.5 + handPoints;
 
-        if (DEB >= 3) {
-            printf("AI_evaluateGame: %d base + handPlayability %d * 0.5 + handPoints %d = eval %d\n",
-                     base_centipoints, handPlayability, handPoints, eval);
-        }
-
         return eval;
     }
     
     return base_centipoints;
-}
-
-Cards AI_playableCards(Cards hand, Meld *meld) {
-    Cards lowHand = Cards_addLowAces(hand);
-    Cards runCenters = hand & (lowHand << 1) & (hand >> 1);
-    Cards setCenters = (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48)));
-    Cards runExtensions = ((meld->runs << 1) | (meld->runs >> 1)) & lowHand;
-    Cards extendedMeldsRuns = meld->runs | runExtensions;
-    runExtensions = ((extendedMeldsRuns << 1) | (extendedMeldsRuns >> 1)) & lowHand;
-    Cards setExtensions = ((meld->sets << 16) | (meld->sets >> 16)) & lowHand;
-
-    // Find all playable cards from these plays
-
-    Cards playable = runCenters | (runCenters << 1) | (runCenters >> 1) | runExtensions |
-                     setCenters | (setCenters << 16) | (setCenters >> 16) |
-                     (setCenters << 48) | (setCenters >> 48) | setExtensions;
-
-    // Kick out low aces from playable cards if the corresponding high aces are playable.
-    return Cards_preferHighAces(playable);
 }
 
 int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
@@ -296,12 +298,37 @@ int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
     int numDrawable = Cards_size(drawable);
     int averageCentipoints = numDrawable > 0 ? totalCentipoints / numDrawable : 0;
 
-    if (DEB >= 3) {
-        printf("AI_evaluateHandPlayability: avg = %d\n", averageCentipoints);
-    }
-
     return averageCentipoints;
 }
 
+Cards AI_playableCards(Cards hand, Meld *meld) {
+    Cards lowHand = Cards_addLowAces(hand);
+    Cards runCenters = hand & (lowHand << 1) & (hand >> 1);
+    Cards setCenters = (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48)));
+    Cards runExtensions = ((meld->runs << 1) | (meld->runs >> 1)) & lowHand;
+    Cards extendedMeldsRuns = meld->runs | runExtensions;
+    runExtensions = ((extendedMeldsRuns << 1) | (extendedMeldsRuns >> 1)) & lowHand;
+    Cards setExtensions = ((meld->sets << 16) | (meld->sets >> 16)) & lowHand;
 
+    // Find all playable cards from these plays
 
+    Cards playable = runCenters | (runCenters << 1) | (runCenters >> 1) | runExtensions |
+                     setCenters | (setCenters << 16) | (setCenters >> 16) |
+                     (setCenters << 48) | (setCenters >> 48) | setExtensions;
+
+    // Kick out low aces from playable cards if the corresponding high aces are playable.
+    return Cards_preferHighAces(playable);
+}
+
+void AI_print(AI *ai) {
+    printf("AI mode %d, total score %d\n", ai->mode, ai->totalScore);
+    printf("  Best take turn: ");
+    Turn_print(&ai->bestTakeTurn);
+    printf("  Best draw turns:\n");
+    for (Cards c = Cards_first(ai->possibleDraws); c != 0; c = Cards_next(ai->possibleDraws, c)) {
+        Card card = Cards_toCard(c);
+        printf("    ");
+        Turn_print(&ai->bestDrawTurn[card]);
+    }
+    printf("  Average draw eval: %d\n", ai->averageDrawEval);
+}

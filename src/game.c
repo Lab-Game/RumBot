@@ -45,6 +45,41 @@ void Game_copy(Game *original, Game *copy) {
     copy->currentPlayer = &copy->players[copy->currentPlayerId];
 }
 
+Cards Game_swapToTop(Game *game, Cards card) {
+    // Swap the top card in the draw pile with the specified card.
+    // Return the card that was previously on top of the draw pile.
+
+    // First we need to find the card, which could be in the
+    // draw pile or a player's hand.  First, check the draw pile
+    Pile *drawPile = &game->drawPile;
+    Cards prevTop = Pile_peek(drawPile);
+
+    if (Cards_has(drawPile->allCards, card)) {
+        // The card is in the draw pile
+        for (int i = 0; i < drawPile->size; ++i) {
+            if (drawPile->cards[i] == card) {
+                Pile_swapToTop(drawPile, i);
+                return prevTop;
+            }
+        }
+    }
+
+    // Check each player's hand
+    for (int i = 0; i < game->numPlayers; ++i) {
+        Player *player = Game_player(game, i);
+        if (Cards_has(player->hand, card)) {
+            // The card is in this player's hand
+            Cards_add(&player->hand, Pile_pop(drawPile));
+            Cards_remove(&player->hand, card);
+            Pile_push(drawPile, card);
+            return prevTop;
+        }
+    }
+
+    assert(false); // card not found
+    return 0;
+}
+
 void Game_permute(Game *game, Game *permuted) {
     // Make a copy of the current game, but with all cards
     // unknown to the current player permuted.
@@ -221,6 +256,15 @@ void Player_undoDiscard(Player *player) {
 
 void Player_meld(Player *player, Meld *meld) {
     Player_playRun(player, meld->runs);
+
+    if (!Cards_has(player->hand, meld->sets)) {
+        printf("Error:  Player does not have all cards for meld set!\n");
+        Meld_printCompact(meld);
+        printf("Player hand after playing runs: ");
+        Cards_print(player->hand);
+        exit(1);
+    }
+
     Player_playSet(player, meld->sets);
 }
 

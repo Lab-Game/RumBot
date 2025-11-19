@@ -3,6 +3,11 @@
 
 #include "game.h"
 
+typedef struct ScoreboardScoreStruct {
+    int numGames;
+    int totalScore[NUM_PLAYERS];
+} ScoreboardScore;
+
 typedef struct ScoreboardStruct {
     struct ScoreboardTakeStruct *takes;
     struct ScoreboardDrawStruct *draws;
@@ -30,23 +35,21 @@ typedef struct ScoreboardDiscardStruct {
     struct ScoreboardDiscardStruct *next;
     Cards discard;
     Turn turn;
-    int numGames;
-    int totalScore[NUM_PLAYERS];
+    ScoreboardScore score;
 } ScoreboardDiscard;
 
-Scoreboard *Scoreboard_fromGame(Game *game);
+Scoreboard *Scoreboard_fromGame(Game *game);  // Returns one object
+ScoreboardTake *Scoreboard_initTakes(Game *game);  // Returns a linked list
+ScoreboardDraw *Scoreboard_initDraws(Game *game);  // Returns a linked list
+ScoreboardMeld *Scoreboard_initMelds(Game *game);  // Returns a linked list
+ScoreboardDiscard *Scoreboard_initDiscards(Game *game);  // Returns a linked list
+void Scoreboard_initScore(ScoreboardScore *score);
 void Scoreboard_free(Scoreboard *scoreboard);
-ScoreboardTake *Scoreboard_takes(Game *game);
-ScoreboardDraw *Scoreboard_draws(Game *game);  // This is an array of size 64, indexed by the drawn card.
-ScoreboardMeld *Scoreboard_melds(Game *game);
-ScoreboardDiscard *Scoreboard_discards(Game *game);
 
 void Scoreboard_print(Scoreboard *scoreboard);
 void ScoreboardTake_print(ScoreboardTake *take);
 void ScoreboardDraw_print(ScoreboardDraw *draw);
 void ScoreboardMeld_print(ScoreboardMeld *meld);
 void ScoreboardDiscard_print(ScoreboardDiscard *discard);
-
-void Scoreboard_free(Scoreboard *scoreboard);
 
 #endif // SCOREBOARD_H

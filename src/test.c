@@ -210,6 +210,12 @@ void AI_test(void) {
 }
 
 int main(void) {
+    printf("sizeof Game = %zu bytes\n", sizeof(Game));
+    printf("sizeof Player = %zu bytes\n", sizeof(Player));
+    printf("sizeof Pile = %zu bytes\n", sizeof(Pile));
+    printf("sizeof Meld = %zu bytes\n", sizeof(Meld));
+
+
     Cards_test();
     Pile_test();
     Meld_test();

@@ -107,7 +107,7 @@ int main(void) {
         ai_ptrs[i] = &ais[i];
     }
 
-    const int numGames = 1;
+    const int numGames = 100;
 
     Game game;
     for (int i = 0; i < numGames; ++i) {
