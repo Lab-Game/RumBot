@@ -43,6 +43,8 @@ static inline Cards Meld_cards(Meld *Meld) {
     return Cards_raiseAces(Meld->runs | Meld->sets);
 }
 
+static void Meld_playable(Cards hand, Meld *table, Meld *playable);
+
 // Meld can refer to either a play, given cards already on the table,
 // or to the current state of the table.  These functions check
 // validity in those two cases.

@@ -39,24 +39,11 @@
 void MeldList_generate(MeldList *list, Cards hand, Meld *table, Cards mustMeld) {
     // Initialize the meld list to be empty.
     list->size = 0;
-
-    Cards lowHand = Cards_addLowAces(hand);
-
-    // Find cards that can be played in a run.
-    Cards mayRun = (hand & (lowHand << 1) & (hand >> 1)) | table->runs;
-    mayRun |= ((mayRun << 1) | (mayRun >> 1)) & lowHand;
-    mayRun |= ((mayRun << 1) | (mayRun >> 1)) & lowHand;
-
-    // Find cards that can be played in a set.
-    Cards maySet = (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48))) | table->sets;
-    maySet |= ((maySet << 16) | (maySet >> 16)) & hand;
-
-    Cards mayMeld = mayRun | maySet;
-    if (!Cards_has(mayMeld, mustMeld)) {
-        // Early exit:  if the mustMeld card is not in the set of playable cards,
-        // then there are no possible melds.
-        return;
-    }
+    
+    Meld playable;
+    Meld_playable(hand, table, &playable);
+    Cards mayRun = playable.runs;
+    Cards maySet = playable.sets;
 
     MeldList_genRec(list, table, mustMeld, mayRun, maySet, table->runs, table->sets);
 }
@@ -79,6 +66,12 @@ void MeldList_genRec(MeldList *list, Meld *table, Cards mustMeld,
     printf(" mustMeld = ");
     Cards_print(mustMeld);
     printf("\n");
+
+    // UGH!  I don't have a valid hand here!!!!
+    Meld playable;
+    Meld_playable(hand, table, &playable);
+
+    // TODO:  I could now prune mayRun and maySet.
 
     // If the meld list is full, stop recursing.
     if (list->size >= MELDLIST_MAX_SIZE) {
