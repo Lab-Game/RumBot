@@ -4,8 +4,7 @@
 #include <stdbool.h>
 #include "meld.h"
 
-#define MELDLIST_MAX_SIZE 48
-#define MELDLIST_MAXMIN 2
+#define MELDLIST_MAX_SIZE 1000
 
 typedef struct {
     Meld melds[MELDLIST_MAX_SIZE];

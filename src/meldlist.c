@@ -39,13 +39,8 @@
 void MeldList_generate(MeldList *list, Cards hand, Meld *table, Cards mustMeld) {
     // Initialize the meld list to be empty.
     list->size = 0;
-    
-    Meld playable;
-    Meld_playable(hand, table, &playable);
-    Cards mayRun = playable.runs;
-    Cards maySet = playable.sets;
-
-    MeldList_genRec(list, table, mustMeld, mayRun, maySet, table->runs, table->sets);
+    MeldList_genRec(list, table, mustMeld,
+        Cards_addLowAces(hand), hand, table->runs, table->sets);
 }
 
 // Consider cards in mayRun and maySet one at a time, in increasing order.
@@ -54,27 +49,16 @@ void MeldList_generate(MeldList *list, Cards hand, Meld *table, Cards mustMeld) 
 void MeldList_genRec(MeldList *list, Meld *table, Cards mustMeld,
                      Cards mayRun, Cards maySet,
                      Cards newRuns, Cards newSets) {
-
-    Meld meld;
-    meld.runs = newRuns;
-    meld.sets = newSets;
-    Meld_printCompact(&meld);
-    printf(" mayRun = ");
-    Cards_print(mayRun);
-    printf(" maySet = ");
-    Cards_print(maySet);
-    printf(" mustMeld = ");
-    Cards_print(mustMeld);
-    printf("\n");
-
-    // UGH!  I don't have a valid hand here!!!!
-    Meld playable;
-    Meld_playable(hand, table, &playable);
-
-    // TODO:  I could now prune mayRun and maySet.
-
-    // If the meld list is full, stop recursing.
+// If the meld list is full, stop recursing.
     if (list->size >= MELDLIST_MAX_SIZE) {
+        return;
+    }
+
+    mayRun &= Meld_playableInRun(mayRun, newRuns);
+    maySet &= Meld_playableInSet(maySet, newSets);
+
+    // If the mustMeld card is neither played nor playable, backtrack.
+    if (!Cards_has(Cards_raiseAces(newRuns | mayRun) | newSets | maySet, mustMeld)) {
         return;
     }
 
@@ -82,7 +66,7 @@ void MeldList_genRec(MeldList *list, Meld *table, Cards mustMeld,
     Cards mayMeld = mayRun | maySet;
 
     // If no more cards can be played, we are are at a recursion leaf.
-    // Add this meld to the MeldList.
+    // Add this meld to the MeldList and backtrack.
     if (mayMeld == 0 ) {
         Meld *meld = &list->melds[list->size++];
         meld->runs = newRuns & ~table->runs;
@@ -92,6 +76,7 @@ void MeldList_genRec(MeldList *list, Meld *table, Cards mustMeld,
 
     // Get the next card that might be added to the meld.
     Cards card = Cards_first(mayMeld);
+
 
     // Consider playing this card (possibly a low ace!) in a run.
     if (Cards_has(mayRun, card)) {
@@ -116,14 +101,14 @@ void MeldList_genRec(MeldList *list, Meld *table, Cards mustMeld,
             (Cards_has(newRuns, prev) || Cards_has(newRuns, nextNext))) {
             Cards played = Cards_addAllAces(run2);
             MeldList_genRec(list, table, mustMeld,
-                mayRun & ~played, maySet & ~played, newRuns | run2, newSets);
+                mayRun & ~played & ~nextNext, maySet & ~played, newRuns | run2, newSets);
         }
 
         // Consider a single card joined to an existing run.
         if (Cards_has(newRuns, prev) || Cards_has(newRuns, next)) {
             Cards played = Cards_addAllAces(card);
             MeldList_genRec(list, table, mustMeld,
-                mayRun & ~played, maySet & ~played, newRuns | card, newSets);
+                mayRun & ~played & ~next, maySet & ~played, newRuns | card, newSets);
         }
     }
 
@@ -159,7 +144,7 @@ void MeldList_genRec(MeldList *list, Meld *table, Cards mustMeld,
                 Cards played = Cards_addAllAces(triple);
 
                 MeldList_genRec(list, table, mustMeld,
-                    mayRun & ~played, maySet & ~played, newRuns, newSets | triple);
+                    mayRun & ~played, maySet & ~played & ~x, newRuns, newSets | triple);
             }
         }
     }

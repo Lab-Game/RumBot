@@ -61,39 +61,16 @@ bool Meld_isValidTable(Meld *meld) {
     return true;
 }
 
-void Meld_playable(Cards hand, Meld *table, Meld *playable) {
+Cards Meld_playableInRun(Cards hand, Cards tableRuns) {
     Cards lowHand = Cards_addLowAces(hand);
-
-    // Find cards that can be played in a run.
-    playable->runs = table->runs;
-    playable->runs |= hand & (lowHand << 1) & (hand >> 1);
-    playable->runs |= (playable->runs << 1) | (playable->runs >> 1);
-    playable->runs |= (playable->runs << 1) | (playable->runs >> 1);
-    playable->runs &= lowHand;
-
-    // Find cards that can be played in a set.
-    playable->sets = table->sets;
-    playable->sets |= hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48));
-    playable->sets |= (playable->sets << 16) | (playable->sets >> 48) | (playable->sets >> 16) | (playable->sets << 48);
-    playable->sets &= hand;
+    Cards p = tableRuns | (hand & (lowHand << 1) & (hand >> 1));
+    p = (p | (p << 1) | (p >> 1)) & lowHand;
+    return (p | (p << 1) | (p >> 1)) & lowHand;
 }
 
-// The calleer is responsible for putting low aces in the hand (if desired).
-Cards Meld_playableInRun(Cards hand, Meld *table) {
-    Cards p;
-    p = table->runs;
-    p |= hand & (hand << 1) & (hand >> 1);
-    p |= (p << 1) | (p >> 1);
-    p |= (p << 1) | (p >> 1);
-    return p &= hand;
-}
-
-Cards Meld_playableInSet(Cards hand, Meld *table) {
-    Cards p;
-    p = table->sets;
-    p |= hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48));
-    p |= (p << 16) | (p >> 48) | (p >> 16) | (p << 48);
-    return p & hand;
+Cards Meld_playableInSet(Cards hand, Cards tableSets) {
+    Cards p = tableSets | (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48)));
+    return (p | (p << 16) | (p >> 48) | (p >> 16) | (p << 48)) & hand;
 }
 
 void Meld_print(Meld *meld) {

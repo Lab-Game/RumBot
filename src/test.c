@@ -104,27 +104,27 @@ void Pile_test(void) {
 
 void Meld_test(void) {
     puts("\nTesting Meld...");
-    Meld Meld;
-    Meld_init(&Meld);
-    assert(Meld.runs == 0);
-    assert(Meld.sets == 0);
+    Meld meld;
+    Meld_init(&meld);
+    assert(meld.runs == 0);
+    assert(meld.sets == 0);
 
-    Meld_addRun(&Meld, Cards_fromString("TH JH QH"));
-    Meld_addRun(&Meld, Cards_fromString("4C 5C 6C 7C"));
-    Meld_addSet(&Meld, Cards_fromString("7H 7C 7D"));
-    Meld_addSet(&Meld, Cards_fromString("JC JD JH JS"));
+    Meld_addRun(&meld, Cards_fromString("TH JH QH"));
+    Meld_addRun(&meld, Cards_fromString("4C 5C 6C 7C"));
+    Meld_addSet(&meld, Cards_fromString("7H 7C 7D"));
+    Meld_addSet(&meld, Cards_fromString("JC JD JH JS"));
     printf("Expected:\nRuns: 4C 5C 6C 7C, TH JH QH\nSets: 7C 7D 7H, JC JD JH JS\nActual:\n");
-    Meld_print(&Meld);
-    assert(Meld.runs == Cards_fromString("4C 5C 6C 7C TH JH QH"));
-    assert(Meld.sets == Cards_fromString("7C 7D 7H JC JD JH JS"));
+    Meld_print(&meld);
+    assert(meld.runs == Cards_fromString("4C 5C 6C 7C TH JH QH"));
+    assert(meld.sets == Cards_fromString("7C 7D 7H JC JD JH JS"));
 
-    Meld_removeRun(&Meld, Cards_fromString("TH JH QH"));
-    Meld_removeSet(&Meld, Cards_fromString("7C 7D 7H"));
-    Meld_addSet(&Meld, Cards_fromString("QC QH QS"));
+    Meld_removeRun(&meld, Cards_fromString("TH JH QH"));
+    Meld_removeSet(&meld, Cards_fromString("7C 7D 7H"));
+    Meld_addSet(&meld, Cards_fromString("QC QH QS"));
     printf("Expected:\nRuns: (no cards)\nSets: JC JD JH JS, QC QH QS\nActual:\n");
-    Meld_print(&Meld);
-    assert(Cards_size(Meld.runs) == 4);
-    assert(Cards_size(Meld.sets) == 7);
+    Meld_print(&meld);
+    assert(Cards_size(meld.runs) == 4);
+    assert(Cards_size(meld.sets) == 7);
 }
 
 void MeldList_test(void) {
@@ -138,8 +138,8 @@ void MeldList_test(void) {
     Meld_addSet(&tableMeld, Cards_fromString("TD TC TS"));
     Cards hand = Cards_fromString("4C 5C 7C 8C 9H TH JH QH 8D JD JC JS");
     Cards mustMeld = Cards_fromString("JC");
-
     MeldList_generate(&list, hand, &tableMeld, mustMeld);
+    MeldList_print(&list);
     assert(list.size == MELDLIST_MAX_SIZE || list.size == 33);
 
     Meld_init(&tableMeld);
