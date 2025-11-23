@@ -4,7 +4,7 @@
 
 void Turn_init(Turn *turn) {
     Pile_init(&turn->taken);
-    turn->draw = 0;
+    turn->drawn = 0;
     turn->discard = 0;
     Meld_init(&turn->meld);
     turn->newDiscards = 0;
@@ -22,7 +22,7 @@ void Turn_print(Turn *turn) {
     if (Pile_size(&turn->taken) == 0) {
         // This is a draw turn
         printf("Draw: ");
-        Cards_print(turn->draw);
+        Cards_print(turn->drawn);
     } else {
         // This is a take turn
         printf("Take: ");

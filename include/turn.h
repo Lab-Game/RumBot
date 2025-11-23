@@ -13,7 +13,7 @@
 
 typedef struct TurnStruct {
     Pile taken;  // cards taken from discard pile
-    Cards draw;  // card drawn (0 if none)
+    Cards drawn;  // card drawn (0 if none)
     Cards discard;  // card discarded (0 if none)
     Meld meld;  // cards melded
     Cards newDiscards;  // cards discarded for the first time this turn

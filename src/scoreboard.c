@@ -41,7 +41,7 @@ ScoreboardDraw *Scoreboard_initDraws(Game *game) {
 
         ScoreboardDraw *draw = malloc(sizeof(ScoreboardDraw));
         draw->next = draws;
-        draw->drawn = player->turn.draw;
+        draw->drawn = player->turn.drawn;
         draw->melds = Scoreboard_initMelds(game);
         draws = draw;
 

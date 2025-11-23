@@ -194,15 +194,15 @@ bool Player_isCurrent(Player *player) {
 Cards Player_draw(Player *player) {
     Cards card = Pile_pop(&player->game->drawPile);
     Cards_add(&player->hand, card);
-    player->turn.draw = card;
+    player->turn.drawn = card;
     return card;
 }
 
 void Player_undoDraw(Player *player) {
-    Cards card = player->turn.draw;
+    Cards card = player->turn.drawn;
     Pile_push(&player->game->drawPile, card);
     Cards_remove(&player->hand, card);
-    player->turn.draw = 0;
+    player->turn.drawn = 0;
 }
 
 Cards Player_couldDraw(Player *player) {
@@ -309,10 +309,10 @@ void Player_undoSet(Player *player, Cards set) {
 
 void Player_play(Player *player, Turn *turn) {
     // Handle draw or take
-    if (turn->draw) {
+    if (turn->drawn) {
         // Draw a card
         Cards drawnCard = Player_draw(player);
-        assert(drawnCard == turn->draw);
+        assert(drawnCard == turn->drawn);
     } else {
         // Take one or more cards from discard pile
         int takeCount = Pile_size(&turn->taken);
