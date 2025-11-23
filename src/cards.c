@@ -55,19 +55,19 @@ Cards Cards_fromString(const char *str) {
     }
 }
 
-void Cards_print(Cards cards) {
+void Cards_printToFile(Cards cards, FILE *file) {
     bool first = true;
     for (Cards cs = Cards_first(cards); cs != 0; cs = Cards_next(cards, cs)) {
         Card c = Cards_toCard(cs);
         if (first) {
-            Card_print(c);
             first = false;
         } else {
-            printf(" ");
-            Card_print(c);
+            fprintf(file, " ");
         }
+        fprintf(file, "%s", Card_name(c));
     }
-    if (first) {
-        printf("(no cards)");
-    }
+}
+
+void Cards_print(Cards cards) {
+    Cards_printToFile(cards, stdout);
 }

@@ -4,16 +4,21 @@
 #include "rumbot.h"
 #include "game.h"
 #include "ai.h"
+#include "log.h"
 
-int DEB = 2;  // Debug level (0=none, 1=some, 2=more, 3=lots)
+int DEB = 0;  // Debug level (0=none, 1=some, 2=more, 3=lots)
 
-void playGame(AI *ais[], Game *game) {
+void playGame(AI *ais[], Game *game, FILE *log_file) {
     for (int i = 0; i < NUM_PLAYERS; ++i) {
         AI_joinGame(ais[i], game, Game_player(game, i));
     }
 
     if (DEB >= 1) {
         printf("\n=== NEW GAME ===\n");
+    }
+
+    if (log_file) {
+        Log_game(game, log_file);
     }
 
     while (!game->isOver) {
@@ -31,6 +36,9 @@ void playGame(AI *ais[], Game *game) {
         }
 
         Player_play(game->currentPlayer, turn);
+        if (log_file) {
+            Log_turn(turn, log_file);
+        }
 
         if (DEB >= 2) {
             printf("  ");
@@ -63,40 +71,49 @@ void playAllOrders(AI *ai, Game *game) {
     shuffled_ais[0] = ai;
     shuffled_ais[1] = ai + 1;
     shuffled_ais[2] = ai + 2;
-    playGame(shuffled_ais, &copy);
+    playGame(shuffled_ais, &copy, NULL);
 
     Game_copy(game, &copy);
     shuffled_ais[0] = ai;
     shuffled_ais[1] = ai + 2;
     shuffled_ais[2] = ai + 1;
-    playGame(shuffled_ais, &copy);
+    playGame(shuffled_ais, &copy, NULL);
 
     Game_copy(game, &copy);
     shuffled_ais[0] = ai + 1;
     shuffled_ais[1] = ai;
     shuffled_ais[2] = ai + 2;
-    playGame(shuffled_ais, &copy);
+    playGame(shuffled_ais, &copy, NULL);
 
     Game_copy(game, &copy);
     shuffled_ais[0] = ai + 1;
     shuffled_ais[1] = ai + 2;
     shuffled_ais[2] = ai;
-    playGame(shuffled_ais, &copy);
+    playGame(shuffled_ais, &copy, NULL);
 
     Game_copy(game, &copy);
     shuffled_ais[0] = ai + 2;
     shuffled_ais[1] = ai;
     shuffled_ais[2] = ai + 1;
-    playGame(shuffled_ais, &copy);
+    playGame(shuffled_ais, &copy, NULL);
 
     Game_copy(game, &copy);
     shuffled_ais[0] = ai + 2;
     shuffled_ais[1] = ai + 1;
     shuffled_ais[2] = ai;
-    playGame(shuffled_ais, &copy);
+    playGame(shuffled_ais, &copy, NULL);
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+    FILE *log_file = NULL;
+    if (argc > 1) {
+        log_file = fopen(argv[1], "w");
+        if (!log_file) {
+            fprintf(stderr, "Error: could not open log file %s for writing\n", argv[1]);
+            return 1;
+        }
+    }
+
     AI ais[NUM_PLAYERS];
     AI *ai_ptrs[NUM_PLAYERS];
 
@@ -113,13 +130,17 @@ int main(void) {
     Game game;
     for (int i = 0; i < numGames; ++i) {
         Game_init(&game);
-        playGame(ai_ptrs, &game);
+        playGame(ai_ptrs, &game, log_file);
     }
 
     // Print final AI scores
     printf("\n=== FINAL SCORES AFTER %d GAMES ===\n", numGames);
     for (int i = 0; i < NUM_PLAYERS; ++i) {
         printf("AI %d (mode %d): %d points\n", i, ais[i].mode, ais[i].totalScore);
+    }
+
+    if (log_file) {
+        fclose(log_file);
     }
 
     return 0;

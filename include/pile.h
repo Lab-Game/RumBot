@@ -57,5 +57,6 @@ void Pile_shuffle(Pile *pile);
 
 // Print the cards in the pile as a space-separated list of card codes.
 void Pile_print(Pile *pile);
+void Pile_printToFile(Pile *pile, FILE *file);
 
 #endif // PILE_H

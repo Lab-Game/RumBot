@@ -26,19 +26,19 @@ void Pile_swapToTop(Pile *pile, int index) {
     pile->cards[pile->size - 1] = temp;
 }
 
-void Pile_print(Pile *pile) {
+void Pile_printToFile(Pile *pile, FILE *file) {
     bool printed = false;
     for (int i = 0; i < pile->size; ++i) {
         Cards card = pile->cards[i];
         assert(Cards_size(card) == 1);
         if (printed) {
-            printf(" ");
+            fprintf(file, " ");
         }
-        Card_print(Cards_toCard(card));
+        Cards_printToFile(card, file);
         printed = true;
     }
+}
 
-    if (!printed) {
-        printf("(empty pile)");
-    }
+void Pile_print(Pile *pile) {
+    Pile_printToFile(pile, stdout);
 }

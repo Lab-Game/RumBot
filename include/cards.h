@@ -145,6 +145,7 @@ Cards Cards_fromString(const char *str);
 
 // Print the Cards set as a space-separated list of card codes.
 void Cards_print(Cards cards);
+void Cards_printToFile(Cards cards, FILE *file);
 void Cards_printExposed(Cards cards, Cards exposed);
 
 #endif // CARDS_H
