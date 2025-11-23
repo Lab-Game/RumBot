@@ -99,7 +99,7 @@ void Meld_print(Meld *meld) {
     prevPrinted = 0;
     for (int value = 0; value <= 13; ++value) {
         for (int suit = 0; suit < 4; ++suit) {
-            Cards c = Cards_fromCard(Card_fromSuitValue(suit, value));
+            Cards c = Cards_fromCard(Card_fromValueSuit(value, suit));
             if (Cards_has(meld->sets, c)) {
                 if (prevPrinted != 0) {                        
                     if ((Cards_toCard(prevPrinted) & 0xF) == value) {
@@ -144,7 +144,7 @@ void Meld_printCompact(Meld *meld) {
     for (int value = 0; value <= 13; ++value) {
         Card prev = ILLEGAL_CARD;
         for (int suit = 0; suit < 4; ++suit) {
-            Cards c = Cards_fromCard(Card_fromSuitValue(suit, value));
+            Cards c = Cards_fromCard(Card_fromValueSuit(value, suit));
             if (Cards_has(meld->sets, c)) {
                 Card card = Cards_toCard(c);
 

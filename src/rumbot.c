@@ -18,7 +18,7 @@ void playGame(AI *ais[], Game *game, FILE *log_file) {
     }
 
     if (log_file) {
-        Log_game(game, log_file);
+        Log_writeGame(game, log_file);
     }
 
     while (!game->isOver) {
@@ -37,7 +37,7 @@ void playGame(AI *ais[], Game *game, FILE *log_file) {
 
         Player_play(game->currentPlayer, turn);
         if (log_file) {
-            Log_turn(turn, log_file);
+            Log_writeTurn(turn, log_file);
         }
 
         if (DEB >= 2) {

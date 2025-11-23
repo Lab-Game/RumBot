@@ -34,9 +34,9 @@ static inline int Card_suit(Card c) {
     return c >> 4;
 }
 
-static inline Card Card_fromSuitValue(int suit, int value) {
-    assert(suit >= 0 && suit <= 3);
+static inline Card Card_fromValueSuit(int value, int suit) {
     assert(value >= 0 && value <= 13);
+    assert(suit >= 0 && suit <= 3);
     return (suit << 4) | value;
 }
 

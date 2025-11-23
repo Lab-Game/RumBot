@@ -44,7 +44,7 @@ Cards Cards_fromString(const char *str) {
         int value = strchr(values, *(str++)) - values;
         int suit = strchr(suits, *(str++)) - suits;
 
-        cards |= (1ULL << (value + (suit << 4)));
+        cards |= Cards_fromCard(Card_fromValueSuit(value, suit));
 
         if (!*str) {
             return cards;

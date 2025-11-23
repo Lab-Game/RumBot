@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 #include "pile.h"
 
 void Pile_fullDeck(Pile *pile) {
