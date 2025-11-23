@@ -48,7 +48,6 @@ void Game_copy(Game *original, Game *copy) {
 Cards Game_swapToTop(Game *game, Cards card) {
     // Swap the top card in the draw pile with the specified card.
     // Return the card that was previously on top of the draw pile.
-
     // First we need to find the card, which could be in the
     // draw pile or a player's hand.  First, check the draw pile
     Pile *drawPile = &game->drawPile;

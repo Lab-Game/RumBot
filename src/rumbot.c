@@ -104,8 +104,29 @@ void playAllOrders(AI *ai, Game *game) {
     playGame(shuffled_ais, &copy, NULL);
 }
 
-int main(int argc, char *argv[]) {
+void readGameFromLog() {
+    Game game;
+    Game_init(&game);
+
     FILE *log_file = NULL;
+    log_file = fopen("logs/game.log", "r");
+    if (!log_file) {
+        fprintf(stderr, "Error: could not open log file for reading\n");
+        exit(1);
+    }
+
+    Log_readGame(&game, log_file);
+    printf("Done reading game from log file. Current game state:\n");
+    Game_print(&game);
+    printf("exiting...\n");
+    fclose(log_file);
+    exit(0);
+}  
+
+int main(int argc, char *argv[]) {
+    readGameFromLog();
+
+     FILE *log_file = NULL;
     if (argc > 1) {
         log_file = fopen(argv[1], "w");
         if (!log_file) {

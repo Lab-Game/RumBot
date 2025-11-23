@@ -98,5 +98,25 @@ int Log_readCard(FILE *log_file, Card *card) {
 void Log_readGame(Game *game, FILE *log_file) {
     Game_init(game);
 
-    
+    // Read the draw pile, which should be the same length as the existing draw pile.
+    for (int i = 0; i < Pile_size(&game->drawPile); ++i) {
+        Card card;
+        int result = Log_readCard(log_file, &card);
+        if (result != 1) {
+            fprintf(stderr, "Log_readGame: expected card in draw pile\n");
+            exit(1);
+        }
+        Cards c = Cards_fromCard(card);
+        printf("Trying to move to position %d: ", i);
+        Card_print(card);
+        printf("\n");
+
+        // Move the card to the top of the draw pile.
+        Game_swapToTop(game, c);
+
+        // Swap the card at the top of the draw pile to position i.
+        Pile_swapToTop(&game->drawPile, i);
+    }
+
+    Game_print(game);
 }
