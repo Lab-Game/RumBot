@@ -3,88 +3,52 @@
 
 #include "log.h"
 
-Log *Log_init(int viewpoint) {
-    Log *log = malloc(sizeof(Log));
-    log->viewpoint = viewpoint;
-    for (int i = 0; i < NUM_PLAYERS; ++i) {
-        log->initialHand[i] = 0;
+void Log_gameStart(const Game *game) {
+    // Print the draw pile
+    Pile_print(&game->drawPile);
+    printf("\n");
+
+    // Print the discard pile
+    Pile_print(&game->discardPile);
+    printf("\n");
+
+    // Print each player's hand
+    for (int i = 0; i < game->numPlayers; ++i) {
+        Cards_print(game->players[i].hand);
+        printf("\n");
     }
-    log->head = NULL;
-    return log;
 }
 
-void Log_setInitialHand(Log *log, int playerId, Cards hand) {
-    log->initialHand[playerId] = hand;
-}
-
-void Log_free(Log *log) {
-    LogEntry *entry = log->head;
-    while (entry != NULL) {
-        LogEntry *next = entry->next;
-        free(entry);
-        entry = next;
-    }
-    free(log);
-}
-
-void Log_addEntry(Log *log, Turn *turn) {
-    LogEntry *entry = malloc(sizeof(LogEntry));
-    entry->numTaken = turn->taken.size;
-    entry->drawn = turn->drawn;
-    entry->meld = turn->meld;
-    entry->discard = turn->discard;
-    entry->next = log->head;
-    log->head = entry;
-}
-
-void Log_applyEntry(Game *game, LogEntry *entry) {
-    // Carry out actions in the log entry on the game state.
-    Player *player = game->currentPlayer;
-    // Handle draw or take
-    if (entry->drawn) {
-        // Modify the game so that the drawn card is on top of the draw pile,
-        // if we know what it is.
-        if (entry->drawn != 0) {
-            Cards swapped = Game_swapToTop(game, entry->drawn);
-        }
-
-        // Draw a card
-        Cards drawnCard = Player_draw(player);
+void Log_turn(const Game *game, const Turn *turn) {
+    // First indicate whether this is a take or draw.
+    // If this is a take, write "T <# of careds>".
+    // If this is a draw, wrinte "D <card drawn>".
+    if (turn->taken.size > 0) {
+        printf("T %d\n", turn->taken.size);
     } else {
-        // Take one or more cards from discard pile
-        for (int i = 0; i < entry->numTaken; ++i) {
-            Player_take(player);
-        }
-    }
-
-    // Handle meld
-    Player_meld(player, &entry->meld);
-
-    // Handle discard
-    if (entry->discard) {
-        Player_discard(player, entry->discard);
-    }
-}
-
-void Log_print(Log *log) {
-    printf("Log (viewpoint: %d):\n", log->viewpoint);
-    for (int i = 0; i < NUM_PLAYERS; ++i) {
-        printf("  Initial hand for player %d: ", i);
-        Cards_print(log->initialHand[i]);
+        printf("D ");
+        Card_print(Cards_toCard(turn->drawn));
         printf("\n");
     }
-    LogEntry *entry = log->head;
-    int turnNum = 0;
-    while (entry != NULL) {
-        printf("  Turn %d: ", turnNum);
-        printf("Taken: %d, Drawn: ", entry->numTaken);
-        Cards_print(entry->drawn);
-        printf(", Meld: ");
-        Meld_printCompact(&entry->meld);
-        printf(", Discard: ");
-        Cards_print(entry->discard);
+
+    // Next print the melded cards.  Run cards are in
+    // angle brackets.  Set cards are in curly braces.
+    if (turn->meld.runs != 0) {
+        printf("< ");
+        Cards_print(turn->meld.runs);
+        printf(">\n");
+    }
+    if (turn->meld.sets != 0) {
+        printf("{");
+        Cards_print(turn->meld.sets);
+        printf(" }\n");
+    }
+
+    // Finally, print the discard.  If there is no discard, print "#".
+    if (turn->discard != 0) {
+        Cards_print(turn->discard);
         printf("\n");
-        entry = entry->next;
-        turnNum++;
+    } else {
+        printf("#\n");
     }
 }
