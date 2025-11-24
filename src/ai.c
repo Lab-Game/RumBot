@@ -279,17 +279,6 @@ int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
         Cards simulatedHand = hand | c;
         Cards playable = AI_playableCards(simulatedHand, meld);
         int centipoints = Cards_points(playable) * 100;  // convert to cpts
-
-        if (DEB >= 4) {
-            if (playable) {
-                printf("AI_evaluateHandPlayability:   draw: ");
-                Card_print(Cards_toCard(c));
-                printf(" -> ");
-                Cards_print(playable);
-                printf(" (%d cpts)\n", centipoints);
-            }
-        }
-
         totalCentipoints += centipoints;
     }
 

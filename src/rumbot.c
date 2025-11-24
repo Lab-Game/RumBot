@@ -6,7 +6,7 @@
 #include "ai.h"
 #include "log.h"
 
-int DEB = 0;  // Debug level (0=none, 1=some, 2=more, 3=lots)
+int DEB = 2;  // Debug level (0=none, 1=some, 2=more, 3=lots)
 
 void playGame(AI *ais[], Game *game, FILE *log_file) {
     for (int i = 0; i < NUM_PLAYERS; ++i) {
@@ -124,9 +124,7 @@ void readGameFromLog() {
 }  
 
 int main(int argc, char *argv[]) {
-    readGameFromLog();
-
-     FILE *log_file = NULL;
+    FILE *log_file = NULL;
     if (argc > 1) {
         log_file = fopen(argv[1], "w");
         if (!log_file) {
@@ -151,6 +149,7 @@ int main(int argc, char *argv[]) {
     Game game;
     for (int i = 0; i < numGames; ++i) {
         Game_init(&game);
+        Game_deal(&game);
         playGame(ai_ptrs, &game, log_file);
     }
 

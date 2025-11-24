@@ -10,30 +10,27 @@ void Game_init(Game *game) {
     for (int i = 0; i < game->numPlayers; ++i) {
         Player_init(&game->players[i], game, i);
     }
+    Pile_fullDeck(&game->drawPile);
     Pile_init(&game->discardPile);
     Meld_init(&game->meld);
     game->everDiscarded = 0;
+    game->isOver = false;
+}
 
-    // Shuffle the draw pile
-    Pile_fullDeck(&game->drawPile);
+void Game_deal(Game *game) {
+    // Shuffle the deck
     Pile_shuffle(&game->drawPile);
 
     // Deal 7 cards to each player
-    for (int i = 0; i < game->numPlayers; ++i) {
+    for (int i = 0; i < NUM_PLAYERS; ++i) {
         Player *player = Game_player(game, i);
         for (int j = 0; j < 7; ++j) {
             Player_draw(player);
         }
     }
 
-    // First player draws one more card, which becomes the discard pile.
-    Player *firstPlayer = Game_player(game, 0);
-    Player_discard(firstPlayer, Player_draw(firstPlayer));
-
-    // Clear the play for the first player
-    Turn_init(&firstPlayer->turn);
-
-    game->isOver = false;
+    // Move the top card from the draw pile to the discard pile.
+    Pile_push(&game->discardPile, Pile_pop(&game->drawPile));
 }
 
 void Game_copy(Game *original, Game *copy) {
@@ -45,16 +42,43 @@ void Game_copy(Game *original, Game *copy) {
     copy->currentPlayer = &copy->players[copy->currentPlayerId];
 }
 
+Cards Game_swap(Game *game, Cards remove, Cards insert) {
+    // Swap the specified cards in the game.
+    // The removed card could be in the draw pile, a player's hand, or the discard pile.
+
+    // Check the draw pile
+    Pile *drawPile = &game->drawPile;
+    if (Cards_has(drawPile->allCards, remove)) {
+        return Pile_swap(&game->drawPile, remove, insert);
+    }
+    
+    // Check each player's hand
+    for (int i = 0; i < game->numPlayers; ++i) {
+        Player *player = Game_player(game, i);
+        if (Cards_has(player->hand, remove)) {
+            return Cards_swap(&player->hand, remove, insert);
+        }
+    }
+
+    // Check the discard pile
+    Pile *discardPile = &game->discardPile;
+    if (Cards_has(discardPile->allCards, remove)) {
+        return Pile_swap(&game->discardPile, remove, insert);
+    }
+
+    assert(false); // remove card not found
+}
+
 Cards Game_swapToTop(Game *game, Cards card) {
     // Swap the top card in the draw pile with the specified card.
     // Return the card that was previously on top of the draw pile.
     // First we need to find the card, which could be in the
-    // draw pile or a player's hand.  First, check the draw pile
+    // draw pile, a player's hand, or the discard pile.
     Pile *drawPile = &game->drawPile;
     Cards prevTop = Pile_peek(drawPile);
 
+    // Check the draw pile
     if (Cards_has(drawPile->allCards, card)) {
-        // The card is in the draw pile
         for (int i = 0; i < drawPile->size; ++i) {
             if (drawPile->cards[i] == card) {
                 Pile_swapToTop(drawPile, i);
@@ -72,6 +96,23 @@ Cards Game_swapToTop(Game *game, Cards card) {
             Cards_remove(&player->hand, card);
             Pile_push(drawPile, card);
             return prevTop;
+        }
+    }
+
+    // Check the discard pile
+    Pile *discardPile = &game->discardPile;
+    if (Cards_has(discardPile->allCards, card)) {
+        for (int i = 0; i < discardPile->size; ++i) {
+            if (discardPile->cards[i] == card) {
+                // The card is in the discard pile
+                Pile_swapToTop(discardPile, i);
+                Cards drawTop = Pile_pop(drawPile);
+                Cards discardTop = Pile_pop(discardPile);
+                Pile_push(drawPile, discardTop);
+                Pile_push(discardPile, drawTop);
+                Pile_swapToTop(discardPile, i);
+                return prevTop;
+            }
         }
     }
 
@@ -149,10 +190,6 @@ void Game_print(Game *game) {
         printf("\n");
     }
 
-    printf("Discard: ");
-    Pile_print(&game->discardPile);
-    printf("\n");
-
     for (int i = 0; i < game->numPlayers; ++i) {
         Player *player = Game_player(game, i);
         if (i == game->currentPlayerId) {
@@ -163,19 +200,15 @@ void Game_print(Game *game) {
         Player_print(player);
     }
 
-    if (DEB >= 2) {
-        // Print all cards in the draw pile
-        printf("Draw: ");
-        Pile_print(&game->drawPile);
-        printf("\n");
-    } else {
-        // Print only the number of cards in the draw pile
-        // and only if there are few cards left.
-        int drawSize = Pile_size(&game->drawPile);
-        if (drawSize <= 5) {
-            printf("Draw: %d cards\n", drawSize);
-        }
-    }
+    // Print all cards in the draw pile
+    printf("Draw: ");
+    Pile_print(&game->drawPile);
+    printf("\n");
+
+    // Print all cards in the discard pile
+    printf("Discard: ");
+    Pile_print(&game->discardPile);
+    printf("\n");
 }
 
 void Player_init(Player *player, Game *game, int id) {
@@ -330,22 +363,7 @@ void Player_play(Player *player, Turn *turn) {
 }
 
 void Player_print(Player *player) {
-    Game *game = player->game;
     printf("Player %d (%3d pts)  ", player->id, player->score);
-    if (DEB >= 1) {
-        Cards_print(player->hand);
-    } else if (!player->hand) {
-        printf("(no cards)");
-    } else {
-        Cards exposed = player->hand & game->everDiscarded;
-        Cards hidden = player->hand & ~game->everDiscarded;
-        if (exposed) {
-            Cards_print(exposed);
-        }
-        if (hidden) {
-            printf(" +%d", Cards_size(hidden));
-        }   
-    }
-    
+    Cards_print(player->hand);
     printf("\n");
 }

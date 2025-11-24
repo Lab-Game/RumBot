@@ -121,11 +121,11 @@ void Meld_print(Meld *meld) {
 }
 
 void Meld_printCompact(Meld *meld) {
-    Card prev = ILLEGAL_CARD;
+    Card prev = kIllegalCard;
     for (Cards c = Cards_first(meld->runs); c != 0; c = Cards_next(meld->runs, c)) {
         Card card = Cards_toCard(c);
 
-        if (prev == ILLEGAL_CARD) {
+        if (prev == 0xff) {
             printf("<");
         } else if (Card_value(prev) + 1 == Card_value(card) &&
                    Card_suit(prev) == Card_suit(card)) {
@@ -135,20 +135,20 @@ void Meld_printCompact(Meld *meld) {
         }
         prev = card;
 
-        Card_print(card);
+        printf("%s", Card_colorName(card));
     }
-    if (prev != ILLEGAL_CARD) {
+    if (prev != kIllegalCard) {
         printf("> ");
     }
 
     for (int value = 0; value <= 13; ++value) {
-        Card prev = ILLEGAL_CARD;
+        Card prev = kIllegalCard;
         for (int suit = 0; suit < 4; ++suit) {
             Cards c = Cards_fromCard(Card_fromValueSuit(value, suit));
             if (Cards_has(meld->sets, c)) {
                 Card card = Cards_toCard(c);
 
-                if (prev == ILLEGAL_CARD) {
+                if (prev == kIllegalCard) {
                     printf("{");
                     prev = c;
                 } else if (Card_value(prev) != Card_value(card)) {
@@ -158,10 +158,10 @@ void Meld_printCompact(Meld *meld) {
                 }
                 prev = card;
 
-                Card_print(card);
+                printf("%s", Card_colorName(card));
             }
         }
-        if (prev != ILLEGAL_CARD) {
+        if (prev != kIllegalCard) {
             printf("} ");
         }
     }

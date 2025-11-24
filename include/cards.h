@@ -5,48 +5,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "card.h"
+
 #define FULL_DECK   0x3FFE3FFE3FFE3FFEULL  // Full deck (high aces only)
 #define LEGAL_CARDS 0x3FFF3FFF3FFF3FFFULL  // All legal cards (high and low aces)
-#define RED_CARDS   0x3FFF00003FFF0000ULL
-#define BLACK_CARDS 0x00003FFF00003FFFULL
 #define LOW_ACES    0x0001000100010001ULL
 #define HIGH_ACES   0x2000200020002000ULL
-
-// A "Card" is a single playing card, represented as a number from 0 to 63.
-// The low 4 bits are the value (0=low Ace, 1=2, ..., 12=King, 13=high Ace).
-// The high 4 bits are the suit (0=Clubs, 1=Diamonds, 2=Hearts, 3=Spades).
-// Values 14-15, 30-31, 46-47, and 62-63, and 64-255 are illegal.
-typedef uint8_t Card;
-
-#define ILLEGAL_CARD 255
-
-static inline bool Card_isLegal(Card i) {
-    return (1ULL << i) & LEGAL_CARDS;
-}
-
-static inline int Card_value(Card c) {
-    assert(Card_isLegal(c));
-    return c & 0xF;
-}
-
-static inline int Card_suit(Card c) {
-    assert(Card_isLegal(c));
-    return c >> 4;
-}
-
-static inline Card Card_fromValueSuit(int value, int suit) {
-    assert(value >= 0 && value <= 13);
-    assert(suit >= 0 && suit <= 3);
-    return (suit << 4) | value;
-}
-
-// Return a two-letter code for legal cards, e.g. "8C" for the 8 of Clubs.
-// Low aces are represented as "a", high aces as "A".
-// Illegal cards are are represented as the number followed by "?", e.g. "14?".
-const char *Card_name(Card i);
-
-// Print the two-letter code for a legal card.
-void Card_print(Card c);
+#define PLACEHOLDER 0xc000c000c000c000ULL  // Tempororary used when swapping cards
 
 // The Cards type is a bitmask used to represent a set of playing cards.
 // There are bits to represent low aces, but these are used only when
@@ -77,6 +42,15 @@ static inline void Cards_remove(Cards *cards, Cards c) {
 // Return the number of cards in the Cards set.
 static inline int Cards_size(Cards cards) {
     return __builtin_popcountll(cards);
+}
+
+// Swap 8C with PLACEHOLDER in a Pile.
+// Swap the 8C with the 7H in a Cards set.
+// Swap the 7H with PLACEHOLDER in the Pile.
+
+static inline Cards Cards_swap(Cards *cards, Cards remove, Cards insert) {
+    *cards = (*cards & ~remove) | insert;
+    return remove;
 }
 
 // Return true of the set of cards includes any low aces.

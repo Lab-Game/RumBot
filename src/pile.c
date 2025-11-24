@@ -40,6 +40,17 @@ void Pile_printToFile(Pile *pile, FILE *file) {
     }
 }
 
+Cards Pile_swap(Pile *pile, Cards remove, Cards insert) {
+    for (int i = 0; i < pile->size; ++i) {
+        if (pile->cards[i] == remove) {
+            pile->cards[i] = insert;
+            return remove;
+        }
+    }
+    assert(false); // remove card not found
+}
+
+
 void Pile_print(Pile *pile) {
     Pile_printToFile(pile, stdout);
 }
