@@ -48,6 +48,12 @@ void AI_simulateMelds(AI *ai, ScoreboardMeld *melds);
 void AI_simulateDiscards(AI *ai, ScoreboardDiscard *discards);
 void AI_simulateGame(AI *ai, ScoreboardScore *score);
 
+// Helper functions to find the best path through the scoreboard tree
+ScoreboardDiscard *AI_findBestScoreboardDiscard(ScoreboardDiscard *discards, int playerId);
+ScoreboardDiscard *AI_findBestScoreboardMeldPath(ScoreboardMeld *melds, int playerId);
+ScoreboardDiscard *AI_findBestScoreboardTakePath(ScoreboardTake *takes, int playerId);
+ScoreboardDiscard *AI_findBestScoreboardDrawPath(ScoreboardDraw *draws, int playerId);
+
 void AI_print(AI *ai);
 
 #endif // AI_H

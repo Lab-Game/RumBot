@@ -42,27 +42,177 @@ Turn *AI_go(AI *ai) {
     }
 }
 
+// Helper function to find the best discard from a linked list of discards
+ScoreboardDiscard *AI_findBestScoreboardDiscard(ScoreboardDiscard *discards, int playerId) {
+    ScoreboardDiscard *bestDiscard = NULL;
+    int bestAverageScore = -999999;
+
+    while (discards) {
+        if (discards->score.numGames > 0) {
+            int averageScore = discards->score.totalScore[playerId] / discards->score.numGames;
+            if (averageScore > bestAverageScore) {
+                bestAverageScore = averageScore;
+                bestDiscard = discards;
+            }
+        }
+        discards = discards->next;
+    }
+
+    return bestDiscard;
+}
+
+// Helper function to find the best path through melds
+ScoreboardDiscard *AI_findBestScoreboardMeldPath(ScoreboardMeld *melds, int playerId) {
+    ScoreboardDiscard *bestDiscard = NULL;
+    int bestAverageScore = -999999;
+
+    while (melds) {
+        ScoreboardDiscard *candidateDiscard = AI_findBestScoreboardDiscard(melds->discards, playerId);
+        if (candidateDiscard && candidateDiscard->score.numGames > 0) {
+            int averageScore = candidateDiscard->score.totalScore[playerId] / candidateDiscard->score.numGames;
+            if (averageScore > bestAverageScore) {
+                bestAverageScore = averageScore;
+                bestDiscard = candidateDiscard;
+            }
+        }
+        melds = melds->next;
+    }
+
+    return bestDiscard;
+}
+
+// Helper function to find the best path through takes
+ScoreboardDiscard *AI_findBestScoreboardTakePath(ScoreboardTake *takes, int playerId) {
+    ScoreboardDiscard *bestDiscard = NULL;
+    int bestAverageScore = -999999;
+
+    while (takes) {
+        ScoreboardDiscard *candidateDiscard = AI_findBestScoreboardMeldPath(takes->melds, playerId);
+        if (candidateDiscard && candidateDiscard->score.numGames > 0) {
+            int averageScore = candidateDiscard->score.totalScore[playerId] / candidateDiscard->score.numGames;
+            if (averageScore > bestAverageScore) {
+                bestAverageScore = averageScore;
+                bestDiscard = candidateDiscard;
+            }
+        }
+        takes = takes->next;
+    }
+
+    return bestDiscard;
+}
+
+// Helper function to find the best path through draws
+ScoreboardDiscard *AI_findBestScoreboardDrawPath(ScoreboardDraw *draws, int playerId) {
+    ScoreboardDiscard *bestDiscard = NULL;
+    int bestAverageScore = -999999;
+
+    while (draws) {
+        ScoreboardDiscard *candidateDiscard = AI_findBestScoreboardMeldPath(draws->melds, playerId);
+        if (candidateDiscard && candidateDiscard->score.numGames > 0) {
+            int averageScore = candidateDiscard->score.totalScore[playerId] / candidateDiscard->score.numGames;
+            if (averageScore > bestAverageScore) {
+                bestAverageScore = averageScore;
+                bestDiscard = candidateDiscard;
+            }
+        }
+        draws = draws->next;
+    }
+
+    return bestDiscard;
+}
+
 Turn *AI_goDeep(AI *ai) {
-    printf("AI_goDeep: Starting simulations...\n");
+    printf("AI_goDeep: Starting simulations for Player %d...\n", ai->player->id);
     Scoreboard *scoreboard = Scoreboard_fromGame(ai->game);
     Scoreboard_print(scoreboard);
 
     // Run lots of simulations on every leaf of the scoreboard tree
     // to determine the best turn.
+    Game *originalGame = ai->game;
+    Player *originalPlayer = ai->player;
+    
     for (int i = 0; i < 1; ++i) {
         Game permuted;
         Game_permute(ai->game, &permuted);
+        
+        // Temporarily point the AI to the permuted game
+        ai->game = &permuted;
+        ai->player = &permuted.players[originalPlayer->id];
+        
         AI_simulate(ai, scoreboard);
+        
+        // Restore the original game pointer
+        ai->game = originalGame;
+        ai->player = originalPlayer;
     }
 
     Scoreboard_print(scoreboard);
 
-    // TODO:  Pick out the best line of play from the scoreboard.
-    // Return best turn as in AI_goShallow().
-
+    // Pick out the best line of play from the scoreboard.
+    int playerId = ai->player->id;
+    
+    // Find the best path from takes
+    ScoreboardDiscard *bestTakeDiscard = AI_findBestScoreboardTakePath(scoreboard->takes, playerId);
+    int bestTakeScore = bestTakeDiscard && bestTakeDiscard->score.numGames > 0
+        ? bestTakeDiscard->score.totalScore[playerId] / bestTakeDiscard->score.numGames
+        : -999999;
+    
+    // Find the best path from draws - need to check which card is actually on top
+    Cards topCard = Pile_peek(&ai->game->drawPile);
+    ScoreboardDiscard *bestDrawDiscard = NULL;
+    int bestDrawScore = -999999;
+    
+    printf("AI_goDeep: Looking for top card ");
+    Cards_print(topCard);
+    printf(" in scoreboard draws\n");
+    
+    // Find the draw path that corresponds to the actual top card of the draw pile
+    ScoreboardDraw *draw = scoreboard->draws;
+    bool foundDraw = false;
+    while (draw) {
+        if (draw->drawn == topCard) {
+            printf("AI_goDeep: Found matching draw!\n");
+            foundDraw = true;
+            ScoreboardDiscard *candidateDiscard = AI_findBestScoreboardMeldPath(draw->melds, playerId);
+            if (candidateDiscard && candidateDiscard->score.numGames > 0) {
+                int score = candidateDiscard->score.totalScore[playerId] / candidateDiscard->score.numGames;
+                if (score > bestDrawScore) {
+                    bestDrawScore = score;
+                    bestDrawDiscard = candidateDiscard;
+                }
+            }
+            break;  // Found the matching draw
+        }
+        draw = draw->next;
+    }
+    
+    if (!foundDraw) {
+        printf("AI_goDeep: WARNING - Did not find draw matching top card!\n");
+    }
+    
+    // Compare take vs draw and pick the best
+    ScoreboardDiscard *bestDiscard = NULL;
+    if (bestTakeScore >= bestDrawScore && bestTakeDiscard) {
+        bestDiscard = bestTakeDiscard;
+    } else if (bestDrawDiscard) {
+        bestDiscard = bestDrawDiscard;
+    } else if (bestTakeDiscard) {
+        bestDiscard = bestTakeDiscard;
+    }
+    
+    // Store the best turn and return a pointer to it
+    if (bestDiscard) {
+        ai->bestTakeTurn = bestDiscard->turn;
+        printf("AI_goDeep: Player %d selected turn with drawn=", ai->player->id);
+        Cards_print(bestDiscard->turn.drawn);
+        printf(" discard=");
+        Cards_print(bestDiscard->turn.discard);
+        printf("\n");
+        Scoreboard_free(scoreboard);
+        return &ai->bestTakeTurn;
+    }
 
     Scoreboard_free(scoreboard);
-
     return NULL;
 }
 
