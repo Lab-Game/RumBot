@@ -344,8 +344,20 @@ void Player_play(Player *player, Turn *turn) {
     if (turn->drawn) {
         // Draw a card
         Cards drawnCard = Player_draw(player);
+        if (drawnCard != turn->drawn) {
+            fprintf(stderr, "ERROR in Player_play: Player %d attempted to draw, but card mismatch!\n", player->id);
+            fprintf(stderr, "  Expected (turn->drawn): 0x%llx ", (unsigned long long)turn->drawn);
+            fflush(stderr);
+            Cards_print(turn->drawn);
+            fprintf(stderr, "\n  Actual (drawnCard): 0x%llx ", (unsigned long long)drawnCard);
+            fflush(stderr);
+            Cards_print(drawnCard);
+            fprintf(stderr, "\n");
+            fprintf(stderr, "  Draw pile size: %d\n", Pile_size(&player->game->drawPile));
+            fflush(stderr);
+        }
         assert(drawnCard == turn->drawn);
-    } else {
+    } else{
         // Take one or more cards from discard pile
         int takeCount = Pile_size(&turn->taken);
         for (int i = 0; i < takeCount; ++i) {

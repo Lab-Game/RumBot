@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "ai.h"
 #include "game.h"
@@ -158,10 +159,24 @@ Turn *AI_goDeep(AI *ai) {
         : -999999;
     
     // Find the best path from draws - need to check which card is actually on top
-    Cards topCard = Pile_peek(&ai->game->drawPile);
     ScoreboardDiscard *bestDrawDiscard = NULL;
     int bestDrawScore = -999999;
     
+    // Check if draw pile is empty
+    if (Pile_size(&ai->game->drawPile) == 0) {
+        printf("AI_goDeep: Draw pile is empty, must take from discard\n");
+        // Can't draw, so just use the best take
+        if (bestTakeDiscard) {
+            ai->bestTakeTurn = bestTakeDiscard->turn;
+            Scoreboard_free(scoreboard);
+            return &ai->bestTakeTurn;
+        }
+        // No valid take or draw
+        Scoreboard_free(scoreboard);
+        return NULL;
+    }
+    
+    Cards topCard = Pile_peek(&ai->game->drawPile);
     printf("AI_goDeep: Looking for top card ");
     Cards_print(topCard);
     printf(" in scoreboard draws\n");
@@ -187,7 +202,9 @@ Turn *AI_goDeep(AI *ai) {
     }
     
     if (!foundDraw) {
-        printf("AI_goDeep: WARNING - Did not find draw matching top card!\n");
+        printf("AI_goDeep: WARNING - Top card not in scoreboard (known card). Falling back to shallow evaluation.\n");
+        Scoreboard_free(scoreboard);
+        return AI_goShallow(ai);
     }
     
     // Compare take vs draw and pick the best
@@ -203,11 +220,26 @@ Turn *AI_goDeep(AI *ai) {
     // Store the best turn and return a pointer to it
     if (bestDiscard) {
         ai->bestTakeTurn = bestDiscard->turn;
-        printf("AI_goDeep: Player %d selected turn with drawn=", ai->player->id);
+        printf("AI_goDeep: Player %d selected turn. drawn=", ai->player->id);
         Cards_print(bestDiscard->turn.drawn);
-        printf(" discard=");
+        printf(" taken=%d discard=", Pile_size(&bestDiscard->turn.taken));
         Cards_print(bestDiscard->turn.discard);
+        printf(" Current top card of draw pile: ");
+        Cards topCardNow = Pile_peek(&ai->game->drawPile);
+        Cards_print(topCardNow);
         printf("\n");
+        
+        // Verify that if this is a draw turn, the drawn card matches the current top card
+        if (bestDiscard->turn.drawn != 0) {
+            if (bestDiscard->turn.drawn != topCardNow) {
+                printf("ERROR: Turn says to draw ");
+                Cards_print(bestDiscard->turn.drawn);
+                printf(" but top card is ");
+                Cards_print(topCardNow);
+                printf("\n");
+            }
+        }
+        
         Scoreboard_free(scoreboard);
         return &ai->bestTakeTurn;
     }
@@ -311,12 +343,41 @@ void AI_simulateGame(AI *ai, ScoreboardScore *score) {
 Turn *AI_goShallow(AI *ai) {
     AI_resetForTurn(ai);
     AI_findBestTakeTurn(ai);
+    
+    // Check if draw pile is empty
+    if (Pile_size(&ai->game->drawPile) == 0) {
+        // Can't draw, must take
+        return &ai->bestTakeTurn;
+    }
+    
     AI_findBestDrawTurns(ai);
 
+    Cards topCard = Pile_peek(&ai->game->drawPile);
+    Card drawCard = Cards_toCard(topCard);
+    
+    // Check if this draw was evaluated (is in possibleDraws)
+    if ((ai->possibleDraws & topCard) == 0) {
+        // Top card is a known/discarded card that wasn't evaluated.
+        // Evaluate it now.
+        Turn *turn = &ai->bestDrawTurn[drawCard];
+        Cards swapped = Game_swapToTop(ai->game, topCard);
+        Player_draw(ai->player);
+        AI_findBestMeld(ai, turn);
+        Player_undoDraw(ai->player);
+        Game_swapToTop(ai->game, swapped);
+        
+        // Compare this specific draw with the best take
+        if (ai->bestTakeTurn.eval >= turn->eval) {
+            return &ai->bestTakeTurn;
+        } else {
+            return turn;
+        }
+    }
+    
+    // Normal case: use average draw eval for comparison
     if (ai->bestTakeTurn.eval > ai->averageDrawEval) {
         return &ai->bestTakeTurn;
     } else {
-        Card drawCard = Cards_toCard(Pile_peek(&ai->game->drawPile));
         return &ai->bestDrawTurn[drawCard];
     }
 }
@@ -349,7 +410,8 @@ void AI_findBestDrawTurns(AI *ai) {
         Game_swapToTop(game, swapped);
     }
 
-    ai->averageDrawEval = totalEval / Cards_size(ai->possibleDraws);
+    int numDraws = Cards_size(ai->possibleDraws);
+    ai->averageDrawEval = (numDraws > 0) ? (totalEval / numDraws) : -9999;
 }
 
 void AI_findBestMeld(AI *ai, Turn *bestTurn) {
