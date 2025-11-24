@@ -18,7 +18,7 @@ void playGame(AI *ais[], Game *game, FILE *log_file) {
     }
 
     if (log_file) {
-        Log_writeGame(game, log_file);
+        Log_writeGame(log_file, game);
     }
 
     while (!game->isOver) {
@@ -37,7 +37,7 @@ void playGame(AI *ais[], Game *game, FILE *log_file) {
 
         Player_play(game->currentPlayer, turn);
         if (log_file) {
-            Log_writeTurn(turn, log_file);
+            Log_writeTurn(log_file, turn);
         }
 
         if (DEB >= 2) {
@@ -115,7 +115,7 @@ void readGameFromLog() {
         exit(1);
     }
 
-    Log_readGame(&game, log_file);
+    Log_readGame(log_file, &game);
     printf("Done reading game from log file. Current game state:\n");
     Game_print(&game);
     printf("exiting...\n");

@@ -4,7 +4,7 @@
 
 #include "log.h"
 
-void Log_writeGame(Game *game, FILE *log_file) {
+void Log_writeGame(FILE *log_file, Game *game) {
     // Print each player's hand
     for (int i = 0; i < game->numPlayers; ++i) {
         Cards_printToFile(game->players[i].hand, log_file);
@@ -20,7 +20,7 @@ void Log_writeGame(Game *game, FILE *log_file) {
     fprintf(log_file, "\n");
 }
 
-void Log_writeTurn(Turn *turn, FILE *log_file) {
+void Log_writeTurn(FILE *log_file, Turn *turn) {
     // First indicate whether this is a take or draw.
     // If this is a take, write "T <# of careds>".
     // If this is a draw, wrinte "D <card drawn>".
@@ -52,50 +52,36 @@ void Log_writeTurn(Turn *turn, FILE *log_file) {
     fprintf(log_file, "\n");
 }
 
-int Log_readCards(FILE *log_file, Cards *card) {
-    // After some spaces, if the file contains a legal card, return 1.
-    // (And fill in the card via the pointer argument.)
-    // If it contains a "?", return 0 (unknown card).
-    // If it contains a newline or EOF, return -1 (end of line).
+Cards Log_readCards(FILE *log_file) {
+    // Read a card from the log file.
+    // If a card can not be read, return 0.
+    // If a unkonwn card ("?") is read, return PLACEHOLDER.
     const char *values = "a23456789TJQKA";
     const char *suits = "CDSH";
 
-    int ch;
-
-    // Skip spaces
-    while((ch = fgetc(log_file)) == ' ');
-
-    // Check for newline or EOF
-    if (ch == '\n' || ch == EOF) {
-        return -1;
-    }
-
-    // Check for "?"
+    int ch = fgetc(log_file);
     if (ch == '?') {
-        return 0;
+        return PLACEHOLDER;
     }
-
-    // Read the card.  If invalid, exit.
     char *value_ptr = strchr(values, ch);
     if (!value_ptr) {
-        fprintf(stderr, "Log_readCard: invalid card value '%c'\n", ch);
-        exit(1);
+        ungetc(ch, log_file);
+        return 0;
     }
     int value = value_ptr - values;
 
     ch = fgetc(log_file);
     char *suit_ptr = strchr(suits, ch);
     if (!suit_ptr) {
-        fprintf(stderr, "Log_readCard: invalid card suit '%c'\n", ch);
-        exit(1);
+        ungetc(ch, log_file);
+        return 0;
     }
     int suit = suit_ptr - suits;
 
-    *card = Cards_fromCard(Card_fromValueSuit(value, suit));
-    return 1;
+    return Cards_fromCard(Card_fromValueSuit(value, suit));
 }
 
-void Log_readGame(Game *game, FILE *log_file) {
+void Log_readGame(FILE *log_file, Game *game) {
     // Start with all the cards in the draw pile.
     Game_init(game);
 

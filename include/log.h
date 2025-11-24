@@ -8,9 +8,8 @@
 #include "turn.h"
 #include "game.h"
 
-void Log_writeGame(Game *game, FILE *log_file);
-void Log_writeTurn(Turn *turn, FILE *log_file);
-void Log_readGame(Game *game, FILE *log_file);
-int Log_readCard(FILE *log_file, Card *card);
+void Log_writeGame(FILE *log_file, Game *game);
+void Log_writeTurn(FILE *log_file, Turn *turn);
+void Log_readGame(FILE *log_file, Game *game);
 
 #endif // LOG_H
