@@ -11,12 +11,13 @@
 #define LEGAL_CARDS 0x3FFF3FFF3FFF3FFFULL  // All legal cards (high and low aces)
 #define LOW_ACES    0x0001000100010001ULL
 #define HIGH_ACES   0x2000200020002000ULL
-#define PLACEHOLDER 0xc000c000c000c000ULL  // Tempororary used when swapping cards
 
 // The Cards type is a bitmask used to represent a set of playing cards.
 // There are bits to represent low aces, but these are used only when
 // representings runs, the sole place where low aces are meaningful.
 typedef uint64_t Cards;
+
+extern const Cards kSpecialCard;  // Tempororary used when swapping cards
 
 // Confirm that all cards in the Cards set are legal.
 static inline bool Cards_isLegal(Cards cards) {

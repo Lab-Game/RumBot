@@ -5,6 +5,8 @@
 #include <string.h>
 #include "cards.h"
 
+const Cards kSpecialCard = 0xc000c000c000c000ULL;
+
 Cards Cards_fromString(const char *str) {
     const char *values = "a23456789TJQKA";
     const char *suits = "CDSH";

@@ -52,7 +52,7 @@ void Log_writeTurn(FILE *log_file, Turn *turn) {
     fprintf(log_file, "\n");
 }
 
-Cards Log_readCards(FILE *log_file) {
+Cards Log_readCard(FILE *log_file) {
     // Read a card from the log file.
     // If a card can not be read, return 0.
     // If a unkonwn card ("?") is read, return PLACEHOLDER.
@@ -61,7 +61,7 @@ Cards Log_readCards(FILE *log_file) {
 
     int ch = fgetc(log_file);
     if (ch == '?') {
-        return PLACEHOLDER;
+        return kSpecialCard;
     }
     char *value_ptr = strchr(values, ch);
     if (!value_ptr) {
@@ -81,6 +81,54 @@ Cards Log_readCards(FILE *log_file) {
     return Cards_fromCard(Card_fromValueSuit(value, suit));
 }
 
+void Log_readCards(FILE *log_file, Game *game, Cards *cards) {
+    *cards = 0;
+    while (1) {
+        Cards card = Log_readCard(log_file);
+        if (card == 0) {
+            fprintf(stderr, "Log_readCards: error reading cards\n");
+            exit(1);
+        }
+
+        if (card == kSpecialCard) {
+            // Replace the unknown card with the top card from the draw pile.
+            card = Pile_pop(&game->drawPile);
+        }
+
+        Cards_add(cards, card);
+
+        int ch = fgetc(log_file);
+        if (ch != ' ') {
+            ungetc(ch, log_file);
+            return;
+        }
+    }
+}
+
+void Log_readPile(FILE *log_file, Game *game, Pile *pile) {
+    Pile_init(pile);
+    while (1) {
+        Cards card = Log_readCard(log_file);
+        if (card == 0) {
+            fprintf(stderr, "Log_readPile: error reading pile\n");
+            exit(1);
+        }
+
+        if (card == kSpecialCard) {
+            // Replace the unknown card with the top card from the draw pile.
+            card = Pile_pop(&game->drawPile);
+        }
+
+        Pile_push(pile, card);
+
+        int ch = fgetc(log_file);
+        if (ch != ' ') {
+            ungetc(ch, log_file);
+            return;
+        }
+    }
+}
+
 void Log_readGame(FILE *log_file, Game *game) {
     // Start with all the cards in the draw pile.
     Game_init(game);
@@ -88,174 +136,136 @@ void Log_readGame(FILE *log_file, Game *game) {
     // Read each player's hand
     for (int i = 0; i < game->numPlayers; ++i) {
         Cards *hand = &game->players[i].hand;
+        Pile handPile;
 
-        while (1) {
-            Cards card;
-            int result = Log_readCards(log_file, &card);
-
-            if (result == -1) {
-                // End of line.  Done with this player's hand.
-                break;
-            }  else if (result == 1) {
-                // If a card is specified, move it to the top of the draw pile.
-                Game_swapToTop(game, card);
-            }
-
-            // Draw a card and add it to the player's hand.
-            Cards_add(hand, Pile_pop(&game->drawPile));
+        Log_readPile(log_file, game, &handPile);
+        *hand = handPile.allCards;
+        if (fgetc(log_file) != '\n') {
+            fprintf(stderr, "Log_readGame: error reading player %d hand\n", i);
+            exit(1);
         }
     }
 
-    // Now read the draw pile and arrange cards in the specified order
-    int i = 0;
-    while (1) {
-        Cards card;
-        int result = Log_readCards(log_file, &card);
-
-        if (result == -1) {
-            // End of line.  Done with the draw pile.
-            break;
-        } else if (result == 1) {
-            // Move the specified card to the top of the draw pile.
-            Game_swapToTop(game, card);
-        }
-
-        // Move the top card in the draw pile to position i.
-        Pile_swapToTop(&game->drawPile, i);
-
-        i += 1;
+    // Read the draw pile
+    Log_readPile(log_file, game, &game->drawPile);
+    if (fgetc(log_file) != '\n') {
+        fprintf(stderr, "Log_readGame: error reading draw pile\n");
+        exit(1);
     }
 
-    // Finally, read the discard pile.
-    while (1) {
-        Cards card;
-        int result = Log_readCards(log_file, &card);
-
-        assert(result != 0); // discard pile cards cannot be unknown
-
-        if (result == -1) {
-            // End of line.  Done with the discard pile.
-            break;
-        } else if (result == 1) {
-            // Move the specified card to the top of the draw pile.
-            Game_swapToTop(game, card);
-        }
-
-        printf("pushing onto discard pile\n");
-        Pile_push(&game->discardPile, Pile_pop(&game->drawPile));
+    // Read the discard pile
+    Log_readPile(log_file, game, &game->discardPile);
+    if (fgetc(log_file) != '\n') {
+        fprintf(stderr, "Log_readGame: error reading discard pile\n");
+        exit(1);
     }
 
-    // Now read turns until end of file.  Skip spaces.
-    // If we reach and EOF, we're done.  If we see a "T" or "D",
-    // then we read a turn.
+    // Now we'll read a sequence of turns until EOF.
     while (1) {
         int ch = fgetc(log_file);
-
         if (ch == EOF) {
-            break;
-        } else if (ch == ' ') {
-            // Skip spaces
-            continue;
-        }
-        
-        if (ch != 'T' && ch != 'D') {
-            fprintf(stderr, "Log_readGame: expected T or D, got '%c'\n", ch);
-            exit(1);
-        }   
-
-        Player *player = game->currentPlayer;
-
-        // Handle a draw
-        if (ch == 'D') {
-            Cards card;
-            int result = Log_readCards(log_file, &card);
-
-            if (result == -1) {
-                fprintf(stderr, "Log_readGame: expected card after D\n");
-                exit(1);
-            }
-
-            if (result == 1) {
-                // Move the specified card to the top of the draw pile.
-                Game_swapToTop(game, card);
-            }
-
-            Player_draw(player);
+            // We've finished reading the log.
+            return;
         }
 
         if (ch == 'T') {
-            // Handle a take
+            // This is a take turn.
             int takeCount;
-            if (fscanf(log_file, "%d", &takeCount) != 1) {
-                fprintf(stderr, "Log_readGame: expected count after T\n");
-                exit(1);
-            }
-
+            fscanf(log_file, "%d", &takeCount);
             for (int i = 0; i < takeCount; ++i) {
-                Player_take(player);
+                Player_take(game->currentPlayer);
             }
+        } else if (ch == 'D') {
+            // This is a draw turn.
+            Cards drawnCard = Log_readCard(log_file);
+            if (drawnCard == kSpecialCard) {
+                // If the drawn card is unknown, then just draw from the draw pile.
+                drawnCard = Pile_pop(&game->drawPile);
+            } else {
+                // Otherwise, we need to make sure the drawn card is on top of the draw pile.
+                Cards topCard = Pile_peek(&game->drawPile);
+                if (topCard != drawnCard) {
+                    // Swap the special card in place of the drawn card,
+                    // wherever it is.
+                    Game_swap(game, kSpecialCard, drawnCard);
+                    // Now swap the drawn card to the top of the draw pile.
+                    Pile_swap(&game->drawPile, drawnCard, topCard);
+                    // And put the old top card wherever the drawn card was.
+                    Game_swap(game, topCard, kSpecialCard);
+
+                }
+            }
+            Cards card = Player_draw(game->currentPlayer);
+            assert(card == drawnCard);
+        } else {
+            fprintf(stderr, "Log_readGame: error reading turn type\n");
+            exit(1);
         }
 
-        // Now look for a meld, including runs of the form <cards> and
-        // sets of the form {cards}.
+        if (fgetc(log_file) != ' ') {
+            fprintf(stderr, "Log_readGame: error reading turn meld/discard\n");
+            exit(1);
+        }
+
+        // Read melds, if any
         Meld meld;
         Meld_init(&meld);
-
         while (1) {
-            ch = fgetc(log_file);
+            int ch = fgetc(log_file);
+            if (ch == '<') {
+                // Read a run meld
+                Cards runCards;
+                Log_readCards(log_file, game, &runCards);
+                Meld_addRun(&meld, runCards);
 
-            // Skip over spaces
-            if (ch == ' ') {
-                continue;
-
-            } else if (ch == '<') {
-                // Read a run
-                Cards run = 0;
-                while (1) {
-                    Cards card;
-                    int result = Log_readCards(log_file, &card);
-                    if (result == -1) {
-                        fprintf(stderr, "Log_readGame: unexpected end of line in run meld\n");
-                        exit(1);
-                    } else if (result == 1) {
-                        Cards_add(&run, card);
-                    }
-
-                    // See if we're done with the run
-                    ch = fgetc(log_file);
-                    if (ch == '>') {
-                        break;
-                    } else {
-                        ungetc(ch, log_file);
-                    }
+                ch = fgetc(log_file);
+                if (ch != '>') {
+                    fprintf(stderr, "Log_readGame: error reading run meld\n");
+                    exit(1);
                 }
-                Meld_addRun(&meld, run);
             } else if (ch == '{') {
-                // Read a set
-                Cards set = 0;
-                while (1) {
-                    Cards card;
-                    int result = Log_readCards(log_file, &card);
-                    if (result == -1) {
-                        fprintf(stderr, "Log_readGame: unexpected end of line in set meld\n");
-                        exit(1);
-                    } else if (result == 1) {
-                        Cards_add(&set, card);
-                    }
+                // Read a set meld
+                Cards setCards;
+                Log_readCards(log_file, game, &setCards);
+                Meld_addSet(&meld, setCards);
 
-                    ch = fgetc(log_file);
-                    if (ch == '}') {
-                        break;
-                    } else {
-                        ungetc(ch, log_file);
-                    }
+                ch = fgetc(log_file);
+                if (ch != '}') {
+                    fprintf(stderr, "Log_readGame: error reading set meld\n");
+                    exit(1);
                 }
-                Meld_addSet(&meld, set);
             } else {
-                // No more melds
                 ungetc(ch, log_file);
                 break;
             }
+
+            if (fgetc(log_file) != ' ') {
+                fprintf(stderr, "Log_readGame: error reading meld/discard separator\n");
+                exit(1);
+            }
         }
     }
+        #if 0
+        // Ensure that the player has all the cards for the meld.
+        Cards meldCards = Meld_cards(&meld);
+        Player *player = game->currentPlayer;
+        for (Cards c = Cards_first(meldCards); c != 0; c = Cards_next(meldCards, c)) {
+            Log_ensurePlayerHasCard(player, c);
+        }
+        Player_meld(game->currentPlayer, &meld);
+
+        // Read discard, if any
+        ch = fgetc(log_file);
+        if (ch == '\n' || ch == EOF) {
+            // No discard
+            continue;
+        }
+        Cards discardCard = Log_readCard(log_file);
+        if (discardCard == 0 || discardCard == kSpecialCard) {
+            fprintf(stderr, "Log_readGame: error reading discard card\n");
+            exit(1);
+        }
+        Log_ensurePlayerHasCard(game->currentPlayer, discardCard);
+        Player_discard(game->currentPlayer, discardCard);
+#endif
 }

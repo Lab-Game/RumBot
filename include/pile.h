@@ -49,7 +49,7 @@ static inline void Pile_init(Pile *pile) {
     pile->allCards = 0;
 }
 
-Cards Pile_swap(Pile *pile, Cards remove, Cards insert);
+Cards Pile_swap(Pile *pile, Cards insert, Cards extract);
 
 // Put a full deck of cards (with only high aces) into the pile in sorted order.
 void Pile_fullDeck(Pile *pile);

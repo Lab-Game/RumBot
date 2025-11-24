@@ -42,28 +42,28 @@ void Game_copy(Game *original, Game *copy) {
     copy->currentPlayer = &copy->players[copy->currentPlayerId];
 }
 
-Cards Game_swap(Game *game, Cards remove, Cards insert) {
+Cards Game_swap(Game *game, Cards insert, Cards extract) {
     // Swap the specified cards in the game.
     // The removed card could be in the draw pile, a player's hand, or the discard pile.
 
     // Check the draw pile
     Pile *drawPile = &game->drawPile;
-    if (Cards_has(drawPile->allCards, remove)) {
-        return Pile_swap(&game->drawPile, remove, insert);
+    if (Cards_has(drawPile->allCards, extract)) {
+        return Pile_swap(&game->drawPile, insert, extract);
     }
     
     // Check each player's hand
     for (int i = 0; i < game->numPlayers; ++i) {
         Player *player = Game_player(game, i);
-        if (Cards_has(player->hand, remove)) {
-            return Cards_swap(&player->hand, remove, insert);
+        if (Cards_has(player->hand, extract)) {
+            return Cards_swap(&player->hand, insert, extract);
         }
     }
 
     // Check the discard pile
     Pile *discardPile = &game->discardPile;
-    if (Cards_has(discardPile->allCards, remove)) {
-        return Pile_swap(&game->discardPile, remove, insert);
+    if (Cards_has(discardPile->allCards, extract)) {
+        return Pile_swap(&game->discardPile, insert, extract);
     }
 
     assert(false); // remove card not found
