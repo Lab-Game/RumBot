@@ -26,6 +26,7 @@ void AI_init(AI *ai, int mode);
 void AI_resetForTurn(AI *ai);
 void AI_joinGame(AI *ai, Game *game, Player *player);
 void AI_exitGame(AI *ai);
+Turn *AI_goShallow(AI *ai);
 Turn *AI_goDeep(AI *ai);
 Turn *AI_go(AI *ai);
 void AI_findBestTakeTurn(AI *ai);
@@ -46,6 +47,12 @@ void AI_simulateDraws(AI *ai, ScoreboardDraw *draws);
 void AI_simulateMelds(AI *ai, ScoreboardMeld *melds);
 void AI_simulateDiscards(AI *ai, ScoreboardDiscard *discards);
 void AI_simulateGame(AI *ai, ScoreboardScore *score);
+
+// Helper functions to find the best path through the scoreboard tree
+ScoreboardDiscard *AI_findBestScoreboardDiscard(ScoreboardDiscard *discards, int playerId);
+ScoreboardDiscard *AI_findBestScoreboardMeldPath(ScoreboardMeld *melds, int playerId);
+ScoreboardDiscard *AI_findBestScoreboardTakePath(ScoreboardTake *takes, int playerId);
+ScoreboardDiscard *AI_findBestScoreboardDrawPath(ScoreboardDraw *draws, int playerId);
 
 void AI_print(AI *ai);
 

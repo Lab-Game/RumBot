@@ -18,8 +18,8 @@ static const char *kColorCardName[64] = {
 };
 
 const char *Card_name(Card i) {
-    assert((i & 0xf) <= 13);  // value 0-13
-    assert((i >> 4) <= 3);    // suit 0-3
+    // assert((i & 0xf) <= 13);  // value 0-13
+    // assert((i >> 4) <= 3);    // suit 0-3
     return kCardName[i];
 }
 

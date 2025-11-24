@@ -1,10 +1,12 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "ai.h"
 #include "game.h"
 
 const int unknownCardCentipoints = 700;
+const int INVALID_SCORE = -999999;
 
 void AI_init(AI *ai, int mode) {
     ai->mode = mode;
@@ -34,21 +36,186 @@ void AI_exitGame(AI *ai) {
     ai->player = NULL;
 }
 
+Turn *AI_go(AI *ai) {
+    if (ai->mode == 2) {
+        return AI_goDeep(ai);
+    } else {
+        return AI_goShallow(ai);
+    }
+}
+
+// Helper function to find the best discard from a linked list of discards
+ScoreboardDiscard *AI_findBestScoreboardDiscard(ScoreboardDiscard *discards, int playerId) {
+    ScoreboardDiscard *bestDiscard = NULL;
+    int bestAverageScore = INVALID_SCORE;
+
+    while (discards) {
+        if (discards->score.numGames > 0) {
+            int averageScore = discards->score.totalScore[playerId] / discards->score.numGames;
+            if (averageScore > bestAverageScore) {
+                bestAverageScore = averageScore;
+                bestDiscard = discards;
+            }
+        }
+        discards = discards->next;
+    }
+
+    return bestDiscard;
+}
+
+// Helper function to find the best path through melds
+ScoreboardDiscard *AI_findBestScoreboardMeldPath(ScoreboardMeld *melds, int playerId) {
+    ScoreboardDiscard *bestDiscard = NULL;
+    int bestAverageScore = INVALID_SCORE;
+
+    while (melds) {
+        ScoreboardDiscard *candidateDiscard = AI_findBestScoreboardDiscard(melds->discards, playerId);
+        if (candidateDiscard && candidateDiscard->score.numGames > 0) {
+            int averageScore = candidateDiscard->score.totalScore[playerId] / candidateDiscard->score.numGames;
+            if (averageScore > bestAverageScore) {
+                bestAverageScore = averageScore;
+                bestDiscard = candidateDiscard;
+            }
+        }
+        melds = melds->next;
+    }
+
+    return bestDiscard;
+}
+
+// Helper function to find the best path through takes
+ScoreboardDiscard *AI_findBestScoreboardTakePath(ScoreboardTake *takes, int playerId) {
+    ScoreboardDiscard *bestDiscard = NULL;
+    int bestAverageScore = INVALID_SCORE;
+
+    while (takes) {
+        ScoreboardDiscard *candidateDiscard = AI_findBestScoreboardMeldPath(takes->melds, playerId);
+        if (candidateDiscard && candidateDiscard->score.numGames > 0) {
+            int averageScore = candidateDiscard->score.totalScore[playerId] / candidateDiscard->score.numGames;
+            if (averageScore > bestAverageScore) {
+                bestAverageScore = averageScore;
+                bestDiscard = candidateDiscard;
+            }
+        }
+        takes = takes->next;
+    }
+
+    return bestDiscard;
+}
+
+// Helper function to find the best path through draws
+ScoreboardDiscard *AI_findBestScoreboardDrawPath(ScoreboardDraw *draws, int playerId) {
+    ScoreboardDiscard *bestDiscard = NULL;
+    int bestAverageScore = INVALID_SCORE;
+
+    while (draws) {
+        ScoreboardDiscard *candidateDiscard = AI_findBestScoreboardMeldPath(draws->melds, playerId);
+        if (candidateDiscard && candidateDiscard->score.numGames > 0) {
+            int averageScore = candidateDiscard->score.totalScore[playerId] / candidateDiscard->score.numGames;
+            if (averageScore > bestAverageScore) {
+                bestAverageScore = averageScore;
+                bestDiscard = candidateDiscard;
+            }
+        }
+        draws = draws->next;
+    }
+
+    return bestDiscard;
+}
+
 Turn *AI_goDeep(AI *ai) {
     Scoreboard *scoreboard = Scoreboard_fromGame(ai->game);
-    Scoreboard_print(scoreboard);
 
     // Run lots of simulations on every leaf of the scoreboard tree
     // to determine the best turn.
+    Game *originalGame = ai->game;
+    Player *originalPlayer = ai->player;
+    
     for (int i = 0; i < 1; ++i) {
         Game permuted;
         Game_permute(ai->game, &permuted);
+        
+        // Temporarily point the AI to the permuted game
+        ai->game = &permuted;
+        ai->player = &permuted.players[originalPlayer->id];
+        
         AI_simulate(ai, scoreboard);
+        
+        // Restore the original game pointer
+        ai->game = originalGame;
+        ai->player = originalPlayer;
     }
-    Scoreboard_print(scoreboard);
 
     // Pick out the best line of play from the scoreboard.
-    // ScoreboardTake *bestTake = NULL;
+    int playerId = ai->player->id;
+    
+    // Find the best path from takes
+    ScoreboardDiscard *bestTakeDiscard = AI_findBestScoreboardTakePath(scoreboard->takes, playerId);
+    int bestTakeScore = bestTakeDiscard && bestTakeDiscard->score.numGames > 0
+        ? bestTakeDiscard->score.totalScore[playerId] / bestTakeDiscard->score.numGames
+        : INVALID_SCORE;
+    
+    // Find the best path from draws - need to check which card is actually on top
+    ScoreboardDiscard *bestDrawDiscard = NULL;
+    int bestDrawScore = INVALID_SCORE;
+    
+    // Check if draw pile is empty
+    if (Pile_size(&ai->game->drawPile) == 0) {
+        // Can't draw, so just use the best take
+        if (bestTakeDiscard) {
+            ai->bestTakeTurn = bestTakeDiscard->turn;
+            Scoreboard_free(scoreboard);
+            return &ai->bestTakeTurn;
+        }
+        // No valid take or draw
+        Scoreboard_free(scoreboard);
+        return NULL;
+    }
+    
+    Cards topCard = Pile_peek(&ai->game->drawPile);
+    
+    // Find the draw path that corresponds to the actual top card of the draw pile
+    ScoreboardDraw *draw = scoreboard->draws;
+    bool foundDraw = false;
+    while (draw) {
+        if (draw->drawn == topCard) {
+            foundDraw = true;
+            ScoreboardDiscard *candidateDiscard = AI_findBestScoreboardMeldPath(draw->melds, playerId);
+            if (candidateDiscard && candidateDiscard->score.numGames > 0) {
+                int score = candidateDiscard->score.totalScore[playerId] / candidateDiscard->score.numGames;
+                if (score > bestDrawScore) {
+                    bestDrawScore = score;
+                    bestDrawDiscard = candidateDiscard;
+                }
+            }
+            break;  // Found the matching draw
+        }
+        draw = draw->next;
+    }
+    
+    if (!foundDraw) {
+        // Top card is a known/discarded card not in scoreboard.
+        // Fall back to shallow evaluation for this turn.
+        Scoreboard_free(scoreboard);
+        return AI_goShallow(ai);
+    }
+    
+    // Compare take vs draw and pick the best
+    ScoreboardDiscard *bestDiscard = NULL;
+    if (bestTakeScore >= bestDrawScore && bestTakeDiscard) {
+        bestDiscard = bestTakeDiscard;
+    } else if (bestDrawDiscard) {
+        bestDiscard = bestDrawDiscard;
+    } else if (bestTakeDiscard) {
+        bestDiscard = bestTakeDiscard;
+    }
+    
+    // Store the best turn and return a pointer to it
+    if (bestDiscard) {
+        ai->bestTakeTurn = bestDiscard->turn;
+        Scoreboard_free(scoreboard);
+        return &ai->bestTakeTurn;
+    }
 
     Scoreboard_free(scoreboard);
     return NULL;
@@ -58,7 +225,7 @@ Turn *AI_goDeep(AI *ai) {
 void AI_simulate(AI *ai, Scoreboard *scoreboard) {
     // The caller is responsible for supplying games to simulate,
     // probably by calling Game_permute() on the current game.
-
+    Game_print(ai->game);
     AI_simulateTakes(ai, scoreboard->takes);
     AI_simulateDraws(ai, scoreboard->draws);
 }
@@ -67,12 +234,14 @@ void AI_simulateTakes(AI *ai, ScoreboardTake *take) {
     Player *player = ai->player;
 
     while (take) {
-        Player_take(player);
+        for (int i = 0; i < take->numTaken; ++i) {
+            Player_take(player);
+        }
         assert(take->numTaken == Pile_size(&player->turn.taken));
         AI_simulateMelds(ai, take->melds);
         take = take->next;
+        Player_undoTakes(player);
     }
-    Player_undoTakes(player);
 }
 
 void AI_simulateDraws(AI *ai, ScoreboardDraw *draws) {
@@ -81,7 +250,8 @@ void AI_simulateDraws(AI *ai, ScoreboardDraw *draws) {
 
     while (draws) {
         Cards swapped = Game_swapToTop(game, draws->drawn);
-        Player_draw(player);
+        Cards drawn = Player_draw(player);
+        assert(drawn == draws->drawn);
         AI_simulateMelds(ai, draws->melds);
         Player_undoDraw(player);
         Game_swapToTop(game, swapped);
@@ -119,10 +289,13 @@ void AI_simulateGame(AI *ai, ScoreboardScore *score) {
     Game simGame;
     Game_copy(ai->game, &simGame);
 
+    // Advance to the next player's turn.
+    Game_nextTurn(&simGame);
+
     // Set up AIs to play the simulated game.
     AI simAIs[NUM_PLAYERS];
     for (int i = 0; i < NUM_PLAYERS; ++i) {
-        AI_init(&simAIs[i], ai->mode);
+        AI_init(&simAIs[i], ai->subMode);
         AI_joinGame(&simAIs[i], &simGame, Game_player(&simGame, i));
     }
 
@@ -140,15 +313,44 @@ void AI_simulateGame(AI *ai, ScoreboardScore *score) {
     }
 }
 
-Turn *AI_go(AI *ai) {
+Turn *AI_goShallow(AI *ai) {
     AI_resetForTurn(ai);
     AI_findBestTakeTurn(ai);
+    
+    // Check if draw pile is empty
+    if (Pile_size(&ai->game->drawPile) == 0) {
+        // Can't draw, must take
+        return &ai->bestTakeTurn;
+    }
+    
     AI_findBestDrawTurns(ai);
 
+    Cards topCard = Pile_peek(&ai->game->drawPile);
+    Card drawCard = Cards_toCard(topCard);
+    
+    // Check if this draw was evaluated (is in possibleDraws)
+    if ((ai->possibleDraws & topCard) == 0) {
+        // Top card is a known/discarded card that wasn't evaluated.
+        // Evaluate it now.
+        Turn *turn = &ai->bestDrawTurn[drawCard];
+        Cards swapped = Game_swapToTop(ai->game, topCard);
+        Player_draw(ai->player);
+        AI_findBestMeld(ai, turn);
+        Player_undoDraw(ai->player);
+        Game_swapToTop(ai->game, swapped);
+        
+        // Compare this specific draw with the best take
+        if (ai->bestTakeTurn.eval >= turn->eval) {
+            return &ai->bestTakeTurn;
+        } else {
+            return turn;
+        }
+    }
+    
+    // Normal case: use average draw eval for comparison
     if (ai->bestTakeTurn.eval > ai->averageDrawEval) {
         return &ai->bestTakeTurn;
     } else {
-        Card drawCard = Cards_toCard(Pile_peek(&ai->game->drawPile));
         return &ai->bestDrawTurn[drawCard];
     }
 }
@@ -181,7 +383,8 @@ void AI_findBestDrawTurns(AI *ai) {
         Game_swapToTop(game, swapped);
     }
 
-    ai->averageDrawEval = totalEval / Cards_size(ai->possibleDraws);
+    int numDraws = Cards_size(ai->possibleDraws);
+    ai->averageDrawEval = (numDraws > 0) ? (totalEval / numDraws) : INVALID_SCORE;
 }
 
 void AI_findBestMeld(AI *ai, Turn *bestTurn) {
@@ -230,7 +433,7 @@ int AI_evaluateGame(AI *ai) {
 
     if (player->hand == 0) {
         // Player went out.  Give 700 centipoints per card remaining
-        // in opponents' hands.  TODO:  Use actual points for known cards.
+        // in opponents' hands.
         int penaltyTotal = 0;
         for (int i = 0; i < game->numPlayers; ++i) {
             penaltyTotal += Cards_size(Game_player(game, i)->hand) * unknownCardCentipoints;
@@ -263,16 +466,6 @@ int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
     // So, for each drawable card, we'll estimate the number of
     // centipoints (cpts) that can be played from the hand into the meld.
     // Then we'll average over all playable cards.
-    if (DEB >= 3) {
-        printf("AI_evaluateHandPlayability: hand = ");
-        Cards_print(hand);
-        printf(" meld = ");
-        Meld_printCompact(meld);
-        printf(" drawable = ");
-        Cards_print(drawable);
-        printf("\n");
-    }
-
     int totalCentipoints = 0;
     for (Cards c = Cards_first(drawable); c != 0; c = Cards_next(drawable, c)) {
         // Simulate adding this card to the hand

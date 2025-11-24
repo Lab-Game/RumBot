@@ -9,6 +9,7 @@ Scoreboard *Scoreboard_fromGame(Game *game) {
     Scoreboard *scoreboard = malloc(sizeof(Scoreboard));
     scoreboard->takes = Scoreboard_initTakes(game);
     scoreboard->draws = Scoreboard_initDraws(game);
+
     return scoreboard;
 }
     
@@ -120,10 +121,10 @@ void Scoreboard_print(Scoreboard *scoreboard) {
         take = take->next;
     }
 
-    for (int i = 0; i < 64; ++i) {
-        if (scoreboard->draws[i].drawn) {
-            ScoreboardDraw_print(&scoreboard->draws[i]);
-        }
+    ScoreboardDraw *draw = scoreboard->draws;
+    while (draw) {
+        ScoreboardDraw_print(draw);
+        draw = draw->next;
     }
 }
 
@@ -163,7 +164,16 @@ void ScoreboardDiscard_print(ScoreboardDiscard *discard) {
     printf("   Discard ");
     Cards_print(discard->discard);
     printf(":  ");
-    Turn_print(&discard->turn);
+
+    ScoreboardScore_print(&discard->score);
+}
+
+void ScoreboardScore_print(ScoreboardScore *score) {
+    printf("%d games ->", score->numGames);
+    for (int i = 0; i < NUM_PLAYERS; ++i) {
+        printf(" %d: %d", i, score->totalScore[i]);
+    }
+    printf("\n");
 }
 
 void Scoreboard_free(Scoreboard *scoreboard) {

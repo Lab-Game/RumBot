@@ -344,8 +344,9 @@ void Player_play(Player *player, Turn *turn) {
     if (turn->drawn) {
         // Draw a card
         Cards drawnCard = Player_draw(player);
+
         assert(drawnCard == turn->drawn);
-    } else {
+    } else{
         // Take one or more cards from discard pile
         int takeCount = Pile_size(&turn->taken);
         for (int i = 0; i < takeCount; ++i) {
