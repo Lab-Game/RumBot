@@ -26,6 +26,7 @@ void AI_init(AI *ai, int mode);
 void AI_resetForTurn(AI *ai);
 void AI_joinGame(AI *ai, Game *game, Player *player);
 void AI_exitGame(AI *ai);
+Turn *AI_goShallow(AI *ai);
 Turn *AI_goDeep(AI *ai);
 Turn *AI_go(AI *ai);
 void AI_findBestTakeTurn(AI *ai);

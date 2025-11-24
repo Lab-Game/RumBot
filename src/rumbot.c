@@ -104,39 +104,11 @@ void playAllOrders(AI *ai, Game *game) {
     playGame(shuffled_ais, &copy, NULL);
 }
 
-void readGameFromLog() {
-    Game game;
-    Game_init(&game);
-
-    FILE *log_file = NULL;
-    log_file = fopen("logs/game.log", "r");
-    if (!log_file) {
-        fprintf(stderr, "Error: could not open log file for reading\n");
-        exit(1);
-    }
-
-    Log_readGame(log_file, &game);
-    printf("Done reading game from log file. Current game state:\n");
-    Game_print(&game);
-    printf("exiting...\n");
-    fclose(log_file);
-    exit(0);
-}  
-
-int main(int argc, char *argv[]) {
-    FILE *log_file = NULL;
-    if (argc > 1) {
-        log_file = fopen(argv[1], "w");
-        if (!log_file) {
-            fprintf(stderr, "Error: could not open log file %s for writing\n", argv[1]);
-            return 1;
-        }
-    }
-
+int main() {
     AI ais[NUM_PLAYERS];
     AI *ai_ptrs[NUM_PLAYERS];
 
-    AI_init(&ais[0], 1);
+    AI_init(&ais[0], 2);
     AI_init(&ais[1], 1);
     AI_init(&ais[2], 1);
     
@@ -150,17 +122,13 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < numGames; ++i) {
         Game_init(&game);
         Game_deal(&game);
-        playGame(ai_ptrs, &game, log_file);
+        playGame(ai_ptrs, &game, NULL);
     }
 
     // Print final AI scores
     printf("\n=== FINAL SCORES AFTER %d GAMES ===\n", numGames);
     for (int i = 0; i < NUM_PLAYERS; ++i) {
         printf("AI %d (mode %d): %d points\n", i, ais[i].mode, ais[i].totalScore);
-    }
-
-    if (log_file) {
-        fclose(log_file);
     }
 
     return 0;

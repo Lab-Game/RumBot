@@ -34,7 +34,16 @@ void AI_exitGame(AI *ai) {
     ai->player = NULL;
 }
 
+Turn *AI_go(AI *ai) {
+    if (ai->mode == 2) {
+        return AI_goDeep(ai);
+    } else {
+        return AI_goShallow(ai);
+    }
+}
+
 Turn *AI_goDeep(AI *ai) {
+    printf("AI_goDeep: Starting simulations...\n");
     Scoreboard *scoreboard = Scoreboard_fromGame(ai->game);
     Scoreboard_print(scoreboard);
 
@@ -45,12 +54,15 @@ Turn *AI_goDeep(AI *ai) {
         Game_permute(ai->game, &permuted);
         AI_simulate(ai, scoreboard);
     }
+
     Scoreboard_print(scoreboard);
 
-    // Pick out the best line of play from the scoreboard.
-    // ScoreboardTake *bestTake = NULL;
+    // TODO:  Pick out the best line of play from the scoreboard.
+    // Return best turn as in AI_goShallow().
+
 
     Scoreboard_free(scoreboard);
+
     return NULL;
 }
 
@@ -58,7 +70,7 @@ Turn *AI_goDeep(AI *ai) {
 void AI_simulate(AI *ai, Scoreboard *scoreboard) {
     // The caller is responsible for supplying games to simulate,
     // probably by calling Game_permute() on the current game.
-
+    Game_print(ai->game);
     AI_simulateTakes(ai, scoreboard->takes);
     AI_simulateDraws(ai, scoreboard->draws);
 }
@@ -67,12 +79,14 @@ void AI_simulateTakes(AI *ai, ScoreboardTake *take) {
     Player *player = ai->player;
 
     while (take) {
-        Player_take(player);
+        for (int i = 0; i < take->numTaken; ++i) {
+            Player_take(player);
+        }
         assert(take->numTaken == Pile_size(&player->turn.taken));
         AI_simulateMelds(ai, take->melds);
         take = take->next;
+        Player_undoTakes(player);
     }
-    Player_undoTakes(player);
 }
 
 void AI_simulateDraws(AI *ai, ScoreboardDraw *draws) {
@@ -81,7 +95,8 @@ void AI_simulateDraws(AI *ai, ScoreboardDraw *draws) {
 
     while (draws) {
         Cards swapped = Game_swapToTop(game, draws->drawn);
-        Player_draw(player);
+        Cards drawn = Player_draw(player);
+        assert(drawn == draws->drawn);
         AI_simulateMelds(ai, draws->melds);
         Player_undoDraw(player);
         Game_swapToTop(game, swapped);
@@ -119,10 +134,13 @@ void AI_simulateGame(AI *ai, ScoreboardScore *score) {
     Game simGame;
     Game_copy(ai->game, &simGame);
 
+    // Advance to the next player's turn.
+    Game_nextTurn(&simGame);
+
     // Set up AIs to play the simulated game.
     AI simAIs[NUM_PLAYERS];
     for (int i = 0; i < NUM_PLAYERS; ++i) {
-        AI_init(&simAIs[i], ai->mode);
+        AI_init(&simAIs[i], ai->subMode);
         AI_joinGame(&simAIs[i], &simGame, Game_player(&simGame, i));
     }
 
@@ -140,7 +158,7 @@ void AI_simulateGame(AI *ai, ScoreboardScore *score) {
     }
 }
 
-Turn *AI_go(AI *ai) {
+Turn *AI_goShallow(AI *ai) {
     AI_resetForTurn(ai);
     AI_findBestTakeTurn(ai);
     AI_findBestDrawTurns(ai);
@@ -230,7 +248,7 @@ int AI_evaluateGame(AI *ai) {
 
     if (player->hand == 0) {
         // Player went out.  Give 700 centipoints per card remaining
-        // in opponents' hands.  TODO:  Use actual points for known cards.
+        // in opponents' hands.
         int penaltyTotal = 0;
         for (int i = 0; i < game->numPlayers; ++i) {
             penaltyTotal += Cards_size(Game_player(game, i)->hand) * unknownCardCentipoints;
@@ -263,16 +281,6 @@ int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
     // So, for each drawable card, we'll estimate the number of
     // centipoints (cpts) that can be played from the hand into the meld.
     // Then we'll average over all playable cards.
-    if (DEB >= 3) {
-        printf("AI_evaluateHandPlayability: hand = ");
-        Cards_print(hand);
-        printf(" meld = ");
-        Meld_printCompact(meld);
-        printf(" drawable = ");
-        Cards_print(drawable);
-        printf("\n");
-    }
-
     int totalCentipoints = 0;
     for (Cards c = Cards_first(drawable); c != 0; c = Cards_next(drawable, c)) {
         // Simulate adding this card to the hand
