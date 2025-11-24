@@ -6,6 +6,7 @@
 #include "game.h"
 
 const int unknownCardCentipoints = 700;
+const int INVALID_SCORE = -999999;
 
 void AI_init(AI *ai, int mode) {
     ai->mode = mode;
@@ -46,7 +47,7 @@ Turn *AI_go(AI *ai) {
 // Helper function to find the best discard from a linked list of discards
 ScoreboardDiscard *AI_findBestScoreboardDiscard(ScoreboardDiscard *discards, int playerId) {
     ScoreboardDiscard *bestDiscard = NULL;
-    int bestAverageScore = -999999;
+    int bestAverageScore = INVALID_SCORE;
 
     while (discards) {
         if (discards->score.numGames > 0) {
@@ -65,7 +66,7 @@ ScoreboardDiscard *AI_findBestScoreboardDiscard(ScoreboardDiscard *discards, int
 // Helper function to find the best path through melds
 ScoreboardDiscard *AI_findBestScoreboardMeldPath(ScoreboardMeld *melds, int playerId) {
     ScoreboardDiscard *bestDiscard = NULL;
-    int bestAverageScore = -999999;
+    int bestAverageScore = INVALID_SCORE;
 
     while (melds) {
         ScoreboardDiscard *candidateDiscard = AI_findBestScoreboardDiscard(melds->discards, playerId);
@@ -85,7 +86,7 @@ ScoreboardDiscard *AI_findBestScoreboardMeldPath(ScoreboardMeld *melds, int play
 // Helper function to find the best path through takes
 ScoreboardDiscard *AI_findBestScoreboardTakePath(ScoreboardTake *takes, int playerId) {
     ScoreboardDiscard *bestDiscard = NULL;
-    int bestAverageScore = -999999;
+    int bestAverageScore = INVALID_SCORE;
 
     while (takes) {
         ScoreboardDiscard *candidateDiscard = AI_findBestScoreboardMeldPath(takes->melds, playerId);
@@ -105,7 +106,7 @@ ScoreboardDiscard *AI_findBestScoreboardTakePath(ScoreboardTake *takes, int play
 // Helper function to find the best path through draws
 ScoreboardDiscard *AI_findBestScoreboardDrawPath(ScoreboardDraw *draws, int playerId) {
     ScoreboardDiscard *bestDiscard = NULL;
-    int bestAverageScore = -999999;
+    int bestAverageScore = INVALID_SCORE;
 
     while (draws) {
         ScoreboardDiscard *candidateDiscard = AI_findBestScoreboardMeldPath(draws->melds, playerId);
@@ -123,9 +124,7 @@ ScoreboardDiscard *AI_findBestScoreboardDrawPath(ScoreboardDraw *draws, int play
 }
 
 Turn *AI_goDeep(AI *ai) {
-    printf("AI_goDeep: Starting simulations for Player %d...\n", ai->player->id);
     Scoreboard *scoreboard = Scoreboard_fromGame(ai->game);
-    Scoreboard_print(scoreboard);
 
     // Run lots of simulations on every leaf of the scoreboard tree
     // to determine the best turn.
@@ -147,8 +146,6 @@ Turn *AI_goDeep(AI *ai) {
         ai->player = originalPlayer;
     }
 
-    Scoreboard_print(scoreboard);
-
     // Pick out the best line of play from the scoreboard.
     int playerId = ai->player->id;
     
@@ -156,15 +153,14 @@ Turn *AI_goDeep(AI *ai) {
     ScoreboardDiscard *bestTakeDiscard = AI_findBestScoreboardTakePath(scoreboard->takes, playerId);
     int bestTakeScore = bestTakeDiscard && bestTakeDiscard->score.numGames > 0
         ? bestTakeDiscard->score.totalScore[playerId] / bestTakeDiscard->score.numGames
-        : -999999;
+        : INVALID_SCORE;
     
     // Find the best path from draws - need to check which card is actually on top
     ScoreboardDiscard *bestDrawDiscard = NULL;
-    int bestDrawScore = -999999;
+    int bestDrawScore = INVALID_SCORE;
     
     // Check if draw pile is empty
     if (Pile_size(&ai->game->drawPile) == 0) {
-        printf("AI_goDeep: Draw pile is empty, must take from discard\n");
         // Can't draw, so just use the best take
         if (bestTakeDiscard) {
             ai->bestTakeTurn = bestTakeDiscard->turn;
@@ -177,16 +173,12 @@ Turn *AI_goDeep(AI *ai) {
     }
     
     Cards topCard = Pile_peek(&ai->game->drawPile);
-    printf("AI_goDeep: Looking for top card ");
-    Cards_print(topCard);
-    printf(" in scoreboard draws\n");
     
     // Find the draw path that corresponds to the actual top card of the draw pile
     ScoreboardDraw *draw = scoreboard->draws;
     bool foundDraw = false;
     while (draw) {
         if (draw->drawn == topCard) {
-            printf("AI_goDeep: Found matching draw!\n");
             foundDraw = true;
             ScoreboardDiscard *candidateDiscard = AI_findBestScoreboardMeldPath(draw->melds, playerId);
             if (candidateDiscard && candidateDiscard->score.numGames > 0) {
@@ -202,7 +194,8 @@ Turn *AI_goDeep(AI *ai) {
     }
     
     if (!foundDraw) {
-        printf("AI_goDeep: WARNING - Top card not in scoreboard (known card). Falling back to shallow evaluation.\n");
+        // Top card is a known/discarded card not in scoreboard.
+        // Fall back to shallow evaluation for this turn.
         Scoreboard_free(scoreboard);
         return AI_goShallow(ai);
     }
@@ -220,26 +213,6 @@ Turn *AI_goDeep(AI *ai) {
     // Store the best turn and return a pointer to it
     if (bestDiscard) {
         ai->bestTakeTurn = bestDiscard->turn;
-        printf("AI_goDeep: Player %d selected turn. drawn=", ai->player->id);
-        Cards_print(bestDiscard->turn.drawn);
-        printf(" taken=%d discard=", Pile_size(&bestDiscard->turn.taken));
-        Cards_print(bestDiscard->turn.discard);
-        printf(" Current top card of draw pile: ");
-        Cards topCardNow = Pile_peek(&ai->game->drawPile);
-        Cards_print(topCardNow);
-        printf("\n");
-        
-        // Verify that if this is a draw turn, the drawn card matches the current top card
-        if (bestDiscard->turn.drawn != 0) {
-            if (bestDiscard->turn.drawn != topCardNow) {
-                printf("ERROR: Turn says to draw ");
-                Cards_print(bestDiscard->turn.drawn);
-                printf(" but top card is ");
-                Cards_print(topCardNow);
-                printf("\n");
-            }
-        }
-        
         Scoreboard_free(scoreboard);
         return &ai->bestTakeTurn;
     }
@@ -411,7 +384,7 @@ void AI_findBestDrawTurns(AI *ai) {
     }
 
     int numDraws = Cards_size(ai->possibleDraws);
-    ai->averageDrawEval = (numDraws > 0) ? (totalEval / numDraws) : -9999;
+    ai->averageDrawEval = (numDraws > 0) ? (totalEval / numDraws) : INVALID_SCORE;
 }
 
 void AI_findBestMeld(AI *ai, Turn *bestTurn) {
