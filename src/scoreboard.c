@@ -21,7 +21,7 @@ ScoreboardTake *Scoreboard_initTakes(Game *game) {
 
         ScoreboardTake *take = malloc(sizeof(ScoreboardTake));
         take->next = takes;
-        take->numTaken = Pile_size(&player->turn.taken);
+        take->numTaken = Pile_size(&game->turn.taken);
         take->melds = Scoreboard_initMelds(game);
         takes = take;
     }
@@ -41,7 +41,7 @@ ScoreboardDraw *Scoreboard_initDraws(Game *game) {
 
         ScoreboardDraw *draw = malloc(sizeof(ScoreboardDraw));
         draw->next = draws;
-        draw->drawn = player->turn.drawn;
+        draw->drawn = game->turn.drawn;
         draw->melds = Scoreboard_initMelds(game);
         draws = draw;
 
@@ -58,7 +58,7 @@ ScoreboardMeld *Scoreboard_initMelds(Game *game) {
     // Generate possible melds from the current hand.
     Player *player = game->currentPlayer;
     MeldList meldList;
-    Cards mustMeld = player->turn.taken.size > 1 ? Pile_peek(&player->turn.taken) : 0;
+    Cards mustMeld = game->turn.taken.size > 1 ? Pile_peek(&game->turn.taken) : 0;
     MeldList_generate(&meldList, player->hand, &game->meld, mustMeld);
 
     for (int i = 0; i < meldList.size; ++i) {
@@ -66,7 +66,7 @@ ScoreboardMeld *Scoreboard_initMelds(Game *game) {
 
         ScoreboardMeld *meld = malloc(sizeof(ScoreboardMeld));
         meld->next = melds;
-        meld->meld = player->turn.meld;
+        meld->meld = game->turn.meld;
         meld->discards = Scoreboard_initDiscards(game);
         melds = meld;
 
@@ -84,7 +84,7 @@ ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
         ScoreboardDiscard *discard = malloc(sizeof(ScoreboardDiscard));
         discard->next = NULL;
         discard->discard = 0;
-        discard->turn = player->turn;
+        discard->turn = game->turn;
         Scoreboard_initScore(&discard->score);
         return discard;
     }
@@ -93,8 +93,8 @@ ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
 
     // You may not discard the only taken card if you have not melded anything.
     Cards illegalDiscard = 0;
-    if (Meld_cards(&player->turn.meld) == 0 && player->turn.taken.size == 1) {
-        illegalDiscard = player->turn.taken.allCards;
+    if (Meld_cards(&player->game->turn.meld) == 0 && player->game->turn.taken.size == 1) {
+        illegalDiscard = player->game->turn.taken.allCards;
     }
 
     for (Cards c = Cards_first(player->hand); c != 0; c = Cards_next(player->hand, c)) {
@@ -103,8 +103,8 @@ ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
 
             ScoreboardDiscard *discard = malloc(sizeof(ScoreboardDiscard));
             discard->next = discards;
-            discard->discard = player->turn.discard;
-            discard->turn = player->turn;
+            discard->discard = game->turn.discard;
+            discard->turn = game->turn;
             Scoreboard_initScore(&discard->score);
             discards = discard;
 

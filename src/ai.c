@@ -81,7 +81,6 @@ void AI_simulateTakes(Game *game, ScoreboardTake *take) {
 
     while (take) {
         Player_take(player, take->numTaken);
-        assert(take->numTaken == Pile_size(&player->turn.taken));
         AI_simulateMelds(game, take->melds);
         Player_undoTake(player);
         take = take->next;
@@ -207,7 +206,7 @@ void AI_findBestMeld(AI *ai, Turn *bestTurn) {
     Player *player = ai->player;
 
     // Generate a list of possible melds
-    Cards mustMeld = player->turn.taken.size > 1 ? Pile_peek(&player->turn.taken) : 0;
+    Cards mustMeld = player->game->turn.taken.size > 1 ? Pile_peek(&player->game->turn.taken) : 0;
 
     MeldList_generate(&ai->meldList, player->hand, &ai->game->meld, mustMeld);
 
@@ -226,16 +225,16 @@ void AI_findBestDiscard(AI *ai, Turn *bestTurn) {
     // This rule helps prevent infinite loops, where each player keeps taking
     // and discarding the same card over and over.
     Cards illegalDiscard = 0;
-    if (Meld_cards(&player->turn.meld) == 0 && player->turn.taken.size == 1) {
-        illegalDiscard = player->turn.taken.allCards;
+    if (Meld_cards(&player->game->turn.meld) == 0 && player->game->turn.taken.size == 1) {
+        illegalDiscard = player->game->turn.taken.allCards;
     }
     
     // Consider all legal discards.
     for (Cards c = Cards_first(player->hand); c != 0; c = Cards_next(player->hand, c)) {
         if (c != illegalDiscard) {
             Player_discard(player, c);
-            player->turn.eval = AI_evaluateGame(ai);
-            Turn_max(bestTurn, &player->turn);
+            player->game->turn.eval = AI_evaluateGame(ai);
+            Turn_max(bestTurn, &player->game->turn);
             Player_undoDiscard(player);
         }
     }

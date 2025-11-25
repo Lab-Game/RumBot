@@ -9,13 +9,15 @@ void Game_init(Game *game) {
     game->currentPlayer = &game->players[0];
     for (int i = 0; i < game->numPlayers; ++i) {
         Player *player = &game->players[i];
-        Player_init(player, i);
+        Player_init(player);
         player->game = game;
+        player->id = i;
     }
     Pile_fullDeck(&game->drawPile);
     Pile_init(&game->discardPile);
     Meld_init(&game->meld);
     game->everDiscarded = 0;
+    Turn_init(&game->turn);
     game->isOver = false;
 }
 
@@ -181,7 +183,7 @@ void Game_nextTurn(Game *game) {
         // Advance to next player's turn
         game->currentPlayerId = (game->currentPlayerId + 1) % game->numPlayers;
         game->currentPlayer = &game->players[game->currentPlayerId];
-        Turn_init(&game->currentPlayer->turn);
+        Turn_init(&game->turn);
     }
 }
 

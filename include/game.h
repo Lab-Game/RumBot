@@ -17,6 +17,7 @@ typedef struct GameStruct {
     Pile discardPile;
     Meld meld;
     Cards everDiscarded;
+    Turn turn;
     bool isOver;
 } Game;
 

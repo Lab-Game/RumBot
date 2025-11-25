@@ -17,6 +17,10 @@ static inline Meld *Meld_init(Meld *Meld) {
     return Meld;
 }
 
+static inline bool Meld_isEmpty(Meld *Meld) {
+    return (Meld->runs | Meld->sets) == 0;
+}
+
 // Add a run of cards to the Meld.  Could be a new run or an extension.
 static inline void Meld_addRun(Meld *Meld, Cards meld) {
     Meld->runs |= meld;
