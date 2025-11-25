@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include "cards.h"
 
 // A Pile is a stack of Cards.  A Pile is used to represent the draw and discard piles.

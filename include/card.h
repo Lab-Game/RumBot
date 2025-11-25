@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 // A "Card" is a single playing card, represented as a number from 0 to 63.
 // The low 4 bits are the value (0=low Ace, 1=2, ..., 12=King, 13=high Ace).
