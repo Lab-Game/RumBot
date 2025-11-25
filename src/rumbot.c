@@ -48,7 +48,7 @@ void playGame(AI *ais[], Game *game, FILE *log_file) {
         Game_nextTurn(game);
 
         if (DEB >= 1) {
-            printf("\n");
+            printf("...\n");
         }
     }
 
@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
     AI ais[NUM_PLAYERS];
     AI *ai_ptrs[NUM_PLAYERS];
 
-    AI_init(&ais[0], 1);
+    AI_init(&ais[0], 2);
     AI_init(&ais[1], 1);
     AI_init(&ais[2], 1);
     

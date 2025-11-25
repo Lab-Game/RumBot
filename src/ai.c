@@ -34,95 +34,116 @@ void AI_exitGame(AI *ai) {
     ai->player = NULL;
 }
 
+Turn *AI_go(AI *ai) {
+    if (ai->mode == 2) {
+        return AI_goDeep(ai);
+    } else {
+        return AI_goShallow(ai);
+    }
+}
+
 Turn *AI_goDeep(AI *ai) {
+    printf("AI_goDeep: Simulating deep lookahead...\n");
+
+    // Build a scoreboard from the current game state
     Scoreboard *scoreboard = Scoreboard_fromGame(ai->game);
-    Scoreboard_print(scoreboard);
 
     // Run lots of simulations on every leaf of the scoreboard tree
     // to determine the best turn.
-    for (int i = 0; i < 1; ++i) {
-        Game permuted;
+    Game permuted;
+    for (int i = 0; i < 100; ++i) {
         Game_permute(ai->game, &permuted);
-        AI_simulate(ai, scoreboard);
+        AI_simulate(&permuted, scoreboard);
     }
     Scoreboard_print(scoreboard);
 
     // Pick out the best line of play from the scoreboard.
     // ScoreboardTake *bestTake = NULL;
 
+    printf("AI_goDeep: Done.\n");
+    exit(0);
+
     Scoreboard_free(scoreboard);
     return NULL;
 }
 
 
-void AI_simulate(AI *ai, Scoreboard *scoreboard) {
+void AI_simulate(Game *game, Scoreboard *scoreboard) {
     // The caller is responsible for supplying games to simulate,
     // probably by calling Game_permute() on the current game.
 
-    AI_simulateTakes(ai, scoreboard->takes);
-    AI_simulateDraws(ai, scoreboard->draws);
+    AI_simulateTakes(game, scoreboard->takes);
+    AI_simulateDraws(game, scoreboard->draws);
 }
 
-void AI_simulateTakes(AI *ai, ScoreboardTake *take) {
-    Player *player = ai->player;
+void AI_simulateTakes(Game *game, ScoreboardTake *take) {
+    Player *player = game->currentPlayer;
 
     while (take) {
-        Player_take(player);
+        for (int i = 0; i < take->numTaken; ++i) {
+            Player_take(player);
+        }
         assert(take->numTaken == Pile_size(&player->turn.taken));
-        AI_simulateMelds(ai, take->melds);
+        AI_simulateMelds(game, take->melds);
+        Player_undoTakes(player);
         take = take->next;
     }
-    Player_undoTakes(player);
 }
 
-void AI_simulateDraws(AI *ai, ScoreboardDraw *draws) {
-    Player *player = ai->player;
-    Game *game = ai->game;
+void AI_simulateDraws(Game *game, ScoreboardDraw *draws) {
+    Player *player = game->currentPlayer;
 
     while (draws) {
         Cards swapped = Game_swapToTop(game, draws->drawn);
         Player_draw(player);
-        AI_simulateMelds(ai, draws->melds);
+        AI_simulateMelds(game, draws->melds);
         Player_undoDraw(player);
         Game_swapToTop(game, swapped);
         draws = draws->next;
     }
 }
 
-void AI_simulateMelds(AI *ai, ScoreboardMeld *meld) {
-    Player *player = ai->player;
+void AI_simulateMelds(Game *game, ScoreboardMeld *meld) {
+    Player *player = game->currentPlayer;
 
     while (meld) {
         Player_meld(player, &meld->meld);
-        AI_simulateDiscards(ai, meld->discards);
+        AI_simulateDiscards(game, meld->discards);
         Player_undoMeld(player, &meld->meld);
         meld = meld->next;
     }
 }
 
-void AI_simulateDiscards(AI *ai, ScoreboardDiscard *discards) {
-    Player *player = ai->player;
+void AI_simulateDiscards(Game *game, ScoreboardDiscard *discards) {
+    Player *player = game->currentPlayer;
+    assert(player->game == game);
 
     while (discards) {
         Player_discard(player, discards->discard);
-        AI_simulateGame(ai, &discards->score);
+        // This could happen, and I haven't figure out what to do.
+        assert(Cards_size(discards->discard) == 1);
+        // At this point, the game could be over.  So no more simulation
+        // is possible...
+        AI_simulateGame(game, &discards->score);
         Player_undoDiscard(player);
         discards = discards->next;
     }
 }
 
-void AI_simulateGame(AI *ai, ScoreboardScore *score) {
+void AI_simulateGame(Game *game, ScoreboardScore *score) {
     // Play out the rest of the game from the current state.
     // Update the ScoreboardScore structure with the results.
 
     // Make a copy of the game, which we'll use for simulation.
     Game simGame;
-    Game_copy(ai->game, &simGame);
+    Game_copy(game, &simGame);
+
+    Game_nextTurn(&simGame);
 
     // Set up AIs to play the simulated game.
     AI simAIs[NUM_PLAYERS];
     for (int i = 0; i < NUM_PLAYERS; ++i) {
-        AI_init(&simAIs[i], ai->mode);
+        AI_init(&simAIs[i], 1);  // Should be the ai submode, but whatever
         AI_joinGame(&simAIs[i], &simGame, Game_player(&simGame, i));
     }
 
@@ -140,7 +161,7 @@ void AI_simulateGame(AI *ai, ScoreboardScore *score) {
     }
 }
 
-Turn *AI_go(AI *ai) {
+Turn *AI_goShallow(AI *ai) {
     AI_resetForTurn(ai);
     AI_findBestTakeTurn(ai);
     AI_findBestDrawTurns(ai);

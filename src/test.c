@@ -12,6 +12,11 @@
 int DEB = 2;  // Debug level (0=none, 1=some, 2=more, 3=lots)
 int POV = 0;  // Print debug from current player's point of view
 
+void Card_test(void) {
+    // TODO: Implement thorough tests of the Card class
+}
+
+
 void Cards_test(void) {
     puts("\nTesting Cards...");
     Cards cards = Cards_fromString("aC TC 5D 6D 6S KS AS 2H JH");

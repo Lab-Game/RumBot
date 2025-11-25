@@ -27,6 +27,7 @@ void AI_resetForTurn(AI *ai);
 void AI_joinGame(AI *ai, Game *game, Player *player);
 void AI_exitGame(AI *ai);
 Turn *AI_goDeep(AI *ai);
+Turn *AI_goShallow(AI *ai);
 Turn *AI_go(AI *ai);
 void AI_findBestTakeTurn(AI *ai);
 void AI_findBestDrawTurns(AI *ai);
@@ -40,12 +41,12 @@ Cards AI_playableCards(Cards hand, Meld *meld);
 // For this game, consider all possible takes and draws followed by
 // all possible melds and discards.  In each scenario, play out the
 // game and record the results in ScoreboardScore structures.
-void AI_simulate(AI *ai, Scoreboard *scoreboard);
-void AI_simulateTakes(AI *ai, ScoreboardTake *take);
-void AI_simulateDraws(AI *ai, ScoreboardDraw *draws);
-void AI_simulateMelds(AI *ai, ScoreboardMeld *melds);
-void AI_simulateDiscards(AI *ai, ScoreboardDiscard *discards);
-void AI_simulateGame(AI *ai, ScoreboardScore *score);
+void AI_simulate(Game *game, Scoreboard *scoreboard);
+void AI_simulateTakes(Game *game, ScoreboardTake *take);
+void AI_simulateDraws(Game *game, ScoreboardDraw *draws);
+void AI_simulateMelds(Game *game, ScoreboardMeld *melds);
+void AI_simulateDiscards(Game *game, ScoreboardDiscard *discards);
+void AI_simulateGame(Game *game, ScoreboardScore *score);
 
 void AI_print(AI *ai);
 

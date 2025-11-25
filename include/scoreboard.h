@@ -51,5 +51,6 @@ void ScoreboardTake_print(ScoreboardTake *take);
 void ScoreboardDraw_print(ScoreboardDraw *draw);
 void ScoreboardMeld_print(ScoreboardMeld *meld);
 void ScoreboardDiscard_print(ScoreboardDiscard *discard);
+void ScoreboardScore_print(ScoreboardScore *score);
 
 #endif // SCOREBOARD_H

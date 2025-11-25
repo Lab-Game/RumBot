@@ -77,9 +77,21 @@ ScoreboardMeld *Scoreboard_initMelds(Game *game) {
 }
 
 ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
+    Player *player = game->currentPlayer;
+
+    // Handle the special case of an empty hand.
+    if (Cards_size(player->hand) == 0) {
+        ScoreboardDiscard *discard = malloc(sizeof(ScoreboardDiscard));
+        discard->next = NULL;
+        discard->discard = 0;
+        discard->turn = player->turn;
+        Scoreboard_initScore(&discard->score);
+        return discard;
+    }
+
     ScoreboardDiscard *discards = NULL;
 
-    Player *player = game->currentPlayer;
+    // You may not discard the only taken card if you have not melded anything.
     Cards illegalDiscard = 0;
     if (Meld_cards(&player->turn.meld) == 0 && player->turn.taken.size == 1) {
         illegalDiscard = player->turn.taken.allCards;
@@ -120,10 +132,10 @@ void Scoreboard_print(Scoreboard *scoreboard) {
         take = take->next;
     }
 
-    for (int i = 0; i < 64; ++i) {
-        if (scoreboard->draws[i].drawn) {
-            ScoreboardDraw_print(&scoreboard->draws[i]);
-        }
+    ScoreboardDraw *draw = scoreboard->draws;
+    while (draw) {
+        ScoreboardDraw_print(draw);
+        draw = draw->next;
     }
 }
 
@@ -163,7 +175,15 @@ void ScoreboardDiscard_print(ScoreboardDiscard *discard) {
     printf("   Discard ");
     Cards_print(discard->discard);
     printf(":  ");
-    Turn_print(&discard->turn);
+    ScoreboardScore_print(&discard->score);
+}
+
+void ScoreboardScore_print(ScoreboardScore *score) {
+    printf("Games: %d  Scores:", score->numGames);
+    for (int i = 0; i < NUM_PLAYERS; ++i) {
+        printf(" %6d", score->totalScore[i]);
+    }
+    printf("\n");
 }
 
 void Scoreboard_free(Scoreboard *scoreboard) {

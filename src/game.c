@@ -25,7 +25,7 @@ void Game_deal(Game *game) {
     for (int i = 0; i < NUM_PLAYERS; ++i) {
         Player *player = Game_player(game, i);
         for (int j = 0; j < 7; ++j) {
-            Player_draw(player);
+            Cards_add(&player->hand, Pile_pop(&game->drawPile));
         }
     }
 
@@ -224,6 +224,8 @@ bool Player_isCurrent(Player *player) {
 }
 
 Cards Player_draw(Player *player) {
+    assert(player->turn.drawn == 0);
+    assert(player->turn.taken.size == 0);
     Cards card = Pile_pop(&player->game->drawPile);
     Cards_add(&player->hand, card);
     player->turn.drawn = card;
@@ -243,6 +245,7 @@ Cards Player_couldDraw(Player *player) {
 }
 
 Cards Player_take(Player *player) {
+    assert(player->turn.drawn == 0);
     assert(Pile_size(&player->game->discardPile) >= 1);
     Cards card = Pile_pop(&player->game->discardPile);
     Pile_push(&player->turn.taken, card);
@@ -344,6 +347,13 @@ void Player_play(Player *player, Turn *turn) {
     if (turn->drawn) {
         // Draw a card
         Cards drawnCard = Player_draw(player);
+        if (drawnCard != turn->drawn) {
+            printf("Drawn card: ");
+            Cards_print(drawnCard);
+            printf("\n");
+            printf("Expected drawn card: ");
+            Cards_print(turn->drawn);
+        }
         assert(drawnCard == turn->drawn);
     } else {
         // Take one or more cards from discard pile
