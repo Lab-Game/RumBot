@@ -80,12 +80,10 @@ void AI_simulateTakes(Game *game, ScoreboardTake *take) {
     Player *player = game->currentPlayer;
 
     while (take) {
-        for (int i = 0; i < take->numTaken; ++i) {
-            Player_take(player);
-        }
+        Player_take(player, take->numTaken);
         assert(take->numTaken == Pile_size(&player->turn.taken));
         AI_simulateMelds(game, take->melds);
-        Player_undoTakes(player);
+        Player_undoTake(player);
         take = take->next;
     }
 }
@@ -179,10 +177,10 @@ void AI_findBestTakeTurn(AI *ai) {
     Player *player = ai->player;
 
     while (Pile_size(&game->discardPile) > 0) {
-        Player_take(player);
+        Player_take(player, 1);
         AI_findBestMeld(ai, &ai->bestTakeTurn);
     }
-    Player_undoTakes(player);
+    Player_undoTake(player);
 }
 
 void AI_findBestDrawTurns(AI *ai) {

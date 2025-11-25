@@ -34,16 +34,17 @@ Cards Player_couldDraw(Player *player) {
     return FULL_DECK & ~(game->everDiscarded | player->hand | Meld_cards(&game->meld));
 }
 
-Cards Player_take(Player *player) {
+void Player_take(Player *player, int num) {
     assert(player->turn.drawn == 0);
-    assert(Pile_size(&player->game->discardPile) >= 1);
-    Cards card = Pile_pop(&player->game->discardPile);
-    Pile_push(&player->turn.taken, card);
-    Cards_add(&player->hand, card);
-    return card;
+    assert(Pile_size(&player->game->discardPile) >= num);
+    for (int i = 0; i < num; ++i) {
+        Cards card = Pile_pop(&player->game->discardPile);
+        Pile_push(&player->turn.taken, card);
+        Cards_add(&player->hand, card);
+    }
 }
 
-void Player_undoTakes(Player *player) {
+void Player_undoTake(Player *player) {
     while (Pile_size(&player->turn.taken) > 0) {
         Cards card = Pile_pop(&player->turn.taken);
         Cards_remove(&player->hand, card);
@@ -138,10 +139,7 @@ void Player_play(Player *player, Turn *turn) {
         assert(drawnCard == turn->drawn);
     } else {
         // Take one or more cards from discard pile
-        int takeCount = Pile_size(&turn->taken);
-        for (int i = 0; i < takeCount; ++i) {
-            Player_take(player);
-        }
+        Player_take(player, Pile_size(&turn->taken));
     }
 
     // Handle meld

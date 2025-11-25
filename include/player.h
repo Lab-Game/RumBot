@@ -9,16 +9,18 @@ typedef struct {
     int id;
     Cards hand;
     int score;
-    Turn turn;
+    Turn turn;  // Eliminate the per-player Turn structure.  Move to game.
 } Player;
 
 void Player_init(Player *player, int id);
 bool Player_isCurrent(Player *player);
+void Player_play(Player *player, Turn *turn);
+
 Cards Player_draw(Player *player);
 void Player_undoDraw(Player *player);
 Cards Player_couldDraw(Player *player);
-Cards Player_take(Player *player);
-void Player_undoTakes(Player *player);
+void Player_take(Player *player, int num);
+void Player_undoTake(Player *player);
 void Player_discard(Player *player, Cards card);
 void Player_undoDiscard(Player *player);
 void Player_meld(Player *player, Meld *meld);
@@ -27,7 +29,7 @@ void Player_playRun(Player *player, Cards run);
 void Player_undoRun(Player *player, Cards run);
 void Player_playSet(Player *player, Cards set);
 void Player_undoSet(Player *player, Cards set);
-void Player_play(Player *player, Turn *turn);
+
 void Player_print(Player *player);
 
 #endif // PLAYER_H

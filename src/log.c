@@ -172,9 +172,7 @@ void Log_readGame(FILE *log_file, Game *game) {
             // This is a take turn.
             int takeCount;
             fscanf(log_file, "%d", &takeCount);
-            for (int i = 0; i < takeCount; ++i) {
-                Player_take(game->currentPlayer);
-            }
+            Player_take(game->currentPlayer, takeCount);
         } else if (ch == 'D') {
             // This is a draw turn.
             Cards drawnCard = Log_readCard(log_file);

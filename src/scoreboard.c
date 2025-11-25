@@ -17,7 +17,7 @@ ScoreboardTake *Scoreboard_initTakes(Game *game) {
 
     Player *player = game->currentPlayer;
     while (Pile_size(&game->discardPile) > 0) {
-        Player_take(player);
+        Player_take(player, 1);
 
         ScoreboardTake *take = malloc(sizeof(ScoreboardTake));
         take->next = takes;
@@ -25,7 +25,7 @@ ScoreboardTake *Scoreboard_initTakes(Game *game) {
         take->melds = Scoreboard_initMelds(game);
         takes = take;
     }
-    Player_undoTakes(player);
+    Player_undoTake(player);
 
     return takes;
 }
