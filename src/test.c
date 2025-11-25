@@ -13,9 +13,41 @@ int DEB = 2;  // Debug level (0=none, 1=some, 2=more, 3=lots)
 int POV = 0;  // Print debug from current player's point of view
 
 void Card_test(void) {
-    // TODO: Implement thorough tests of the Card class
-}
+    puts("Testing Card...");
 
+    int numLegal = 0;
+    int numSuit[4] = { 0, 0, 0, 0 };
+    int numValue[14] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    int numRed = 0;
+    int numBlack = 0;
+    for (int i = 0; i < 255; ++i) {
+        Card c = (Card) i;
+        if (Card_isLegal(c)) {
+            const char *name = Card_name((Card) i);
+            numLegal++;
+            numValue[Card_value(c)]++;
+            numSuit[Card_suit(c)]++;
+            if (Card_isRed(c)) {
+                numRed++;
+                assert(name[1] == 'D' || name[1] == 'H');
+            }
+            if (Card_isBlack(c)) {
+                numBlack++;
+                assert(name[1] == 'C' || name[1] == 'S');
+            }
+        }
+    }
+
+    assert(numLegal == 56);
+    for (int i = 0; i < 4; ++i) {
+        assert(numSuit[i] == 14);
+    }
+    for (int i = 0; i < 14; ++i) {
+        assert(numValue[i] == 4);
+    }
+    assert(numRed == 28);
+    assert(numBlack == 28);
+}
 
 void Cards_test(void) {
     puts("\nTesting Cards...");
@@ -215,25 +247,7 @@ void AI_test(void) {
 }
 
 int main(void) {
-    printf("Hand = ");
-    Cards hand = 0x02c82840088000c0;
-    Cards_print(hand);
-
-    printf("\nMeld = ");
-    Meld table;
-    table.runs = 0x0000000000003e1e;
-    table.sets = 0x1536153615360120;
-    Meld_printCompact(&table);
-
-    printf("\nMustMeld = ");
-    Cards mustMeld = 0x0040000000000000;
-    Cards_print(mustMeld);
-    printf("\n");
-
-    MeldList list;
-    MeldList_generate(&list, hand, &table, mustMeld);
-    MeldList_print(&list);
-
+    Card_test();
     Cards_test();
     Pile_test();
     Meld_test();
