@@ -11,11 +11,9 @@ void Player_init(Player *player) {
 void Player_play(Player *player, Turn *turn) {
     // Handle draw or take
     if (turn->drawn) {
-        // Draw a card
         Cards drawnCard = Player_draw(player);
         assert(drawnCard == turn->drawn);
     } else {
-        // Take cards from discard pile
         assert(turn->taken.size > 0);
         Player_take(player, Pile_size(&turn->taken));
     }

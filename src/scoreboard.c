@@ -180,8 +180,16 @@ void ScoreboardDiscard_print(ScoreboardDiscard *discard) {
 
 void ScoreboardScore_print(ScoreboardScore *score) {
     printf("Games: %d  Scores:", score->numGames);
+
+    // Print the total score for each player followed
+    // (in parentheses) by the total score minus the
+    // average score of the opponents.
+    int sumScores = 0;
     for (int i = 0; i < NUM_PLAYERS; ++i) {
-        printf(" %6d", score->totalScore[i]);
+        sumScores += score->totalScore[i];
+    }
+    for (int i = 0; i < NUM_PLAYERS; ++i) {
+        printf(" %6d (%6d)", score->totalScore[i], score->totalScore[i] - (sumScores - score->totalScore[i]) / (NUM_PLAYERS - 1));
     }
     printf("\n");
 }

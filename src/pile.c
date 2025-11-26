@@ -51,7 +51,31 @@ Cards Pile_swap(Pile *pile, Cards insert, Cards extract) {
 }
 
 void Pile_fromString(Pile *pile, const char *str) {
-    
+    Pile_init(pile);
+
+    if (!*str) {
+        return;
+    }
+
+    while (true) {
+        assert(*str);
+        assert(strchr(kCardValues, *str));
+        assert(*(str + 1));
+        assert(strchr(kCardSuits, *(str + 1)));
+
+        int value = strchr(kCardValues, *(str++)) - kCardValues;
+        int suit = strchr(kCardSuits, *(str++)) - kCardSuits;
+
+        Cards card = Cards_fromCard(Card_fromValueSuit(value, suit));
+        Pile_push(pile, card);
+
+        if (!*str) {
+            return;
+        } else {
+            assert(*str == ' ');
+            str++;
+        }
+    }
 }
 
 

@@ -21,10 +21,11 @@ void Game_init(Game *game) {
     game->isOver = false;
 }
 
-void Game_deal(Game *game) {
-    // Shuffle the deck
+void Game_shuffle(Game *game) {
     Pile_shuffle(&game->drawPile);
+}
 
+void Game_deal(Game *game) {
     // Deal 7 cards to each player
     for (int i = 0; i < NUM_PLAYERS; ++i) {
         Player *player = Game_player(game, i);

@@ -51,7 +51,7 @@ Turn *AI_goDeep(AI *ai) {
     // Run lots of simulations on every leaf of the scoreboard tree
     // to determine the best turn.
     Game permuted;
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 20; ++i) {
         Game_permute(ai->game, &permuted);
         AI_simulate(&permuted, scoreboard);
     }

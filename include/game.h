@@ -22,6 +22,7 @@ typedef struct GameStruct {
 } Game;
 
 void Game_init(Game *game);
+void Game_shuffle(Game *game);
 void Game_deal(Game *game);
 void Game_copy(Game *original, Game *copy);
 Cards Game_swap(Game *game, Cards remove, Cards insert);
@@ -30,6 +31,5 @@ void Game_permute(Game *game, Game *permuted);
 Player *Game_player(Game *game, int num);
 void Game_nextTurn(Game *game);
 void Game_print(Game *game);
-void Game_printExposed(Game *game);
 
 #endif // GAME_H
