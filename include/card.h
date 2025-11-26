@@ -13,6 +13,9 @@
 
 typedef uint8_t Card;
 
+extern const char *kCardValues;
+extern const char *kCardSuits;
+
 extern const Card kIllegalCard;
 
 static inline bool Card_isLegal(Card i) {

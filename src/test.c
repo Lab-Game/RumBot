@@ -23,10 +23,19 @@ void Card_test(void) {
     for (int i = 0; i < 255; ++i) {
         Card c = (Card) i;
         if (Card_isLegal(c)) {
+            int value = Card_value(c);
+            int suit = Card_suit(c);
+
+            assert(value >= 0 && value <= 13);
+            assert(suit >= 0 && suit <= 3);
+
             const char *name = Card_name((Card) i);
+            assert(name[0] == kCardValues[value]);
+            assert(name[1] == kCardSuits[suit]);
+
             numLegal++;
-            numValue[Card_value(c)]++;
-            numSuit[Card_suit(c)]++;
+            numValue[value]++;
+            numSuit[suit]++;
             if (Card_isRed(c)) {
                 numRed++;
                 assert(name[1] == 'D' || name[1] == 'H');
@@ -190,6 +199,7 @@ void Game_test(void) {
     puts("\nTesting Game...");
     Game game;
     Game_init(&game);
+    Game_deal(&game);
 
     assert(game.numPlayers == NUM_PLAYERS);
     assert(game.currentPlayerId == 0);

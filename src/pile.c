@@ -50,6 +50,10 @@ Cards Pile_swap(Pile *pile, Cards insert, Cards extract) {
     assert(false); // remove card not found
 }
 
+void Pile_fromString(Pile *pile, const char *str) {
+    
+}
+
 
 void Pile_print(Pile *pile) {
     Pile_printToFile(pile, stdout);

@@ -35,6 +35,7 @@ void Game_deal(Game *game) {
 
     // Move the top card from the draw pile to the discard pile.
     Pile_push(&game->discardPile, Pile_pop(&game->drawPile));
+    game->everDiscarded = Pile_peek(&game->discardPile);
 }
 
 void Game_copy(Game *original, Game *copy) {

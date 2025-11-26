@@ -58,6 +58,8 @@ void Pile_fullDeck(Pile *pile);
 // Shuffle the cards in the pile.
 void Pile_shuffle(Pile *pile);
 
+void Pile_fromString(Pile *pile, const char *str);
+
 // Print the cards in the pile as a space-separated list of card codes.
 void Pile_print(Pile *pile);
 void Pile_printToFile(Pile *pile, FILE *file);
