@@ -4,14 +4,8 @@
 #include "ai.h"
 #include "game.h"
 
-const int unknownCardCentipoints = 700;
-
-void AI_init(AI *ai, int mode) {
-    ai->mode = mode;
-    ai->simMode = 0;
-    ai->totalScore = 0;
-    ai->game = NULL;
-    ai->player = NULL;
+// Clear fields used in selecting a turn.
+static void AI_resetForGo(AI *ai) {
     Turn_init(&ai->bestTakeTurn);
     ai->possibleDraws = 0;
     for (int i = 0; i < 64; ++i) {
@@ -19,6 +13,15 @@ void AI_init(AI *ai, int mode) {
     }
     ai->averageDrawEval = 0;
     MeldList_init(&ai->meldList);
+}
+
+void AI_init(AI *ai, int mode) {
+    ai->mode = mode;
+    ai->simMode = 0;
+    ai->totalScore = 0;
+    ai->game = NULL;
+    ai->player = NULL;
+    AI_resetForGo(ai);
 }
 
 void AI_joinGame(AI *ai, Game *game, Player *player) {
@@ -32,16 +35,14 @@ void AI_exitGame(AI *ai) {
 }
 
 Turn *AI_go(AI *ai) {
-    Turn_init(&ai->bestTakeTurn);
-    ai->possibleDraws = 0;
-    for (int i = 0; i < 64; ++i) {
-        Turn_init(&ai->bestDrawTurn[i]);
-    }
-    ai->averageDrawEval = 0;
+    AI_resetForGo(ai);
 
     if (ai->mode == 2) {
+        // Consider all possible turns and evaluate each by simulating
+        // many random completions of the game.
         return AI_goDeep(ai);
     } else {
+        // Consider all possible turns and evaluate each by a heuristic.
         return AI_goShallow(ai);
     }
 }
@@ -62,7 +63,7 @@ Turn *AI_goDeep(AI *ai) {
     }
     Scoreboard_print(scoreboard);
 
-    // Pick out the best line of play from the scoreboard.
+    // Pick out the best lines of play from the scoreboard.
     // ScoreboardTake *bestTake = NULL;
 
     printf("AI_goDeep: Done.\n");
@@ -246,6 +247,8 @@ void AI_findBestDiscard(AI *ai, Turn *bestTurn) {
 }
 
 int AI_evaluateGame(AI *ai) {
+    const int unknownCardCentipoints = 700;
+
     Game *game = ai->game;
     Player *player = ai->player;
 
