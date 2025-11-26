@@ -36,9 +36,12 @@
  *    meld generation.
  */
 
-void MeldList_generate(MeldList *list, Cards hand, Meld *table, Cards mustMeld) {
-    // Initialize the meld list to be empty.
+void MeldList_init(MeldList *list) {
     list->size = 0;
+}
+
+void MeldList_generate(MeldList *list, Cards hand, Meld *table, Cards mustMeld) {
+    MeldList_init(list);
     MeldList_genRec(list, table, mustMeld,
         Cards_addLowAces(hand), hand, table->runs, table->sets);
 }

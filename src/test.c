@@ -8,6 +8,9 @@
 #include "meldlist.h"
 #include "game.h"
 #include "ai.h"
+#include "ai-shallow.h"
+#include "ai-deep.h"
+#include "player.h"
 
 int DEB = 2;  // Debug level (0=none, 1=some, 2=more, 3=lots)
 int POV = 0;  // Print debug from current player's point of view

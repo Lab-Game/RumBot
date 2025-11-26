@@ -4,13 +4,14 @@
 #include <stdbool.h>
 #include "meld.h"
 
-#define MELDLIST_MAX_SIZE 1000
+#define MELDLIST_MAX_SIZE 48
 
 typedef struct {
     Meld melds[MELDLIST_MAX_SIZE];
     int size;
 } MeldList;
 
+void MeldList_init(MeldList *list);
 void MeldList_generate(MeldList *list, Cards hand, Meld *tableMeld, Cards mustMeld);
 void MeldList_genRec(MeldList *list, Meld *table, Cards mustMeld,
                      Cards mayRun, Cards maySet,
