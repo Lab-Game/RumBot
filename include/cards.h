@@ -45,13 +45,14 @@ static inline int Cards_size(Cards cards) {
     return __builtin_popcountll(cards);
 }
 
-// Swap 8C with PLACEHOLDER in a Pile.
-// Swap the 8C with the 7H in a Cards set.
-// Swap the 7H with PLACEHOLDER in the Pile.
+// Print the Cards set as a space-separated list of card codes.
+void Cards_print(Cards cards);
+void Cards_printToFile(Cards cards, FILE *file);
+void Cards_printExposed(Cards cards, Cards exposed);
 
-static inline Cards Cards_swap(Cards *cards, Cards remove, Cards insert) {
-    *cards = (*cards & ~remove) | insert;
-    return remove;
+static inline Cards Cards_swap(Cards *cards, Cards insert, Cards extract) {
+    *cards = (*cards & ~extract) | insert;
+    return extract;
 }
 
 // Return true of the set of cards includes any low aces.
@@ -117,10 +118,5 @@ static inline Cards Cards_next(Cards cards, Cards card) {
 
 // Create a Cards set from a string of space-separated card codes.
 Cards Cards_fromString(const char *str);
-
-// Print the Cards set as a space-separated list of card codes.
-void Cards_print(Cards cards);
-void Cards_printToFile(Cards cards, FILE *file);
-void Cards_printExposed(Cards cards, Cards exposed);
 
 #endif // CARDS_H

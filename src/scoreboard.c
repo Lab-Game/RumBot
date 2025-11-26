@@ -36,7 +36,8 @@ ScoreboardDraw *Scoreboard_initDraws(Game *game) {
     Player *player = game->currentPlayer;
     Cards drawable = Player_couldDraw(player);
     for (Cards c = Cards_first(drawable); c != 0; c = Cards_next(drawable, c)) {
-        Cards swapped = Game_swapToTop(game, c);
+        Cards swap = Pile_peek(&game->drawPile);
+        Game_swap(game, c, swap);
         Player_draw(player);
 
         ScoreboardDraw *draw = malloc(sizeof(ScoreboardDraw));
@@ -46,7 +47,7 @@ ScoreboardDraw *Scoreboard_initDraws(Game *game) {
         draws = draw;
 
         Player_undoDraw(player);
-        Game_swapToTop(game, swapped);
+        Game_swap(game, c, swap);
     }
 
     return draws;

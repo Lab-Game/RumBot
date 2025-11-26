@@ -112,6 +112,12 @@ void Pile_test(void) {
     Pile pile;
 
     Pile_init(&pile);
+    Pile_push(&pile, kSpecialCard);
+    assert(Pile_size(&pile) == 1);
+    assert(pile.allCards == kSpecialCard);
+    assert(Cards_has(pile.allCards, kSpecialCard));
+
+    Pile_init(&pile);
     assert(Pile_size(&pile) == 0);
     assert(pile.allCards == 0);
 

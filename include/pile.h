@@ -23,7 +23,7 @@ void Pile_print(Pile *pile);
 
 // Add a card to the top of the pile.
 static inline void Pile_push(Pile *pile, Cards card) {
-    assert(!(card & ~FULL_DECK)); // card is legal
+    assert(!(card & ~FULL_DECK) || card == kSpecialCard); // card is legal
     assert(!(pile->allCards & card)); // card not already in pile
     pile->cards[pile->size++] = card;
     pile->allCards |= card;
@@ -37,11 +37,13 @@ static inline Cards Pile_pop(Pile *pile) {
     return c;
 }
 
-void Pile_swapToTop(Pile *pile, int index);
-
 static inline Cards Pile_peek(Pile *pile) {
     assert(pile->size >= 1);
     return pile->cards[pile->size - 1];
+}
+
+static inline bool Pile_has(Pile *pile, Cards card) {
+    return Cards_has(pile->allCards, card);
 }
 
 // Initialize the pile to be empty.

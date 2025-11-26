@@ -20,18 +20,11 @@ void Pile_shuffle(Pile *pile) {
     }
 }
 
-void Pile_swapToTop(Pile *pile, int index) {
-    assert(index >= 0 && index < pile->size);
-    Cards temp = pile->cards[index];
-    pile->cards[index] = pile->cards[pile->size - 1];
-    pile->cards[pile->size - 1] = temp;
-}
-
 void Pile_printToFile(Pile *pile, FILE *file) {
     bool printed = false;
     for (int i = 0; i < pile->size; ++i) {
         Cards card = pile->cards[i];
-        assert(Cards_size(card) == 1);
+        // assert(Cards_size(card) == 1);
         if (printed) {
             fprintf(file, " ");
         }
@@ -44,6 +37,7 @@ Cards Pile_swap(Pile *pile, Cards insert, Cards extract) {
     for (int i = 0; i < pile->size; ++i) {
         if (pile->cards[i] == extract) {
             pile->cards[i] = insert;
+            pile->allCards = (pile->allCards & ~extract) | insert;
             return extract;
         }
     }

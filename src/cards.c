@@ -38,6 +38,13 @@ Cards Cards_fromString(const char *str) {
 
 void Cards_printToFile(Cards cards, FILE *file) {
     bool first = true;
+
+    if (Cards_has(cards, kSpecialCard)) {
+        fprintf(file, "<special>");
+        cards &= ~kSpecialCard;
+        first = false;
+    }
+
     for (Cards cs = Cards_first(cards); cs != 0; cs = Cards_next(cards, cs)) {
         Card c = Cards_toCard(cs);
         if (first) {

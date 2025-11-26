@@ -8,20 +8,17 @@ const int unknownCardCentipoints = 700;
 
 void AI_init(AI *ai, int mode) {
     ai->mode = mode;
-    ai->subMode = 0;
+    ai->simMode = 0;
     ai->totalScore = 0;
     ai->game = NULL;
     ai->player = NULL;
-    AI_resetForTurn(ai);
-}
-
-void AI_resetForTurn(AI *ai) {
     Turn_init(&ai->bestTakeTurn);
     ai->possibleDraws = 0;
     for (int i = 0; i < 64; ++i) {
         Turn_init(&ai->bestDrawTurn[i]);
     }
     ai->averageDrawEval = 0;
+    MeldList_init(&ai->meldList);
 }
 
 void AI_joinGame(AI *ai, Game *game, Player *player) {
@@ -35,6 +32,13 @@ void AI_exitGame(AI *ai) {
 }
 
 Turn *AI_go(AI *ai) {
+    Turn_init(&ai->bestTakeTurn);
+    ai->possibleDraws = 0;
+    for (int i = 0; i < 64; ++i) {
+        Turn_init(&ai->bestDrawTurn[i]);
+    }
+    ai->averageDrawEval = 0;
+
     if (ai->mode == 2) {
         return AI_goDeep(ai);
     } else {
@@ -52,7 +56,8 @@ Turn *AI_goDeep(AI *ai) {
     // to determine the best turn.
     Game permuted;
     for (int i = 0; i < 20; ++i) {
-        Game_permute(ai->game, &permuted);
+        Game_copy(ai->game, &permuted);
+        Game_permute(&permuted);
         AI_simulate(&permuted, scoreboard);
     }
     Scoreboard_print(scoreboard);
@@ -91,11 +96,11 @@ void AI_simulateDraws(Game *game, ScoreboardDraw *draws) {
     Player *player = game->currentPlayer;
 
     while (draws) {
-        Cards swapped = Game_swapToTop(game, draws->drawn);
+        Game_swap(game, draws->drawn, Pile_peek(&game->drawPile));
         Player_draw(player);
         AI_simulateMelds(game, draws->melds);
         Player_undoDraw(player);
-        Game_swapToTop(game, swapped);
+        Game_swap(game, draws->drawn, Pile_peek(&game->drawPile));
         draws = draws->next;
     }
 }
@@ -191,12 +196,12 @@ void AI_findBestDrawTurns(AI *ai) {
     for (Cards c = Cards_first(ai->possibleDraws); c != 0; c = Cards_next(ai->possibleDraws, c)) {
         Turn *turn = &ai->bestDrawTurn[Cards_toCard(c)];
 
-        Cards swapped = Game_swapToTop(game, c);
+        Game_swap(game, c, Pile_peek(&game->drawPile));
         Player_draw(player);
         AI_findBestMeld(ai, turn);
         totalEval += turn->eval;
         Player_undoDraw(player);
-        Game_swapToTop(game, swapped);
+        Game_swap(game, c, Pile_peek(&game->drawPile));
     }
 
     ai->averageDrawEval = totalEval / Cards_size(ai->possibleDraws);

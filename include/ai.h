@@ -11,7 +11,7 @@
 
 typedef struct AIStruct {
     int mode;
-    int subMode;  // for AIs used to simulate games
+    int simMode;  // for AIs used to simulate games
     int totalScore;
     Game *game;
     Player *player;
@@ -22,10 +22,15 @@ typedef struct AIStruct {
     MeldList meldList;
 } AI;
 
+// Completely clear an AI structure.
 void AI_init(AI *ai, int mode);
-void AI_resetForTurn(AI *ai);
+
+// Add the AI to the game, operating the given player.
 void AI_joinGame(AI *ai, Game *game, Player *player);
+
+// Remove the AI from the game.
 void AI_exitGame(AI *ai);
+
 Turn *AI_goDeep(AI *ai);
 Turn *AI_goShallow(AI *ai);
 Turn *AI_go(AI *ai);

@@ -35,7 +35,7 @@ void Turn_print(Turn *turn) {
     printf(" Discard: ");
     Cards_print(turn->discard);
 
-    if (turn->eval > -9999) {
+    if (turn->eval > -999999) {
         printf(" Eval: %d", turn->eval);
     }
     printf("\n");
