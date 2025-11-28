@@ -3,7 +3,7 @@
 
 #include "ai.h"
 
-Turn *AI_goShallow(AI *ai);
+void AI_goShallow(AI *ai);
 void AI_findBestTakeTurn(AI *ai);
 void AI_findBestDrawTurns(AI *ai);
 void AI_findBestMeld(AI *ai, Turn *bestTurn);

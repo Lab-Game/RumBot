@@ -21,7 +21,7 @@ extern const Cards kSpecialCard;  // Tempororary used when swapping cards
 
 // Confirm that all cards in the Cards set are legal.
 static inline bool Cards_isLegal(Cards cards) {
-    return (cards & ~FULL_DECK) == 0;
+    return (cards & ~LEGAL_CARDS) == 0;
 }
 
 // Determine whether Cards set 'cards' includes all cards in the Cards set 'c'.
@@ -73,10 +73,6 @@ static inline Cards Cards_addLowAces(Cards cards) {
 // Return a Cards set with all aces moved high.  Low aces are removed.
 static inline Cards Cards_raiseAces(Cards cards) {
     return (cards | ((cards & LOW_ACES) << 13)) & FULL_DECK;
-}
-
-static inline Cards Cards_preferHighAces(Cards cards) {
-    return cards & ~((cards & HIGH_ACES) >> 13);
 }
 
 static inline Cards Cards_sameValue(Cards card) {

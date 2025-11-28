@@ -85,8 +85,7 @@ ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
         ScoreboardDiscard *discard = malloc(sizeof(ScoreboardDiscard));
         discard->next = NULL;
         discard->discard = 0;
-        discard->turn = game->turn;
-        Scoreboard_initScore(&discard->score);
+        discard->score = Scoreboard_initScore(game);
         return discard;
     }
 
@@ -105,8 +104,7 @@ ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
             ScoreboardDiscard *discard = malloc(sizeof(ScoreboardDiscard));
             discard->next = discards;
             discard->discard = game->turn.discard;
-            discard->turn = game->turn;
-            Scoreboard_initScore(&discard->score);
+            discard->score = Scoreboard_initScore(game);
             discards = discard;
 
             Player_undoDiscard(player);
@@ -117,11 +115,14 @@ ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
     return discards;
 }
 
-void Scoreboard_initScore(ScoreboardScore *score) {
+ScoreboardScore *Scoreboard_initScore(Game *game) {
+    ScoreboardScore *score = malloc(sizeof(ScoreboardScore));
+    score->turn = game->turn;
     score->numGames = 0;
     for (int i = 0; i < NUM_PLAYERS; ++i) {
         score->totalScore[i] = 0;
     }
+    return score;
 }
 
 void Scoreboard_print(Scoreboard *scoreboard) {
@@ -176,7 +177,7 @@ void ScoreboardDiscard_print(ScoreboardDiscard *discard) {
     printf("   Discard ");
     Cards_print(discard->discard);
     printf(":  ");
-    ScoreboardScore_print(&discard->score);
+    ScoreboardScore_print(discard->score);
 }
 
 void ScoreboardScore_print(ScoreboardScore *score) {
@@ -210,6 +211,7 @@ void Scoreboard_free(Scoreboard *scoreboard) {
             ScoreboardDiscard *discard = meld->discards;
             while (discard) {
                 ScoreboardDiscard *nextDiscard = discard->next;
+                free(discard->score);
                 free(discard);
                 discard = nextDiscard;
             }
@@ -236,6 +238,7 @@ void Scoreboard_free(Scoreboard *scoreboard) {
             ScoreboardDiscard *discard = meld->discards;
             while (discard) {
                 ScoreboardDiscard *nextDiscard = discard->next;
+                free(discard->score);
                 free(discard);
                 discard = nextDiscard;
             }

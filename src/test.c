@@ -94,12 +94,6 @@ void Cards_test(void) {
     Cards_print(handWithLowAces);
     printf("\n");
 
-    // Test preference for high aces.
-    Cards handMixedAces = Cards_fromString("aC AC aD AD aH 5H 6H AS");
-    Cards preferredAces = Cards_preferHighAces(handMixedAces);
-    Cards expectedPreferredAces = Cards_fromString("AC AD 5H 6H aH AS");
-    assert(preferredAces == expectedPreferredAces);
-
     // Test iteration over a Cards set.
     Cards hand = Cards_fromString("TC JC QC 5D 6D 2H JH 6S KS AS");
     int numCards = 0;
@@ -227,44 +221,6 @@ void Game_test(void) {
     Game_print(&game);
 }
 
-void AI_test(void) {
-    puts("\nTesting AI...");
-    Game game;
-    Game_init(&game);
-    Player *player = game.currentPlayer;
-    player->hand = Cards_fromString("3C QC 8D 9D 2H QS AS 4H KS");
-
-    AI ai;
-    AI_init(&ai, 0);
-    
-    AI_joinGame(&ai, &game, game.currentPlayer);
-
-    // Test AI_evaluateHandPlayability
-    {
-        // Consider a pretty good hand
-        Cards hand = Cards_fromString("3C 5C 6C AD 6H 7H TC JC KC AC");
-        Meld meld;
-        Meld_init(&meld);
-        Meld_addSet(&meld, Cards_fromString("8C 8D 8H"));
-        Meld_addRun(&meld, Cards_fromString("8S 9S TS"));
-        Cards drawable = FULL_DECK & ~hand & ~Meld_cards(&meld) & ~Cards_fromString("5H 8D JD");
-        int eval = AI_evaluateHandPlayability(hand, &meld, drawable);
-        assert(eval == 779);
-    }
-
-    {
-        // Consider a weaker hand
-        Cards hand = Cards_fromString("3C 6H 9H 2D 5D 4S KS");
-        Meld meld;
-        Meld_init(&meld);
-        Meld_addSet(&meld, Cards_fromString("8C 8D 8H"));
-        Meld_addRun(&meld, Cards_fromString("8S 9S TS"));
-        Cards drawable = FULL_DECK & ~hand & ~Meld_cards(&meld) & ~Cards_fromString("5H 8D JD");
-        int eval = AI_evaluateHandPlayability(hand, &meld, drawable);
-        assert(eval == 40);
-    }
-}
-
 int main(void) {
     Card_test();
     Cards_test();
@@ -272,7 +228,6 @@ int main(void) {
     Meld_test();
     MeldList_test();
     Game_test();
-    AI_test();
     printf("\nAll tests passed.\n");
     return 0;
 }

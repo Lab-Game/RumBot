@@ -6,7 +6,7 @@
 #include "ai-deep.h"
 #include "scoreboard.h"
 
-Turn *AI_goDeep(AI *ai) {
+void AI_goDeep(AI *ai) {
     printf("AI_goDeep: Simulating deep lookahead...\n");
 
     // Build a scoreboard from the current game state
@@ -15,83 +15,117 @@ Turn *AI_goDeep(AI *ai) {
     // Run lots of simulations on every leaf of the scoreboard tree
     // to determine the best turn.
     Game permuted;
-    for (int i = 0; i < 20; ++i) {
+    for (int i = 0; i < 100; ++i) {
         Game_copy(ai->game, &permuted);
         Game_permute(&permuted);
-        AI_simulate(&permuted, scoreboard);
+        AI_simulate(ai, &permuted, scoreboard);
     }
-    Scoreboard_print(scoreboard);
 
-    // Pick out the best lines of play from the scoreboard.
-    // ScoreboardTake *bestTake = NULL;
-
-    printf("AI_goDeep: Done.\n");
-    exit(0);
+    AI_extractBestTakeTurn(ai, scoreboard);
+    AI_extractBestDrawTurns(ai, scoreboard);
 
     Scoreboard_free(scoreboard);
-    return NULL;
 }
 
-void AI_simulate(Game *game, Scoreboard *scoreboard) {
+void AI_extractBestTakeTurn(AI *ai, Scoreboard *scoreboard) {
+    Turn *bestTakeTurn = &ai->bestTakeTurn;
+    Turn_init(bestTakeTurn);
+
+    for (ScoreboardTake *t = scoreboard->takes; t != NULL; t = t->next) {
+        for (ScoreboardMeld *m = t->melds; m != NULL; m = m->next) {
+            for (ScoreboardDiscard *d = m->discards; d != NULL; d = d->next) {
+                ScoreboardScore *score = d->score;
+                assert(score->numGames > 0);
+                Turn_max(bestTakeTurn, &score->turn);
+            }
+        }
+    }
+}
+
+void AI_extractBestDrawTurns(AI *ai, Scoreboard *scoreboard) {
+    for (int i = 0; i < 64; ++i) {
+        Turn_init(&ai->bestDrawTurn[i]);
+    }
+
+    int sumEval = 0;
+    int numEval = 0;
+    for (ScoreboardDraw *t = scoreboard->draws; t != NULL; t = t->next) {
+        Card drawCard = Cards_toCard(t->drawn);
+        for (ScoreboardMeld *m = t->melds; m != NULL; m = m->next) {
+            for (ScoreboardDiscard *d = m->discards; d != NULL; d = d->next) {
+                ScoreboardScore *score = d->score;
+                assert(score->numGames > 0);
+                Turn_max(&ai->bestDrawTurn[drawCard], &score->turn);
+            }
+        }
+        sumEval += ai->bestDrawTurn[drawCard].eval;
+        numEval += 1;
+    }
+    assert(numEval > 0);
+    ai->averageDrawEval = sumEval / numEval;
+}
+
+void AI_simulate(AI *ai, Game *game, Scoreboard *scoreboard) {
     // The caller is responsible for supplying games to simulate,
     // probably by calling Game_permute() on the current game.
 
-    AI_simulateTakes(game, scoreboard->takes);
-    AI_simulateDraws(game, scoreboard->draws);
+    AI_simulateTakes(ai, game, scoreboard->takes);
+    AI_simulateDraws(ai, game, scoreboard->draws);
 }
 
-void AI_simulateTakes(Game *game, ScoreboardTake *take) {
+void AI_simulateTakes(AI *ai, Game *game, ScoreboardTake *take) {
     Player *player = game->currentPlayer;
 
     while (take) {
         Player_take(player, take->numTaken);
-        AI_simulateMelds(game, take->melds);
+        AI_simulateMelds(ai, game, take->melds);
         Player_undoTake(player);
         take = take->next;
     }
 }
 
-void AI_simulateDraws(Game *game, ScoreboardDraw *draws) {
+void AI_simulateDraws(AI *ai, Game *game, ScoreboardDraw *draws) {
     Player *player = game->currentPlayer;
 
     while (draws) {
         Game_swap(game, draws->drawn, Pile_peek(&game->drawPile));
         Player_draw(player);
-        AI_simulateMelds(game, draws->melds);
+        AI_simulateMelds(ai, game, draws->melds);
         Player_undoDraw(player);
         Game_swap(game, draws->drawn, Pile_peek(&game->drawPile));
         draws = draws->next;
     }
 }
 
-void AI_simulateMelds(Game *game, ScoreboardMeld *meld) {
+void AI_simulateMelds(AI *ai, Game *game, ScoreboardMeld *meld) {
     Player *player = game->currentPlayer;
 
     while (meld) {
         Player_meld(player, &meld->meld);
-        AI_simulateDiscards(game, meld->discards);
+        AI_simulateDiscards(ai, game, meld->discards);
         Player_undoMeld(player, &meld->meld);
         meld = meld->next;
     }
 }
 
-void AI_simulateDiscards(Game *game, ScoreboardDiscard *discards) {
+void AI_simulateDiscards(AI *ai, Game *game, ScoreboardDiscard *discards) {
     Player *player = game->currentPlayer;
     assert(player->game == game);
 
     while (discards) {
-        Player_discard(player, discards->discard);
-        // This could happen, and I haven't figure out what to do.
-        assert(Cards_size(discards->discard) == 1);
-        // At this point, the game could be over.  So no more simulation
-        // is possible...
-        AI_simulateGame(game, &discards->score);
-        Player_undoDiscard(player);
+        if (discards->discard) {
+            Player_discard(player, discards->discard);
+            AI_simulateGame(ai, game, discards->score);
+            Player_undoDiscard(player);
+        } else {
+            // No discard (should only happen if the game is over)
+            AI_simulateGame(ai, game, discards->score);
+        }
         discards = discards->next;
     }
 }
 
-void AI_simulateGame(Game *game, ScoreboardScore *score) {
+void AI_simulateGame(AI *ai, Game *game, ScoreboardScore *score) {
     // Play out the rest of the game from the current state.
     // Update the ScoreboardScore structure with the results.
 
@@ -100,11 +134,20 @@ void AI_simulateGame(Game *game, ScoreboardScore *score) {
     Game_copy(game, &simGame);
 
     Game_nextTurn(&simGame);
+    if (game->isOver) {
+        // The game ended immediately after the last discard.
+        // No need for simulation.
+        score->numGames += 1;
+        for (int i = 0; i < NUM_PLAYERS; ++i) {
+            score->totalScore[i] += simGame.players[i].score;
+        }
+        return;
+    }
 
-    // Set up AIs to play the simulated game.
+    // Set up AIs to play the simulated game to conclusion.
     AI simAIs[NUM_PLAYERS];
     for (int i = 0; i < NUM_PLAYERS; ++i) {
-        AI_init(&simAIs[i], 1);  // Should be the ai submode, but whatever
+        AI_init(&simAIs[i], ai->simMode, 0);
         AI_joinGame(&simAIs[i], &simGame, Game_player(&simGame, i));
     }
 
@@ -119,5 +162,22 @@ void AI_simulateGame(Game *game, ScoreboardScore *score) {
     score->numGames += 1;
     for (int i = 0; i < NUM_PLAYERS; ++i) {
         score->totalScore[i] += simGame.players[i].score;
+    }
+
+    // Update the turn's eval to the difference between the
+    // AI player's score and the average opponent score.
+    int sumEval = 0;
+    for (int i = 0; i < NUM_PLAYERS; ++i) {
+        if (i == ai->player->id) {
+            sumEval += 100 * score->totalScore[i];
+        } else {
+            sumEval -= 100 * score->totalScore[i] / (NUM_PLAYERS - 1);
+        }
+    }
+    score->turn.eval = sumEval / score->numGames;
+
+    // Clean up the AIs.
+    for (int i = 0; i < NUM_PLAYERS; ++i) {
+        AI_exitGame(&simAIs[i]);
     }
 }

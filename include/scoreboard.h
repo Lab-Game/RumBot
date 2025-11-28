@@ -4,6 +4,7 @@
 #include "game.h"
 
 typedef struct ScoreboardScoreStruct {
+    Turn turn;
     int numGames;
     int totalScore[NUM_PLAYERS];
 } ScoreboardScore;
@@ -34,8 +35,7 @@ typedef struct ScoreboardMeldStruct {
 typedef struct ScoreboardDiscardStruct {
     struct ScoreboardDiscardStruct *next;
     Cards discard;
-    Turn turn;
-    ScoreboardScore score;
+    ScoreboardScore *score;
 } ScoreboardDiscard;
 
 Scoreboard *Scoreboard_fromGame(Game *game);  // Returns one object
@@ -43,7 +43,7 @@ ScoreboardTake *Scoreboard_initTakes(Game *game);  // Returns a linked list
 ScoreboardDraw *Scoreboard_initDraws(Game *game);  // Returns a linked list
 ScoreboardMeld *Scoreboard_initMelds(Game *game);  // Returns a linked list
 ScoreboardDiscard *Scoreboard_initDiscards(Game *game);  // Returns a linked list
-void Scoreboard_initScore(ScoreboardScore *score);
+ScoreboardScore *Scoreboard_initScore(Game *game);
 void Scoreboard_free(Scoreboard *scoreboard);
 
 void Scoreboard_print(Scoreboard *scoreboard);

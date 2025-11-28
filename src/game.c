@@ -131,15 +131,18 @@ Player *Game_player(Game *game, int num) {
 void Game_nextTurn(Game *game) {
     Player *player = game->currentPlayer;
 
-    if (!player->hand || Pile_size(&game->drawPile) == 0) {
+    if (player->hand == 0) {
+        // Player went out.
+        // Reduce the score of other players by the points in their hand
         game->isOver = true;
-
-        // Reduce the score of each player by the points in their hand
         for (int i = 0; i < game->numPlayers; ++i) {
             Player *p = Game_player(game, i);
             int handPoints = Cards_points(p->hand);
             p->score -= handPoints;
         }
+    } else if (Pile_size(&game->drawPile) == 0) {
+        // Draw pile is empty.  Game is over, but no penalties are applied.
+        game->isOver = true;
     } else {
         // Advance to next player's turn
         game->currentPlayerId = (game->currentPlayerId + 1) % game->numPlayers;

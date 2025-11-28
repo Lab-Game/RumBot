@@ -13,14 +13,13 @@ typedef struct AIStruct {
     Game *game;
     Player *player;
     Turn bestTakeTurn;
-    Cards possibleDraws;
     Turn bestDrawTurn[64];
     int averageDrawEval;
     MeldList meldList;
 } AI;
 
 // Completely clear an AI structure.
-void AI_init(AI *ai, int mode);
+void AI_init(AI *ai, int mode, int simMode);
 
 // Clear fields used in selecting a turn.
 void AI_resetForGo(AI *ai);
@@ -31,7 +30,7 @@ void AI_joinGame(AI *ai, Game *game, Player *player);
 void AI_exitGame(AI *ai);
 
 // Return the best move for the AI's player in the current game state.
-Turn *AI_go(AI *ai);
+void AI_go(AI *ai, Turn *turn);
 
 // Print AI state for debugging.
 void AI_print(AI *ai);
