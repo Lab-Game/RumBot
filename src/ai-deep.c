@@ -153,8 +153,9 @@ void AI_simulateGame(AI *ai, Game *game, ScoreboardScore *score) {
 
     // Play out the game until it's over.
     while (!simGame.isOver) {
-        Turn *turn = AI_go(&simAIs[simGame.currentPlayerId]);
-        Player_play(simGame.currentPlayer, turn);
+        Turn turn;
+        AI_go(&simAIs[simGame.currentPlayerId], &turn);
+        Player_play(simGame.currentPlayer, &turn);
         Game_nextTurn(&simGame);
     }
 

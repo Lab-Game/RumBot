@@ -30,5 +30,6 @@ void Game_permute(Game *game);
 Player *Game_player(Game *game, int num);
 void Game_nextTurn(Game *game);
 void Game_print(Game *game);
+void Game_printForPlayer(Game *game);
 
 #endif // GAME_H

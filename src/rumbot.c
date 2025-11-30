@@ -28,19 +28,19 @@ void playGame(AI *ais[], Game *game, FILE *log_file) {
         }
 
         AI *ai = ais[game->currentPlayerId];
-        Turn *turn = AI_go(ai);
+        Turn turn;
+        AI_go(ai, &turn);
 
         if (DEB >= 1) {
             printf("AI: ");
-            Turn_print(turn);
+            Turn_print(&turn);
         }
 
         printf("Player %d plays turn: ", game->currentPlayer->id);
-        Turn_print(turn);
-
-        Player_play(game->currentPlayer, turn);
+        Turn_print(&turn);
+        Player_play(game->currentPlayer, &turn);
         if (log_file) {
-            Log_writeTurn(log_file, turn);
+            Log_writeTurn(log_file, &turn);
         }
 
         if (DEB >= 2) {

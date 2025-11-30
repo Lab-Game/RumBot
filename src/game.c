@@ -174,3 +174,31 @@ void Game_print(Game *game) {
     Pile_print(&game->drawPile);
     printf("\n");
 }
+
+void Game_printForPlayer(Game *game) {
+    for (int i = 0; i < game->numPlayers; ++i) {
+        Player *player = Game_player(game, i);
+        if (i == game->currentPlayerId) {
+            printf("-> ");
+            Player_print(player);
+        } else {
+            printf("Player %d (%3d pts)  ", player->id, player->score);
+            for (Cards c = Cards_first(player->hand); c != 0; c = Cards_next(player->hand, c)) {
+                printf("?? ");
+            }
+            printf("\n");
+
+            printf("   Player %d: ", player->id);
+            Cards_print(player->hand);
+            printf(" (cards hidden)\n");
+        }
+    }
+
+    // Print all cards in the discard pile
+    printf("Discard: ");
+    Pile_print(&game->discardPile);
+    printf("\n");
+
+    // Print all cards in the draw pile
+    printf("Draw: (%d cards)\n", Pile_size(&game->drawPile));
+}

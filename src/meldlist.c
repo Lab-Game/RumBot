@@ -52,13 +52,14 @@ void MeldList_generate(MeldList *list, Cards hand, Meld *table, Cards mustMeld) 
 void MeldList_genRec(MeldList *list, Meld *table, Cards mustMeld,
                      Cards mayRun, Cards maySet,
                      Cards newRuns, Cards newSets) {
-// If the meld list is full, stop recursing.
+    // If the meld list is full, stop recursing.
     if (list->size >= MELDLIST_MAX_SIZE) {
         return;
     }
 
-    mayRun &= Meld_playableInRun(mayRun, newRuns);
-    maySet &= Meld_playableInSet(maySet, newSets);
+    // Compute which cards are actually playable in runs and sets.
+    mayRun &= Meld_playableInRun(newRuns, mayRun);
+    maySet &= Meld_playableInSet(newSets, maySet);
 
     // If the mustMeld card is neither played nor playable, backtrack.
     if (!Cards_has(Cards_raiseAces(newRuns | mayRun) | newSets | maySet, mustMeld)) {

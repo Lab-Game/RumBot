@@ -61,16 +61,21 @@ bool Meld_isValidTable(Meld *meld) {
     return true;
 }
 
-Cards Meld_playableInRun(Cards hand, Cards tableRuns) {
+Cards Meld_playableInRun(Cards tableRuns, Cards hand) {
     Cards lowHand = Cards_addLowAces(hand);
     Cards p = tableRuns | (hand & (lowHand << 1) & (hand >> 1));
     p = (p | (p << 1) | (p >> 1)) & lowHand;
     return (p | (p << 1) | (p >> 1)) & lowHand;
 }
 
-Cards Meld_playableInSet(Cards hand, Cards tableSets) {
+Cards Meld_playableInSet(Cards tableSets, Cards hand) {
     Cards p = tableSets | (hand & ((hand << 16) | (hand >> 48)) & ((hand >> 16) | (hand << 48)));
     return (p | (p << 16) | (p >> 48) | (p >> 16) | (p << 48)) & hand;
+}
+
+Cards Meld_playableCards(Meld *meld, Cards hand) {
+    return Cards_raiseAces(
+        Meld_playableInRun(meld->runs, hand) | Meld_playableInSet(meld->sets, hand));
 }
 
 void Meld_print(Meld *meld) {

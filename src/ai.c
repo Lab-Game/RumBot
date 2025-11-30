@@ -5,6 +5,7 @@
 #include "game.h"
 #include "ai-shallow.h"
 #include "ai-deep.h"
+#include "ai-human.h"
 #include "meldlist.h"
 
 void AI_init(AI *ai, int mode, int simMode) {
@@ -44,30 +45,27 @@ void AI_exitGame(AI *ai) {
 
 void AI_go(AI *ai, Turn *turn) {
     AI_resetForGo(ai);
+    Turn_init(turn);
 
+    // Artificial AI:  human player mode
     if (ai->mode == -1) {
-        // Human player: just return an empty turn for now.
         AI_goHuman(ai, turn);
-    } else if (ai->mode >= 10) {
+        return;
+    }
+    
+    if (ai->mode >= 10) {
         // Consider all possible turns and evaluate each by simulating
         // many random completions of the game.
         AI_goDeep(ai);
-        AI_print(ai);
     } else {
         // Consider all possible turns and evaluate each by a heuristic.
         AI_goShallow(ai);
     }
 
+    // Choose the best turn, which could be a take or a draw.
     if (ai->bestTakeTurn.eval > ai->averageDrawEval) {
         *turn = ai->bestTakeTurn;
     } else {
-        // To simplify the code, we'll let the AI peek at the draw card
-        // so we can return the best Turn for that draw as opposed to
-        // the best Turn for every possible draw, which makes for more
-        // complex code.  This is a problem if the drawn card is supplied
-        // externally, but I'll deal with that later.  In principle,
-        // I just need to return take vs. draw now and then can return
-        // the rest of the Turn after the draw card is known.
         Card drawCard = Cards_toCard(Pile_peek(&ai->game->drawPile));
         *turn = ai->bestDrawTurn[drawCard];
     }

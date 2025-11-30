@@ -17,22 +17,33 @@ Cards Cards_fromString(const char *str) {
     }
 
     while (true) {
-        assert(*str);
-        assert(strchr(values, *str));
-        assert(*(str+1));
-        assert(strchr(suits, *(str + 1)));
+        if (!*str || !*(str+1)) {
+            return kSpecialCard;
+        }
 
-        int value = strchr(values, *(str++)) - values;
-        int suit = strchr(suits, *(str++)) - suits;
+        char *valuePtr = strchr(values, *str);
+        char *suitPtr = strchr(suits, *(str + 1));
+
+        if (!valuePtr || !suitPtr) {
+            return kSpecialCard;
+        }
+
+        str += 2;
+
+        int value = valuePtr - values;
+        int suit = suitPtr - suits;
 
         cards |= Cards_fromCard(Card_fromValueSuit(value, suit));
 
         if (!*str) {
             return cards;
-        } else {
-            assert(*str == ' ');
-            str++;
         }
+        
+        if (*str != ' ') {
+            return kSpecialCard;
+        }
+
+        str += 1;
     }
 }
 

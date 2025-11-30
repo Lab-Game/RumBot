@@ -50,8 +50,12 @@ static inline Cards Meld_cards(Meld *Meld) {
 // Determine which cards can be played from hand into the Meld,
 // though some possibilities may be mututally exclusive.
 // playableInRun returns separate bits for low and high aces.
-Cards Meld_playableInRun(Cards hand, Cards tableRuns);
-Cards Meld_playableInSet(Cards hand, Cards tableSets);
+Cards Meld_playableInRun(Cards tableRuns, Cards hand);
+Cards Meld_playableInSet(Cards tableSets, Cards hand);
+
+// Return which cards can be played from hand into the Meld.
+// Aces are always high.
+Cards Meld_playableCards(Meld *meld, Cards hand);
 
 // Meld can refer to either a play, given cards already on the table,
 // or to the current state of the table.  These functions check
