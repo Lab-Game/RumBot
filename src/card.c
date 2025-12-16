@@ -1,9 +1,14 @@
 #include "card.h"
 
-const Card kIllegalCard = 0xff;
-
 const char *kCardValues = "a23456789TJQKA";
 const char *kCardSuits = "CDSH";
+
+const int kClubSuit = 0;
+const int kDiamondSuit = 1;
+const int kSpadeSuit = 2;
+const int kHeartSuit = 3;
+
+const Card kIllegalCard = 0xff;
 
 static const char *kCardName[64] = {
     "aC", "2C", "3C", "4C", "5C", "6C", "7C", "8C", "9C", "TC", "JC", "QC", "KC", "AC", "14?", "15?",
@@ -27,6 +32,5 @@ const char *Card_name(Card i) {
 
 const char *Card_colorName(Card i) {
     assert(Card_isLegal(i));
-    assert((i >> 4) <= 3);    // suit 0-3
     return kColorCardName[i];
 }

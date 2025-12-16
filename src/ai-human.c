@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "game.h"
 #include "player.h"
@@ -15,90 +16,107 @@ void AI_goHuman(AI *ai, Turn *turn) {
     // Show the game from the player's perspective.
     Game_printForPlayer(game);
 
-    printf("YOUR TURN HUMAN!\n");
-    printf("(t)ake or (d)raw?\n");
-
     // Determine whether this is a draw or take.
-    char turnType[16];
+    char turnTypeInput[8];
     while(1) {
-        fgets(turnType, sizeof(turnType), stdin);
-        if (turnType[0] == 't' || turnType[0] == 'd') {
+        printf("(t)ake or (d)raw? ");
+        fgets(turnTypeInput, sizeof(turnTypeInput), stdin);
+        if (turnTypeInput[0] == 't' || turnTypeInput[0] == 'd') {
             break;
         }
-        printf("Faulty human input REJECTED! (t)ake or (d)raw?\n");
     }
     
-    if (turnType[0] == 't') {
-        char cardsTaken[8];
-        Cards takeDownTo = 0;
+    // Handle a take turn
+    Cards mustMeld = 0;
+    if (turnTypeInput[0] == 't') {
+        char takeInput[8];
 
         while(1) {
-            printf("Take down to what card?\n");
-            fgets(cardsTaken, sizeof(cardsTaken), stdin);
-            takeDownTo = Cards_fromString(cardsTaken);
-
-            if (takeDownTo == kSpecialCard || Cards_size(takeDownTo) != 1) {
-                printf("Invalid card input. Try harder.\n");
+            printf("take how many (1-%d)? ", Pile_size(&game->discardPile));
+            fgets(takeInput, sizeof(takeInput), stdin);
+            int numTaken = atoi(takeInput);
+            if (numTaken < 1 || numTaken > Pile_size(&game->discardPile)) {
                 continue;
             }
 
-            if (!Pile_has(&game->discardPile, takeDownTo)) {
-                printf("Card not in discard pile.  Do better.\n");
-                continue;
+            // If more than one card is taken, the player must play the deepest card.
+            if (numTaken > 1) {
+                mustMeld = game->discardPile.cards[game->discardPile.size - numTaken];
             }
 
-            while (Pile_has(&game->turn.taken, takeDownTo)) {
-                Player_take(player, 1);
-            }
+            Player_take(player, numTaken);
 
-            if (Pile_size(&game->turn.taken) > 1 &&
-                !Cards_has(Meld_playableCards(&game->meld, player->hand), takeDownTo)) {
-                printf("Must meld deepest card taken.  You failed.\n");
+            // Ensure that the deepest card can be played.
+            if (!Cards_has(Meld_playableCards(&game->meld, player->hand), mustMeld)) {
+                printf("can't play deepest card\n");
                 Player_undoTake(player);
                 continue;
             }
-
-            printf("Took cards: ");
-            Cards_print(game->turn.taken.allCards);
-            printf("\n");
-            break;
         }
     } else {
         Cards drawn = Player_draw(player);
-        printf("You drew: ");
+        printf("drew ");
         Cards_print(drawn);
         printf("\n");
     }
 
+    // Show the game again after drawing/taking.
     Game_printForPlayer(game);
 
-    printf("Enter run cards:\n");
-    char runInput[128];
-    fgets(runInput, sizeof(runInput), stdin);
-    Cards runCards = Cards_fromString(runInput);
-
-    // Determine whether these cards can be played as a run.
-    // 
-
-    if (runCards != 0) {
+    //  Handle playing runs.
+    Cards playableInRun = Meld_playableInRun(game->meld.runs, player->hand);
+    while(1) {
+        printf("run meld? ");
+        char runInput[128];
+        fgets(runInput, sizeof(runInput), stdin);
+        Cards runCards = Cards_fromString(runInput);
+        if (!Cards_has(player->hand, runCards) || !Cards_has(playableInRun, runCards)) {
+            continue;
+        }
         Player_playRun(player, runCards);
+
+        // If the mustMeld card is in the player's hand and is not playable after this meld, undo the meld.
+        if (Cards_has(player->hand, mustMeld) &&
+            !Cards_has(Meld_playableCards(&game->meld, player->hand), mustMeld)) {
+            printf("must play deepest card\n");
+            Player_undoRun(player, runCards);
+            continue;
+        }
     }
 
-    printf("Enter set crards:\n");
-    char setInput[128];
-    fgets(setInput, sizeof(setInput), stdin);
-    Cards setCards = Cards_fromString(setInput);
-    if (setCards != 0) {
+    // Handle playing sets.
+    Cards playableInSet = Meld_playableInSet(game->meld.sets, player->hand);
+    while(1) {
+        printf("set meld? ");
+        char setInput[128];
+        fgets(setInput, sizeof(setInput), stdin);
+        Cards setCards = Cards_fromString(setInput);
+        if (!Cards_has(player->hand, setCards) || !Cards_has(playableInSet, setCards)) {
+            continue;
+        }
         Player_playSet(player, setCards);
+        if (Cards_has(player->hand, mustMeld)) {
+            printf("must play deepest card\n");
+            Player_undoSet(player, setCards);
+            continue;
+        }
     }
 
+    // Handle discarding.
     if (Cards_size(player->hand) == 0) {
-        printf("No discard (you went out!)\n");
+        printf("no discard\n");
     } else {
-        printf("Enter discard card:\n");
-        char discardInput[16];
-        fgets(discardInput, sizeof(discardInput), stdin);
-        Cards discardCard = Cards_fromString(discardInput);
-        Player_discard(player, discardCard);
+        while(1) {
+            printf("discard? ");
+            char discardInput[8];
+            fgets(discardInput, sizeof(discardInput), stdin);
+            Cards discardCard = Cards_fromString(discardInput);
+            if (!Cards_has(player->hand, discardCard) || Cards_size(discardCard) != 1) {
+                printf("invalid discard\n");
+                continue;
+            }
+            Player_discard(player, discardCard);
+            break;
+        }
     }
 }

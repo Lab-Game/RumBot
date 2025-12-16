@@ -16,40 +16,51 @@ typedef uint8_t Card;
 extern const char *kCardValues;
 extern const char *kCardSuits;
 
+extern const int kClubSuit;
+extern const int kDiamondSuit;
+extern const int kHeartSuit;
+extern const int kSpadeSuit;
+
 extern const Card kIllegalCard;
 
+// Card is legal if its value is 0-13 and its suit is 0-3.
 static inline bool Card_isLegal(Card i) {
     return (i & 0xf) <= 13 && (i >> 4) <= 3;
 }
 
+// Return the value (0-13) of a legal card.
 static inline int Card_value(Card c) {
     assert(Card_isLegal(c));
     return c & 0xF;
 }
 
+// Return the suit (0-3) of a legal card.
 static inline int Card_suit(Card c) {
     assert(Card_isLegal(c));
     return c >> 4;
 }
 
+// Create a card from its value (0-13) and suit (0-3).
 static inline Card Card_fromValueSuit(int value, int suit) {
     assert(value >= 0 && value <= 13);
     assert(suit >= 0 && suit <= 3);
     return (suit << 4) | value;
 }
 
+// Return whether the card is red (Diamonds or Hearts).
 static inline bool Card_isRed(Card c) {
     assert(Card_isLegal(c));
-    return Card_suit(c) == 1 || Card_suit(c) == 3;
+    return Card_suit(c) == kDiamondSuit || Card_suit(c) == kHeartSuit;
 }
 
+// Return whether the card is black (Clubs or Spades).
 static inline bool Card_isBlack(Card c) {
     assert(Card_isLegal(c));
-    return Card_suit(c) == 0 || Card_suit(c) == 2;
+    return Card_suit(c) == kClubSuit || Card_suit(c) == kSpadeSuit;
 }
 
 // Return a null-terminated two-letter code for legal cards, e.g.
-// "8C" for the 8 of Clubs.  Low aces are represented as "a", high aces as "A".
+// "8C" for the 8 of Clubs.  Low aces are "a", high aces are "A".
 const char *Card_name(Card i);
 
 // Escape the two-letter code to add color.
