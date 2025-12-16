@@ -29,7 +29,7 @@ void Player_play(Player *player, Turn *turn) {
 
 Cards Player_couldDraw(Player *player) {
     Game *game = player->game;
-    return FULL_DECK & ~(game->everDiscarded | player->hand | Meld_cards(&game->meld));
+    return kFullDeck & ~(game->everDiscarded | player->hand | Meld_cards(&game->meld));
 }
 
 void Player_print(Player *player) {

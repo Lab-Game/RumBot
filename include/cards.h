@@ -7,21 +7,21 @@
 
 #include "card.h"
 
-#define FULL_DECK   0x3FFE3FFE3FFE3FFEULL  // Full deck (high aces only)
-#define LEGAL_CARDS 0x3FFF3FFF3FFF3FFFULL  // All legal cards (high and low aces)
-#define LOW_ACES    0x0001000100010001ULL
-#define HIGH_ACES   0x2000200020002000ULL
-
 // The Cards type is a bitmask used to represent a set of playing cards.
+// The correspondence between bits and cards matches the Card type.
 // There are bits to represent low aces, but these are used only when
 // representings runs, the sole place where low aces are meaningful.
 typedef uint64_t Cards;
 
-extern const Cards kSpecialCard;  // Tempororary used when swapping cards
+extern const Cards kFullDeck;   // Bits for full deck (high aces only)
+extern const Cards kLegalCards; // Bits for all legal cards
+extern const Cards kLowAces;    // Bits for low aces
+extern const Cards kHighAces;   // Bits for high aces
+extern const Cards kSpecialCard;  // Temp used when swapping cards
 
 // Confirm that all cards in the Cards set are legal.
 static inline bool Cards_isLegal(Cards cards) {
-    return (cards & ~LEGAL_CARDS) == 0;
+    return (cards & ~kLegalCards) == 0;
 }
 
 // Determine whether Cards set 'cards' includes all cards in the Cards set 'c'.
@@ -57,22 +57,22 @@ static inline Cards Cards_swap(Cards *cards, Cards insert, Cards extract) {
 
 // Return true of the set of cards includes any low aces.
 static inline bool Cards_isLowAce(Cards card) {
-    return (card & LOW_ACES) != 0;
+    return (card & kLowAces) != 0;
 }
 
 // If there is a low or high ace, add the other ace to the Cards set.
 static inline Cards Cards_addAllAces(Cards cards) {
-    return (cards | ((cards & LOW_ACES) << 13) | ((cards & HIGH_ACES) >> 13));
+    return (cards | ((cards & kLowAces) << 13) | ((cards & kHighAces) >> 13));
 }
 
 // Return a Cards set with a low ace added for every high ace present.
 static inline Cards Cards_addLowAces(Cards cards) {
-    return cards | ((cards & HIGH_ACES) >> 13);
+    return cards | ((cards & kHighAces) >> 13);
 }
 
 // Return a Cards set with all aces moved high.  Low aces are removed.
 static inline Cards Cards_raiseAces(Cards cards) {
-    return (cards | ((cards & LOW_ACES) << 13)) & FULL_DECK;
+    return (cards | ((cards & kLowAces) << 13)) & kFullDeck;
 }
 
 static inline Cards Cards_sameValue(Cards card) {

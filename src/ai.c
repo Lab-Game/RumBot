@@ -76,7 +76,7 @@ void AI_print(AI *ai) {
     printf("  Best take turn: ");
     Turn_print(&ai->bestTakeTurn);
     printf("  Best draw turns:\n");
-    for (Cards c = Cards_first(FULL_DECK); c != 0; c = Cards_next(FULL_DECK, c)) {
+    for (Cards c = Cards_first(kFullDeck); c != 0; c = Cards_next(kFullDeck, c)) {
         Card card = Cards_toCard(c);
         Turn *turn = &ai->bestDrawTurn[card];
         if (turn->drawn == c) {

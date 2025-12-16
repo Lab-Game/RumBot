@@ -120,11 +120,11 @@ void Pile_test(void) {
 
     Pile_fullDeck(&pile);
     assert(Pile_size(&pile) == 52);
-    assert(pile.allCards == FULL_DECK);
+    assert(pile.allCards == kFullDeck);
 
     Pile_shuffle(&pile);
     assert(Pile_size(&pile) == 52);
-    assert(pile.allCards == FULL_DECK);
+    assert(pile.allCards == kFullDeck);
 
     assert(pile.size == 52);
     for (int i = 0; i < 52; ++i) {

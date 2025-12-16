@@ -167,7 +167,7 @@ Cards AI_playableCards(Cards hand, Meld *meld) {
                      setCenters | (setCenters << 16) | (setCenters >> 16) |
                      (setCenters << 48) | (setCenters >> 48) | setExtensions;
     // Kick out low aces if the corresponding high aces are playable.
-    playable &= ~((playable & HIGH_ACES) >> 13);
+    playable &= ~((playable & kHighAces) >> 13);
     assert(Cards_isLegal(playable));
     return playable;
 }

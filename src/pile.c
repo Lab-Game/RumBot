@@ -6,7 +6,7 @@
 
 void Pile_fullDeck(Pile *pile) {
     Pile_init(pile);
-    for (Cards c = Cards_first(FULL_DECK); c != 0; c = Cards_next(FULL_DECK, c)) {
+    for (Cards c = Cards_first(kFullDeck); c != 0; c = Cards_next(kFullDeck, c)) {
         Pile_push(pile, c);
     }
 }
