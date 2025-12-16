@@ -16,7 +16,7 @@ int DEB = 2;  // Debug level (0=none, 1=some, 2=more, 3=lots)
 int POV = 0;  // Print debug from current player's point of view
 
 void Card_test(void) {
-    puts("Testing Card...");
+    printf("Testing Card... ");
 
     int numLegal = 0;
     int numSuit[4] = { 0, 0, 0, 0 };
@@ -26,39 +26,55 @@ void Card_test(void) {
     for (int i = 0; i < 255; ++i) {
         Card c = (Card) i;
         if (Card_isLegal(c)) {
+            numLegal++;
+
             int value = Card_value(c);
             int suit = Card_suit(c);
 
             assert(value >= 0 && value <= 13);
             assert(suit >= 0 && suit <= 3);
 
+            numValue[value]++;
+            numSuit[suit]++;
+
+            Card d = Card_fromValueSuit(value, suit);
+            assert(c == d);
+
             const char *name = Card_name((Card) i);
             assert(name[0] == kCardValues[value]);
             assert(name[1] == kCardSuits[suit]);
 
-            numLegal++;
-            numValue[value]++;
-            numSuit[suit]++;
             if (Card_isRed(c)) {
                 numRed++;
+                assert(suit == kDiamondSuit || suit == kHeartSuit);
                 assert(name[1] == 'D' || name[1] == 'H');
             }
             if (Card_isBlack(c)) {
                 numBlack++;
+                assert(suit == kClubSuit || suit == kSpadeSuit);
                 assert(name[1] == 'C' || name[1] == 'S');
             }
         }
     }
 
+    // There are 56 legal cards (including low aces).
     assert(numLegal == 56);
+
+    // There are 14 cards of each suit.
     for (int i = 0; i < 4; ++i) {
         assert(numSuit[i] == 14);
     }
+
+    // There are 4 cards of each value.
     for (int i = 0; i < 14; ++i) {
         assert(numValue[i] == 4);
     }
+
+    // There are 28 cards of each color.
     assert(numRed == 28);
     assert(numBlack == 28);
+
+    printf("passed.\n");
 }
 
 void Cards_test(void) {
