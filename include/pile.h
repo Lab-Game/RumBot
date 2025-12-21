@@ -6,12 +6,12 @@
 #include <stdio.h>
 #include "cards.h"
 
-// A Pile is a stack of Cards.  A Pile is used to represent the draw and discard piles.
+// A Pile is a stack of Cards.  A Pile represents the draw and discard piles.
 
 typedef struct {
     Cards cards[52];
     int size;
-    Cards allCards;
+    Cards allCards;  // All cards in the pile as a bitset
 } Pile;
 
 // Return the number of cards in the pile.
@@ -19,11 +19,9 @@ static inline int Pile_size(Pile *pile) {
     return pile->size;
 }
 
-void Pile_print(Pile *pile);
-
 // Add a card to the top of the pile.
 static inline void Pile_push(Pile *pile, Cards card) {
-    assert(!(card & ~kFullDeck) || card == kSpecialCard); // card is legal
+    assert(!(card & ~kFullDeck) || card == kSpecialCard); // card is legal or the special
     assert(!(pile->allCards & card)); // card not already in pile
     pile->cards[pile->size++] = card;
     pile->allCards |= card;
@@ -52,6 +50,8 @@ static inline void Pile_init(Pile *pile) {
     pile->allCards = 0;
 }
 
+// Swap cards in the pile: remove 'extract' cards and add 'insert' cards.
+// Returns the cards that were removed.
 Cards Pile_swap(Pile *pile, Cards insert, Cards extract);
 
 // Put a full deck of cards (with only high aces) into the pile in sorted order.
@@ -60,6 +60,7 @@ void Pile_fullDeck(Pile *pile);
 // Shuffle the cards in the pile.
 void Pile_shuffle(Pile *pile);
 
+// Create a pile from a string like "aC 2C 3C".  Bottom card is first in string.
 void Pile_fromString(Pile *pile, const char *str);
 
 // Print the cards in the pile as a space-separated list of card codes.
