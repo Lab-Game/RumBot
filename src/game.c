@@ -100,6 +100,7 @@ Player *Game_player(Game *game, int num) {
 bool Game_nextTurn(Game *game) {
     assert(!game->isOver);
 
+    // Flush the previous player's turn.
     Turn_init(&game->turn);
 
     Player *player = game->currentPlayer;
@@ -127,24 +128,16 @@ bool Game_nextTurn(Game *game) {
 void Game_permute(Game *game) {
     assert(!game->isOver);
 
-    // Permute cards unknown to the current player.
-    Player *player = game->currentPlayer;
-
-    // Note the size of each player's hand.
-    int handSize[NUM_PLAYERS];
+    // Withdraw all unknown cards from other players' hands.
+    int numExchanged[NUM_PLAYERS] = { 0 };
     for (int i = 0; i < game->numPlayers; ++i) {
-        handSize[i] = Cards_size(game->players[i].hand);
-    }
-
-    for (int i = 0; i < game->numPlayers; ++i) {
-        if (i != player->id) {
-            // Take all cards out of other players' hands that were never discarded
-            // and put them in the draw pile.
-            Player *other = &game->players[i];
-            Cards withdrawn = other->hand & ~game->everDiscarded;
-            Cards_remove(&other->hand, withdrawn);
+        Player *player = Game_player(game, i);
+        if (player != game->currentPlayer) {
+            Cards withdrawn = player->hand & ~game->everDiscarded;
+            Cards_remove(&player->hand, withdrawn);
             for (Cards c = Cards_first(withdrawn); c != 0; c = Cards_next(withdrawn, c)) {
                 Pile_push(&game->drawPile, c);
+                numExchanged[i]++;
             }
         }
     }
@@ -154,11 +147,11 @@ void Game_permute(Game *game) {
 
     // Refill hands from the draw pile.
     for (int i = 0; i < game->numPlayers; ++i) {
-        Player *other = &game->players[i];
-        int numToDeal = handSize[i] - Cards_size(other->hand);
-        for (int j = 0; j < numToDeal; ++j) {
+        Player *player = Game_player(game, i);
+        while (numExchanged[i] > 0) {
             Cards card = Pile_pop(&game->drawPile);
-            Cards_add(&other->hand, card);
+            Cards_add(&player->hand, card);
+            numExchanged[i]--;
         }
     }
 }

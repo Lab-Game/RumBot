@@ -50,8 +50,11 @@ void Game_swap(Game *game, Cards card1, Cards card2);
 // and return true.
 bool Game_nextTurn(Game *game);
 
-// Permute all unknown cards to the current player.
+// Permute all cards unknown to the current player.  This transaforms
+// the game into another state that is indistinguishable from the current
+// player's perspective.
 void Game_permute(Game *game);
+
 void Game_print(Game *game);
 void Game_printForPlayer(Game *game);
 
