@@ -13,10 +13,10 @@
 // representings runs, the sole place where low aces are meaningful.
 typedef uint64_t Cards;
 
-extern const Cards kFullDeck;   // Bits for full deck (high aces only)
-extern const Cards kLegalCards; // Bits for all legal cards
-extern const Cards kLowAces;    // Bits for low aces
-extern const Cards kHighAces;   // Bits for high aces
+extern const Cards kFullDeck;  // Full deck (high aces only)
+extern const Cards kLegalCards;  // Set of all legal cards (including low aces)
+extern const Cards kLowAces;  // Set of low aces
+extern const Cards kHighAces;  // Set of high aces
 extern const Cards kSpecialCard;  // Temp used when swapping cards
 
 // Confirm that all cards in the Cards set are legal.

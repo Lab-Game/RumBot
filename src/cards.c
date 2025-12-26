@@ -9,7 +9,7 @@ const Cards kFullDeck = 0x3FFE3FFE3FFE3FFEULL;
 const Cards kLegalCards = 0x3FFF3FFF3FFF3FFFULL;
 const Cards kLowAces = 0x0001000100010001ULL;
 const Cards kHighAces = 0x2000200020002000ULL;
-const Cards kSpecialCard = ~kLegalCards;  // Temp used when swapping cards
+const Cards kSpecialCard = 0x8000000000000000ULL;  // Temp used when swapping cards
 
 Cards Cards_fromString(const char *str) {
     const char *values = "a23456789TJQKA";

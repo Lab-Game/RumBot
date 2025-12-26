@@ -26,6 +26,8 @@ void Game_shuffle(Game *game) {
 }
 
 void Game_deal(Game *game) {
+    assert(Pile_size(&game->drawPile) >= NUM_PLAYERS * 7 + 1);
+
     // Deal 7 cards to each player
     for (int i = 0; i < NUM_PLAYERS; ++i) {
         Player *player = Game_player(game, i);
@@ -48,17 +50,19 @@ void Game_copy(Game *original, Game *copy) {
     copy->currentPlayer = &copy->players[copy->currentPlayerId];
 }
 
-static Cards Game_swapAux(Game *game, Cards insert, Cards extract) {
+// Replace the extract card with the insert card.  The insert card should
+// NOT be present in the game initially.  The extract card MUST be present.
+// Returns the card that was extracted.
+static Cards Game_replace(Game *game, Cards insert, Cards extract) {
+    // Look for the extracted card in the draw pile
     Pile *drawPile = &game->drawPile;
-    Pile *discardPile = &game->discardPile;
-
     if (Pile_has(drawPile, extract)) {
-        // Look for the extracted card in the draw pile
         return Pile_swap(&game->drawPile, insert, extract);
     }
 
+    // Look for the extracted card in the discard pile
+    Pile *discardPile = &game->discardPile;
     if (Pile_has(discardPile, extract)) {
-        // Look for the extracted card in the discard pile
         return Pile_swap(&game->discardPile, insert, extract);
     }
 
@@ -77,11 +81,47 @@ static Cards Game_swapAux(Game *game, Cards insert, Cards extract) {
 
 void Game_swap(Game *game, Cards card1, Cards card2) {
     if (card1 == card2) {
+        // Swapping a card with itself has no effect.
         return;
     }
-    Game_swapAux(game, kSpecialCard, card1);
-    Game_swapAux(game, card1, card2);
-    Game_swapAux(game, card2, kSpecialCard);
+
+    // Replalce card1 with a special temporary card, then replace card2 with card1,
+    // then replace the temporary card with card2.
+    Game_replace(game, kSpecialCard, card1);
+    Game_replace(game, card1, card2);
+    Game_replace(game, card2, kSpecialCard);
+}
+
+Player *Game_player(Game *game, int num) {
+    assert(num >= 0 && num < game->numPlayers);
+    return &(game->players[num]);
+}
+
+bool Game_nextTurn(Game *game) {
+    assert(!game->isOver);
+
+    Turn_init(&game->turn);
+
+    Player *player = game->currentPlayer;
+    if (player->hand == 0) {
+        // Player went out.
+        // Reduce the scores of other players by the points in their hand
+        game->isOver = true;
+        for (int i = 0; i < game->numPlayers; ++i) {
+            Player *p = Game_player(game, i);
+            int handPoints = Cards_points(p->hand);
+            p->score -= handPoints;
+        }
+    } else if (Pile_size(&game->drawPile) == 0) {
+        // Draw pile is empty.  Game is over, but no penalties are applied.
+        game->isOver = true;
+    } else {
+        // Advance to next player's turn
+        game->currentPlayerId = (game->currentPlayerId + 1) % game->numPlayers;
+        game->currentPlayer = &game->players[game->currentPlayerId];
+    }
+
+    return game->isOver;
 }
 
 void Game_permute(Game *game) {
@@ -120,34 +160,6 @@ void Game_permute(Game *game) {
             Cards card = Pile_pop(&game->drawPile);
             Cards_add(&other->hand, card);
         }
-    }
-}
-
-Player *Game_player(Game *game, int num) {
-    assert(num >= 0 && num < game->numPlayers);
-    return &(game->players[num]);
-}
-
-void Game_nextTurn(Game *game) {
-    Player *player = game->currentPlayer;
-
-    if (player->hand == 0) {
-        // Player went out.
-        // Reduce the score of other players by the points in their hand
-        game->isOver = true;
-        for (int i = 0; i < game->numPlayers; ++i) {
-            Player *p = Game_player(game, i);
-            int handPoints = Cards_points(p->hand);
-            p->score -= handPoints;
-        }
-    } else if (Pile_size(&game->drawPile) == 0) {
-        // Draw pile is empty.  Game is over, but no penalties are applied.
-        game->isOver = true;
-    } else {
-        // Advance to next player's turn
-        game->currentPlayerId = (game->currentPlayerId + 1) % game->numPlayers;
-        game->currentPlayer = &game->players[game->currentPlayerId];
-        Turn_init(&game->turn);
     }
 }
 
