@@ -39,6 +39,13 @@ void Player_undoDiscard(Player *player);
 void Player_play(Player *player, Turn *turn);
 
 void Player_print(Player *player);
+
+// Return the set of cards that the player could possibly draw,
+// from that player's perspective and thus in any possible
+// permutation of the game.  This is all cards in the deck except:
+//   - cards in the player's hand
+//   - cards in the meld
+//   - cards that have ever been discarded
 Cards Player_couldDraw(Player *player);
 
 #endif // PLAYER_H

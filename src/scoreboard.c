@@ -13,17 +13,23 @@ Scoreboard *Scoreboard_fromGame(Game *game) {
 }
     
 ScoreboardTake *Scoreboard_initTakes(Game *game) {
-    ScoreboardTake *takes = NULL;
-
     Player *player = game->currentPlayer;
+
+    // Consider taking each number of cards from the discard pile.
+    // Only create an entry in the scoreboard, if the number of
+    // cards taken is legal, i.e. the deepest card taken can be played,
+    // if multiple cards are taken.
+    ScoreboardTake *takes = NULL; // linked list, initially empty
     while (Pile_size(&game->discardPile) > 0) {
         Player_take(player, 1);
-
-        ScoreboardTake *take = malloc(sizeof(ScoreboardTake));
-        take->next = takes;
-        take->numTaken = Pile_size(&game->turn.taken);
-        take->melds = Scoreboard_initMelds(game);
-        takes = take;
+        ScoreboardMeld *melds = Scoreboard_initMelds(game);
+        if (melds != NULL) {
+            ScoreboardTake *take = malloc(sizeof(ScoreboardTake));
+            take->next = takes;
+            take->numTaken = Pile_size(&game->turn.taken);
+            take->melds = melds;
+            takes = take;
+        }
     }
     Player_undoTake(player);
 
@@ -31,10 +37,13 @@ ScoreboardTake *Scoreboard_initTakes(Game *game) {
 }
 
 ScoreboardDraw *Scoreboard_initDraws(Game *game) {
-    ScoreboardDraw *draws = NULL;
-
     Player *player = game->currentPlayer;
+
+    // Make a linked list of all possible draws.  For each cards that could
+    // possibly be drawn, we'll swap that to the top of the draw pile,
+    // simulate the player drawing the card, and then reverse those steps.
     Cards drawable = Player_couldDraw(player);
+    ScoreboardDraw *draws = NULL;
     for (Cards c = Cards_first(drawable); c != 0; c = Cards_next(drawable, c)) {
         Cards swap = Pile_peek(&game->drawPile);
         Game_swap(game, c, swap);
@@ -54,14 +63,14 @@ ScoreboardDraw *Scoreboard_initDraws(Game *game) {
 }
 
 ScoreboardMeld *Scoreboard_initMelds(Game *game) {
-    ScoreboardMeld *melds = NULL;
-
-    // Generate possible melds from the current hand.
     Player *player = game->currentPlayer;
+
+    // Generate possible melds from the current hand.  This list may be
+    // truncated for efficiency.
     MeldList meldList;
     Cards mustMeld = game->turn.taken.size > 1 ? Pile_peek(&game->turn.taken) : 0;
     MeldList_generate(&meldList, player->hand, &game->meld, mustMeld);
-
+    ScoreboardMeld *melds = NULL;
     for (int i = 0; i < meldList.size; ++i) {
         Player_meld(player, &meldList.melds[i]);
 
@@ -80,7 +89,7 @@ ScoreboardMeld *Scoreboard_initMelds(Game *game) {
 ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
     Player *player = game->currentPlayer;
 
-    // Handle the special case of an empty hand.
+    // Handle the special case of an empty hand.  In this case, no discard is required.
     if (Cards_size(player->hand) == 0) {
         ScoreboardDiscard *discard = malloc(sizeof(ScoreboardDiscard));
         discard->next = NULL;
@@ -91,7 +100,8 @@ ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
 
     ScoreboardDiscard *discards = NULL;
 
-    // You may not discard the only taken card if you have not melded anything.
+    // Enforce a special rule to reduce risk of infinite games:  you can not take one
+    // card and then discard that same card if you have not melded anything this turn.
     Cards illegalDiscard = 0;
     if (Meld_cards(&player->game->turn.meld) == 0 && player->game->turn.taken.size == 1) {
         illegalDiscard = player->game->turn.taken.allCards;
@@ -111,7 +121,6 @@ ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
         }
     }
 
-    // Return a linked list of all possible discards.
     return discards;
 }
 
