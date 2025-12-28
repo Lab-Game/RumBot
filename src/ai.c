@@ -24,7 +24,6 @@ void AI_resetForGo(AI *ai) {
         Turn_init(&ai->bestDrawTurn[i]);
     }
     ai->averageDrawEval = 0;
-    MeldList_init(&ai->meldList);
 }
 
 void AI_joinGame(AI *ai, Game *game, Player *player) {

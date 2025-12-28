@@ -60,7 +60,7 @@ static inline bool Cards_isLowAce(Cards card) {
     return (card & kLowAces) != 0;
 }
 
-// If there is a low or high ace, add the other ace to the Cards set.
+// If there is a low or high ace, add the other ace to the Cards set as well.
 static inline Cards Cards_addAllAces(Cards cards) {
     return (cards | ((cards & kLowAces) << 13) | ((cards & kHighAces) >> 13));
 }

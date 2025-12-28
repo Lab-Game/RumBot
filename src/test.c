@@ -212,6 +212,11 @@ void MeldList_test(void) {
     mustMeld = Cards_fromString("7H");
     MeldList_generate(&list, hand, &tableMeld, mustMeld);
     assert(list.size == MELDLIST_MAX_SIZE || list.size == 258);
+
+    Meld_init(&tableMeld);
+    hand = Cards_fromString("3C 3H 3D 3S");
+    MeldList_generate(&list, hand, &tableMeld, 0);
+    assert(list.size == 6);
 }
 
 void Game_test(void) {
