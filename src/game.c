@@ -4,21 +4,33 @@
 #include "game.h"
 
 void Game_init(Game *game) {
+    // Put all cards in the draw pile in sorted order.
+    Pile_fullDeck(&game->drawPile);
+
+    // Clear the discard pile and meld.
+    Pile_init(&game->discardPile);
+    Meld_init(&game->meld);
+
+    // Set up players
     game->numPlayers = NUM_PLAYERS;
     game->currentPlayerId = 0;
     game->currentPlayer = &game->players[0];
     for (int i = 0; i < game->numPlayers; ++i) {
         Player *player = &game->players[i];
-        Player_init(player);
         player->game = game;
         player->id = i;
+        player->hand = 0;
+        player->score = 0;
     }
-    Pile_fullDeck(&game->drawPile);
-    Pile_init(&game->discardPile);
-    Meld_init(&game->meld);
+
+    // No cards have ever been discarded.
     game->everDiscarded = 0;
-    Turn_init(&game->turn);
+
+    // The game is not over.
     game->isOver = false;
+
+    // Clear the record of actions in the current turn.
+    Turn_init(&game->turn);
 }
 
 void Game_shuffle(Game *game) {

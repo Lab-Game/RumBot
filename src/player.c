@@ -1,43 +1,6 @@
 #include "player.h"
 #include "game.h"
 
-void Player_init(Player *player) {
-    player->game = NULL;
-    player->id = 0;
-    player->score = 0;
-    player->hand = 0;
-}
-
-void Player_play(Player *player, Turn *turn) {
-    // Handle draw or take
-    if (turn->drawn) {
-        Cards drawnCard = Player_draw(player);
-        assert(drawnCard == turn->drawn);
-    } else {
-        assert(turn->taken.size > 0);
-        Player_take(player, Pile_size(&turn->taken));
-    }
-
-    // Handle meld
-    Player_meld(player, &turn->meld);
-
-    // Handle discard
-    if (turn->discard) {
-        Player_discard(player, turn->discard);
-    }
-}
-
-Cards Player_couldDraw(Player *player) {
-    Game *game = player->game;
-    return kFullDeck & ~(game->everDiscarded | player->hand | Meld_cards(&game->meld));
-}
-
-void Player_print(Player *player) {
-    printf("Player %d (%3d pts)  ", player->id, player->score);
-    Cards_print(player->hand);
-    printf("\n");
-}
-
 Cards Player_draw(Player *player) {
     Game *game = player->game;
     Turn *turn = &game->turn;
@@ -212,4 +175,34 @@ void Player_undoDiscard(Player *player) {
     game->everDiscarded &= ~turn->newDiscards;
     turn->discard = 0;
     turn->newDiscards = 0;
+}
+
+void Player_play(Player *player, Turn *turn) {
+    // Handle draw or take
+    if (turn->drawn) {
+        Cards drawnCard = Player_draw(player);
+        assert(drawnCard == turn->drawn);
+    } else {
+        assert(turn->taken.size > 0);
+        Player_take(player, Pile_size(&turn->taken));
+    }
+
+    // Handle meld
+    Player_meld(player, &turn->meld);
+
+    // Handle discard
+    if (turn->discard) {
+        Player_discard(player, turn->discard);
+    }
+}
+
+Cards Player_couldDraw(Player *player) {
+    Game *game = player->game;
+    return kFullDeck & ~(game->everDiscarded | player->hand | Meld_cards(&game->meld));
+}
+
+void Player_print(Player *player) {
+    printf("Player %d (%3d pts)  ", player->id, player->score);
+    Cards_print(player->hand);
+    printf("\n");
 }
