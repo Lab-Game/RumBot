@@ -125,10 +125,10 @@ void Pile_test(void) {
     Pile pile;
 
     Pile_init(&pile);
-    Pile_push(&pile, kSpecialCard);
+    Pile_push(&pile, kJoker);
     assert(Pile_size(&pile) == 1);
-    assert(pile.allCards == kSpecialCard);
-    assert(Cards_has(pile.allCards, kSpecialCard));
+    assert(pile.allCards == kJoker);
+    assert(Cards_has(pile.allCards, kJoker));
 
     Pile_init(&pile);
     assert(Pile_size(&pile) == 0);
@@ -215,6 +215,11 @@ void MeldList_test(void) {
 
     Meld_init(&tableMeld);
     hand = Cards_fromString("3C 3H 3D 3S");
+    MeldList_generate(&list, hand, &tableMeld, 0);
+    assert(list.size == 6);
+
+    Meld_init(&tableMeld);
+    hand = Cards_fromString("AC AH AD AS");
     MeldList_generate(&list, hand, &tableMeld, 0);
     assert(list.size == 6);
 }

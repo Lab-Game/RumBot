@@ -99,9 +99,9 @@ void Game_swap(Game *game, Cards card1, Cards card2) {
 
     // Replalce card1 with a special temporary card, then replace card2 with card1,
     // then replace the temporary card with card2.
-    Game_replace(game, kSpecialCard, card1);
+    Game_replace(game, kJoker, card1);
     Game_replace(game, card1, card2);
-    Game_replace(game, card2, kSpecialCard);
+    Game_replace(game, card2, kJoker);
 }
 
 Player *Game_player(Game *game, int num) {
@@ -169,11 +169,9 @@ void Game_permute(Game *game) {
 }
 
 void Game_print(Game *game) {
-    if (Meld_cards(&game->meld)) {
-        printf("Meld: ");
-        Meld_printCompact(&game->meld);
-        printf("\n");
-    }
+    printf("Meld: ");
+    Meld_printCompact(&game->meld);
+    printf("\n");
 
     for (int i = 0; i < game->numPlayers; ++i) {
         Player *player = Game_player(game, i);
@@ -182,7 +180,7 @@ void Game_print(Game *game) {
     }
 
     // Print all cards in the discard pile
-    printf("Discard: ");
+    printf("Discard pile: ");
     Pile_print(&game->discardPile);
     printf("\n");
 

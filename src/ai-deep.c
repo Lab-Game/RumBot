@@ -6,28 +6,92 @@
 #include "ai-deep.h"
 #include "scoreboard.h"
 
-void AI_goDeep(AI *ai) {
-    printf("AI_goDeep: Simulating deep lookahead...\n");
+const int kNumTakeSimulations = 100;
+const int kNumDrawSimulationsLight = 20;
+const int kNumDrawSimulationsFull = 500;
 
-    // Build a scoreboard from the current game state
-    Scoreboard *scoreboard = Scoreboard_fromGame(ai->game);
 
-    // Run lots of simulations on every leaf of the scoreboard tree
-    // to determine the best turn.
-    Game permuted;
-    for (int i = 0; i < 100; ++i) {
-        Game_copy(ai->game, &permuted);
-        Game_permute(&permuted);
-        AI_simulate(ai, &permuted, scoreboard);
-    }
-
-    AI_extractBestTakeTurn(ai, scoreboard);
-    AI_extractBestDrawTurns(ai, scoreboard);
-
-    Scoreboard_free(scoreboard);
+void DeepAI_beginTurn(AI *ai) {
+    // Initialize the scoreboard for deep AI simulations.
+    assert(ai->scoreboard == NULL);
+    ai->scoreboard = Scoreboard_fromGame(ai->game);
 }
 
-void AI_extractBestTakeTurn(AI *ai, Scoreboard *scoreboard) {
+void DeepAI_endTurn(AI *ai) {
+    assert(ai->scoreboard != NULL);
+    Scoreboard_free(ai->scoreboard);
+    ai->scoreboard = NULL;
+}
+
+bool DeepAI_takeTurn(AI *ai, Turn *turn) {
+    // We'll extensively simulate every possible take turn and
+    // more lightly simualate all possible draw turns.  The intuition
+    // is that we'll average over all draw turns, giving us a good estimate
+    // of the expected value of drawing, which is all that matters here.
+
+    Game permuted;
+    for (int i = 0; i < kNumTakeSimulations; ++i) {
+        Game_copy(ai->game, &permuted);
+        Game_permute(&permuted);
+        DeepAI_simulateTakes(ai, &permuted, ai->scoreboard->takes);
+        if (i < kNumDrawSimulationsLight) {
+            DeepAI_simulateDraws(ai, &permuted, ai->scoreboard->draws);
+        }
+    }
+
+    DeepAI_extractBestTakeTurn(ai, ai->scoreboard);
+    DeepAI_extractBestDrawTurns(ai, ai->scoreboard);
+
+    // Decide whether to take or draw based on the evaluations.
+    if (ai->bestTakeTurn.eval >= ai->averageDrawEval) {
+        *turn = ai->bestTakeTurn;;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void DeepAI_drawTurn(AI *ai, Cards drawCard, Turn *turn) {
+    // Locate the ScoreboardDraw entry for the specified draw card.
+    ScoreboardDraw *draw = NULL;
+    for (ScoreboardDraw *d = ai->scoreboard->draws; d; d = d->next) {
+        if (draw->drawn == Cards_fromCard(drawCard)) {
+            draw = d;
+            break;
+        }
+    }
+    assert(draw != NULL);
+
+    // Perform additiona simulations for this specific draw card.
+    Game permuted;
+    for (int i = 0; i < kNumDrawSimulationsFull; ++i) {
+        Game_copy(ai->game, &permuted);
+        Game_permute(&permuted);
+
+        // Move the specified draw card to the top of the draw pile
+        // and simulate the player drawing it.
+        Game_swap(&permuted, drawCard, Pile_peek(&permuted.drawPile));
+        Player_draw(permuted.currentPlayer);
+
+        // Now consider all possible melds and discards for this draw.
+        DeepAI_simulateMelds(ai, &permuted, draw->melds);
+    }
+
+    // Recompute the best turn for this draw card.
+    Turn *bestTurn = &ai->bestDrawTurn[drawCard];
+    Turn_init(bestTurn);
+    for (ScoreboardMeld *m = draw->melds; m; m = m->next) {
+        for (ScoreboardDiscard *d = m->discards; d != NULL; d = d->next) {
+            ScoreboardScore *score = d->score;
+            assert(score->numGames > 0);
+            Turn_max(bestTurn, &score->turn);
+        }
+    }
+
+    *turn = *bestTurn;
+}
+
+void DeepAI_extractBestTakeTurn(AI *ai, Scoreboard *scoreboard) {
     Turn *bestTakeTurn = &ai->bestTakeTurn;
     Turn_init(bestTakeTurn);
 
@@ -42,16 +106,16 @@ void AI_extractBestTakeTurn(AI *ai, Scoreboard *scoreboard) {
     }
 }
 
-void AI_extractBestDrawTurns(AI *ai, Scoreboard *scoreboard) {
+void DeepAI_extractBestDrawTurns(AI *ai, Scoreboard *scoreboard) {
     for (int i = 0; i < 64; ++i) {
         Turn_init(&ai->bestDrawTurn[i]);
     }
 
     int sumEval = 0;
     int numEval = 0;
-    for (ScoreboardDraw *t = scoreboard->draws; t != NULL; t = t->next) {
-        Card drawCard = Cards_toCard(t->drawn);
-        for (ScoreboardMeld *m = t->melds; m != NULL; m = m->next) {
+    for (ScoreboardDraw *d = scoreboard->draws; d != NULL; d = d->next) {
+        Card drawCard = Cards_toCard(d->drawn);
+        for (ScoreboardMeld *m = d->melds; m != NULL; m = m->next) {
             for (ScoreboardDiscard *d = m->discards; d != NULL; d = d->next) {
                 ScoreboardScore *score = d->score;
                 assert(score->numGames > 0);
@@ -65,67 +129,60 @@ void AI_extractBestDrawTurns(AI *ai, Scoreboard *scoreboard) {
     ai->averageDrawEval = sumEval / numEval;
 }
 
-void AI_simulate(AI *ai, Game *game, Scoreboard *scoreboard) {
-    // The caller is responsible for supplying games to simulate,
-    // probably by calling Game_permute() on the current game.
-
-    AI_simulateTakes(ai, game, scoreboard->takes);
-    AI_simulateDraws(ai, game, scoreboard->draws);
+void DeepAI_simulate(AI *ai, Game *game, Scoreboard *scoreboard) {
+    DeepAI_simulateTakes(ai, game, scoreboard->takes);
+    DeepAI_simulateDraws(ai, game, scoreboard->draws);
 }
 
-void AI_simulateTakes(AI *ai, Game *game, ScoreboardTake *take) {
+void DeepAI_simulateTakes(AI *ai, Game *game, ScoreboardTake *takes) {
     Player *player = game->currentPlayer;
 
-    while (take) {
+    for (ScoreboardTake *take = takes; take != NULL; take = take->next) {
         Player_take(player, take->numTaken);
-        AI_simulateMelds(ai, game, take->melds);
+        DeepAI_simulateMelds(ai, game, take->melds);
         Player_undoTake(player);
-        take = take->next;
     }
 }
 
-void AI_simulateDraws(AI *ai, Game *game, ScoreboardDraw *draws) {
+void DeepAI_simulateDraws(AI *ai, Game *game, ScoreboardDraw *draws) {
     Player *player = game->currentPlayer;
 
-    while (draws) {
-        Game_swap(game, draws->drawn, Pile_peek(&game->drawPile));
+    for (ScoreboardDraw *draw = draws; draw; draw = draw->next) {
+        Game_swap(game, draw->drawn, Pile_peek(&game->drawPile));
         Player_draw(player);
-        AI_simulateMelds(ai, game, draws->melds);
+        DeepAI_simulateMelds(ai, game, draw->melds);
         Player_undoDraw(player);
-        Game_swap(game, draws->drawn, Pile_peek(&game->drawPile));
-        draws = draws->next;
+        Game_swap(game, draw->drawn, Pile_peek(&game->drawPile));
     }
 }
 
-void AI_simulateMelds(AI *ai, Game *game, ScoreboardMeld *meld) {
+void DeepAI_simulateMelds(AI *ai, Game *game, ScoreboardMeld *melds) {
     Player *player = game->currentPlayer;
 
-    while (meld) {
+    for (ScoreboardMeld *meld = melds; meld; meld = meld->next) {
         Player_meld(player, &meld->meld);
-        AI_simulateDiscards(ai, game, meld->discards);
+        DeepAI_simulateDiscards(ai, game, meld->discards);
         Player_undoMeld(player, &meld->meld);
-        meld = meld->next;
     }
 }
 
-void AI_simulateDiscards(AI *ai, Game *game, ScoreboardDiscard *discards) {
+void DeepAI_simulateDiscards(AI *ai, Game *game, ScoreboardDiscard *discards) {
     Player *player = game->currentPlayer;
     assert(player->game == game);
 
-    while (discards) {
-        if (discards->discard) {
-            Player_discard(player, discards->discard);
-            AI_simulateGame(ai, game, discards->score);
+    for (ScoreboardDiscard *discard = discards; discard; discard = discard->next) {
+        if (discard->discard) {
+            Player_discard(player, discard->discard);
+            DeepAI_simulateGame(ai, game, discard->score);
             Player_undoDiscard(player);
         } else {
             // No discard (should only happen if the game is over)
-            AI_simulateGame(ai, game, discards->score);
+            DeepAI_simulateGame(ai, game, discard->score);
         }
-        discards = discards->next;
     }
 }
 
-void AI_simulateGame(AI *ai, Game *game, ScoreboardScore *score) {
+void DeepAI_simulateGame(AI *ai, Game *game, ScoreboardScore *score) {
     // Play out the rest of the game from the current state.
     // Update the ScoreboardScore structure with the results.
 
@@ -147,14 +204,23 @@ void AI_simulateGame(AI *ai, Game *game, ScoreboardScore *score) {
     // Set up AIs to play the simulated game to conclusion.
     AI simAIs[NUM_PLAYERS];
     for (int i = 0; i < NUM_PLAYERS; ++i) {
-        AI_init(&simAIs[i], ai->simMode, 0);
+        AI_init(&simAIs[i], ai->mode, false);
         AI_joinGame(&simAIs[i], &simGame, Game_player(&simGame, i));
     }
 
     // Play out the game until it's over.
     while (!simGame.isOver) {
+        AI *ai = &simAIs[simGame.currentPlayerId];
+
         Turn turn;
-        AI_go(&simAIs[simGame.currentPlayerId], &turn);
+        AI_beginTurn(ai);
+        if (!AI_takeTurn(ai, &turn)) {
+            // Peek at the top card of the draw pile.
+            Cards drawCard = Pile_peek(&simGame.drawPile);
+            AI_drawTurn(ai, drawCard, &turn);
+        }
+        AI_endTurn(ai);
+
         Player_play(simGame.currentPlayer, &turn);
         Game_nextTurn(&simGame);
     }

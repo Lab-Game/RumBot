@@ -34,8 +34,8 @@ typedef struct TurnStruct {
     int eval;
 } Turn;
 
-void Turn_init(Turn *play);
+void Turn_init(Turn *turn);
 int Turn_max(Turn *best, Turn *scratch);
-void Turn_print(Turn *play);
+void Turn_print(Turn *turn);
 
 #endif // TURN_H

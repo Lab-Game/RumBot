@@ -65,17 +65,13 @@ void Pile_fromString(Pile *pile, const char *str) {
 }
 
 void Pile_print(Pile *pile) {
-    Pile_printToFile(pile, stdout);
-}
-
-void Pile_printToFile(Pile *pile, FILE *file) {
     bool printed = false;
     for (int i = 0; i < pile->size; ++i) {
         Cards card = pile->cards[i];
         if (printed) {
-            fprintf(file, " ");
+            putchar(' ');
         }
-        Cards_printToFile(card, file);
+        Cards_print(card);
         printed = true;
     }
 }

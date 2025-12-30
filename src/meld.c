@@ -126,6 +126,11 @@ void Meld_print(Meld *meld) {
 }
 
 void Meld_printCompact(Meld *meld) {
+    if (meld->runs == 0 && meld->sets == 0) {
+        printf("<none> ");
+        return;
+    }
+
     Card prev = kIllegalCard;
     for (Cards c = Cards_first(meld->runs); c != 0; c = Cards_next(meld->runs, c)) {
         Card card = Cards_toCard(c);

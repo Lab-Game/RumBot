@@ -21,7 +21,7 @@ static inline int Pile_size(Pile *pile) {
 
 // Add a card to the top of the pile.
 static inline void Pile_push(Pile *pile, Cards card) {
-    assert(!(card & ~kFullDeck) || card == kSpecialCard); // card is legal or the special
+    assert(!(card & ~kFullDeck) || card == kJoker); // card is legal or the special
     assert(!(pile->allCards & card)); // card not already in pile
     pile->cards[pile->size++] = card;
     pile->allCards |= card;

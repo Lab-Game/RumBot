@@ -4,6 +4,8 @@
 
 #include "log.h"
 
+#if 0
+
 void Log_writeGame(FILE *log_file, Game *game) {
     // Print each player's hand
     for (int i = 0; i < game->numPlayers; ++i) {
@@ -267,3 +269,5 @@ void Log_readGame(FILE *log_file, Game *game) {
         Player_discard(game->currentPlayer, discardCard);
 #endif
 }
+
+#endif

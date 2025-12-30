@@ -1,30 +1,62 @@
 #include "ai.h"
 #include "ai-shallow.h"
 
-void AI_goShallow(AI *ai) {
+// No special setup or teardown is needed for a shallow AI.
+void ShallowAI_beginTurn(AI *ai) { (void) ai; }
+void ShallowAI_endTurn(AI *ai) { (void) ai; }
+
+bool ShallowAI_takeTurn(AI *ai, Turn *turn) {
     Game *game = ai->game;
     Player *player = ai->player;
 
     assert(!game->isOver);
     assert(game->currentPlayer == player);
 
-    AI_resetForGo(ai);
-    AI_findBestTakeTurn(ai);
-    AI_findBestDrawTurns(ai);
+    // Reset the best turn records.
+    Turn_init(&ai->bestTakeTurn);
+    for (int i = 0; i < 64; ++i) {
+        Turn_init(&ai->bestDrawTurn[i]);
+    }
+
+    // Consider all take turns.
+    ShallowAI_findBestTakeTurn(ai);
+
+    // Consider all draw turns.
+    ShallowAI_findBestDrawTurns(ai);
+
+    // Decide whether to take or draw.
+    if (ai->bestTakeTurn.eval >= ai->averageDrawEval) {
+        *turn = ai->bestTakeTurn;;
+        return true;
+    } else {
+        return false;
+    }
 }
 
-void AI_findBestTakeTurn(AI *ai) {
+void ShallowAI_drawTurn(AI *ai, Cards drawCard, Turn *turn) {
+    Game *game = ai->game;
+    Player *player = ai->player;
+
+    assert(!game->isOver);
+    assert(game->currentPlayer == player);
+
+    // Locate the best turn for the drawn card.
+    Card drawCardIndex = Cards_toCard(drawCard);
+    *turn = ai->bestDrawTurn[drawCardIndex];
+}
+
+void ShallowAI_findBestTakeTurn(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
     while (Pile_size(&game->discardPile) > 0) {
         Player_take(player, 1);
-        AI_findBestMeld(ai, &ai->bestTakeTurn);
+        ShallowAI_findBestMeld(ai, &ai->bestTakeTurn);
     }
     Player_undoTake(player);
 }
 
-void AI_findBestDrawTurns(AI *ai) {
+void ShallowAI_findBestDrawTurns(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
@@ -37,7 +69,7 @@ void AI_findBestDrawTurns(AI *ai) {
 
         Game_swap(game, c, topCard);
         Player_draw(player);
-        AI_findBestMeld(ai, turn);
+        ShallowAI_findBestMeld(ai, turn);
         totalEval += turn->eval;
         Player_undoDraw(player);
         Game_swap(game, c, topCard);
@@ -46,7 +78,7 @@ void AI_findBestDrawTurns(AI *ai) {
     ai->averageDrawEval = totalEval / Cards_size(drawable);
 }
 
-void AI_findBestMeld(AI *ai, Turn *bestTurn) {
+void ShallowAI_findBestMeld(AI *ai, Turn *bestTurn) {
     Game *game = ai->game;
     Player *player = ai->player;
 
@@ -59,12 +91,12 @@ void AI_findBestMeld(AI *ai, Turn *bestTurn) {
     // Try all of the possible melds, and find the best discard for each.
     for (int i = 0; i < ai->meldList.size; ++i) {
         Player_meld(player, &ai->meldList.melds[i]);
-        AI_findBestDiscard(ai, bestTurn);
+        ShallowAI_findBestDiscard(ai, bestTurn);
         Player_undoMeld(player, &ai->meldList.melds[i]);
     }
 }
 
-void AI_findBestDiscard(AI *ai, Turn *bestTurn) {
+void ShallowAI_findBestDiscard(AI *ai, Turn *bestTurn) {
     Game *game = ai->game;
     Player *player = ai->player;
 
@@ -80,14 +112,14 @@ void AI_findBestDiscard(AI *ai, Turn *bestTurn) {
     for (Cards c = Cards_first(player->hand); c != 0; c = Cards_next(player->hand, c)) {
         if (c != illegalDiscard) {
             Player_discard(player, c);
-            game->turn.eval = AI_evaluateGame(ai);
+            game->turn.eval = ShallowAI_evaluateGame(ai);
             Turn_max(bestTurn, &game->turn);
             Player_undoDiscard(player);
         }
     }
 }
 
-int AI_evaluateGame(AI *ai) {
+int ShallowAI_evaluateGame(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
 
@@ -121,7 +153,7 @@ int AI_evaluateGame(AI *ai) {
     // In mode 2, we also consider the playability of the player's hand.
     if (ai->mode == 2) {
         Cards drawable = Player_couldDraw(player);
-        int handPlayability = AI_evaluateHandPlayability(player->hand, &game->meld, drawable);
+        int handPlayability = ShallowAI_evaluateHandPlayability(player->hand, &game->meld, drawable);
         return baseCentipoints + handPlayability * 0.5 + 0.01 * handCentipoints;
     }
 
@@ -129,7 +161,7 @@ int AI_evaluateGame(AI *ai) {
     return baseCentipoints;
 }
 
-int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
+int ShallowAI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
     // Evaluate the quality of a hand given the table meld and
     // cards that could possibly be drawn.  In a good hand, there
     // are many possible draws that enable many playable cards.
@@ -141,7 +173,7 @@ int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
     for (Cards c = Cards_first(drawable); c != 0; c = Cards_next(drawable, c)) {
         // Simulate adding this card to the hand
         Cards simulatedHand = hand | c;
-        Cards playable = AI_playableCards(simulatedHand, meld);
+        Cards playable = ShallowAI_playableCards(simulatedHand, meld);
         int centipoints = Cards_points(playable) * 100;  // convert to cpts
         totalCentipoints += centipoints;
     }
@@ -153,7 +185,7 @@ int AI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
     return averageCentipoints;
 }
 
-Cards AI_playableCards(Cards hand, Meld *meld) {
+Cards ShallowAI_playableCards(Cards hand, Meld *meld) {
     // Find all cards in the hand that can be played in the meld.
     // These may not be simultaneously playable.
     Cards lowHand = Cards_addLowAces(hand);

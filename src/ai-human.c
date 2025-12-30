@@ -5,16 +5,22 @@
 #include "game.h"
 #include "player.h"
 #include "ai.h"
+#include "ai-human.h"
 
-void AI_goHuman(AI *ai, Turn *turn) {
+void HumanAI_beginTurn(AI *ai) {
+    (void) ai;
+}
+
+void HumanAI_endTurn(AI *ai) {
+    (void) ai;
+}
+
+bool HumanAI_takeTurn(AI *ai, Turn *turn) {
     Game *game = ai->game;
     Player *player = ai->player;
 
     assert(!game->isOver);
     assert(game->currentPlayer == player);
-
-    // Show the game from the player's perspective.
-    Game_printForPlayer(game);
 
     // Determine whether this is a draw or take.
     char turnTypeInput[8];
@@ -25,7 +31,7 @@ void AI_goHuman(AI *ai, Turn *turn) {
             break;
         }
     }
-    
+
     // Handle a take turn
     Cards mustMeld = 0;
     if (turnTypeInput[0] == 't') {
@@ -52,13 +58,56 @@ void AI_goHuman(AI *ai, Turn *turn) {
                 Player_undoTake(player);
                 continue;
             }
+
+            // Complete the meld and discard.
+            HumanAI_meldAndDiscard(ai, mustMeld);
+
+            // Record the turn.
+            *turn = game->turn;
+
+            // Unwind the player's actions so the main loop can reapply them.
+            Player_undoDiscard(player);
+            Player_undoMeld(player, &turn->meld);
+            Player_undoTake(player);
+            
+            return true;
         }
     } else {
-        Cards drawn = Player_draw(player);
-        printf("drew ");
-        Cards_print(drawn);
-        printf("\n");
+        return false;
     }
+}
+
+void HumanAI_drawTurn(AI *ai, Cards drawCard, Turn *turn) {
+    Game *game = ai->game;
+    Player *player = ai->player;
+
+    assert(!game->isOver);
+    assert(game->currentPlayer == player);
+
+    Cards drawn = Player_draw(player);
+    assert (drawn == drawCard);
+    printf("drew ");
+    Cards_print(drawn);
+    printf("\n");
+
+    // Complete the meld and discard.
+    HumanAI_meldAndDiscard(ai, 0);
+
+    // Record the turn.
+    *turn = game->turn;
+
+    // Unwind the player's actions so the main loop can reapply them.
+    Player_undoDiscard(player);
+    Player_undoMeld(player, &turn->meld);
+    Player_undoDraw(player);
+}
+
+void HumanAI_meldAndDiscard(AI *ai, Cards mustMeld) {
+    Game *game = ai->game;
+    Player *player = ai->player;
+
+    assert(!game->isOver);
+    assert(game->currentPlayer == player);
 
     // Show the game again after drawing/taking.
     Game_printForPlayer(game);
@@ -77,7 +126,7 @@ void AI_goHuman(AI *ai, Turn *turn) {
 
         // If the mustMeld card is in the player's hand and is not playable after this meld, undo the meld.
         if (Cards_has(player->hand, mustMeld) &&
-            !Cards_has(Meld_playableCards(&game->meld, player->hand), mustMeld)) {
+            !Cards_has(Meld_playableCards(&game->meld, mustMeld), mustMeld)) {
             printf("must play deepest card\n");
             Player_undoRun(player, runCards);
             continue;

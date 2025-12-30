@@ -17,7 +17,7 @@ extern const Cards kFullDeck;  // Full deck (high aces only)
 extern const Cards kLegalCards;  // Set of all legal cards (including low aces)
 extern const Cards kLowAces;  // Set of low aces
 extern const Cards kHighAces;  // Set of high aces
-extern const Cards kSpecialCard;  // Temp used when swapping cards
+extern const Cards kJoker;  // Temp used when swapping cards
 
 // Confirm that all cards in the Cards set are legal.
 static inline bool Cards_isLegal(Cards cards) {
@@ -47,7 +47,7 @@ static inline int Cards_size(Cards cards) {
 
 // Print the Cards set as a space-separated list of card codes.
 void Cards_print(Cards cards);
-void Cards_printToFile(Cards cards, FILE *file);
+
 void Cards_printExposed(Cards cards, Cards exposed);
 
 static inline Cards Cards_swap(Cards *cards, Cards insert, Cards extract) {

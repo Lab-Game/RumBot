@@ -8,22 +8,18 @@
 #include "ai-human.h"
 #include "meldlist.h"
 
-void AI_init(AI *ai, int mode, int simMode) {
-    ai->mode = mode;
-    ai->simMode = simMode;
+void AI_init(AI *ai, int mode, bool deep) {
+    // Either there is a human player (mode -1) or an AI player (mode >= 0),
+    // in which case deep evaluation may be enabled.
+    assert((mode == AI_HUMAN && !deep) || (mode >= 0));
+
     ai->totalScore = 0;
+    ai->mode = mode;
+    ai->deep = deep;
     ai->game = NULL;
     ai->player = NULL;
-    AI_resetForGo(ai);
-}
 
-// Clear fields used in selecting a turn.
-void AI_resetForGo(AI *ai) {
-    Turn_init(&ai->bestTakeTurn);
-    for (int i = 0; i < 64; ++i) {
-        Turn_init(&ai->bestDrawTurn[i]);
-    }
-    ai->averageDrawEval = 0;
+    ai->scoreboard = NULL;
 }
 
 void AI_joinGame(AI *ai, Game *game, Player *player) {
@@ -42,31 +38,43 @@ void AI_exitGame(AI *ai) {
     ai->player = NULL;
 }
 
-void AI_go(AI *ai, Turn *turn) {
-    AI_resetForGo(ai);
-    Turn_init(turn);
-
-    // Artificial AI:  human player mode
-    if (ai->mode == -1) {
-        AI_goHuman(ai, turn);
-        return;
-    }
-    
-    if (ai->mode >= 10) {
-        // Consider all possible turns and evaluate each by simulating
-        // many random completions of the game.
-        AI_goDeep(ai);
+void AI_beginTurn(AI *ai) {
+    if (ai->mode == AI_HUMAN) {
+        HumanAI_beginTurn(ai);
+    } else if (ai->deep) {
+        DeepAI_beginTurn(ai);
     } else {
-        // Consider all possible turns and evaluate each by a heuristic.
-        AI_goShallow(ai);
+        ShallowAI_beginTurn(ai);
     }
+}
 
-    // Choose the best turn, which could be a take or a draw.
-    if (ai->bestTakeTurn.eval > ai->averageDrawEval) {
-        *turn = ai->bestTakeTurn;
+bool AI_takeTurn(AI *ai, Turn *turn) {
+    if (ai->mode == AI_HUMAN) {
+        return HumanAI_takeTurn(ai, turn);
+    } else if (ai->deep) {
+        return DeepAI_takeTurn(ai, turn);
     } else {
-        Card drawCard = Cards_toCard(Pile_peek(&ai->game->drawPile));
-        *turn = ai->bestDrawTurn[drawCard];
+        return ShallowAI_takeTurn(ai, turn);
+    }
+}
+
+void AI_drawTurn(AI *ai, Cards drawCard, Turn *turn) {
+    if (ai->mode == AI_HUMAN) {
+        HumanAI_drawTurn(ai, drawCard, turn);
+    } else if (ai->deep) {
+        DeepAI_drawTurn(ai, drawCard, turn);
+    } else {
+        ShallowAI_drawTurn(ai, drawCard, turn);
+    }
+}
+
+void AI_endTurn(AI *ai) {
+    if (ai->mode == AI_HUMAN) {
+        HumanAI_endTurn(ai);
+    } else if (ai->deep) {
+        DeepAI_endTurn(ai);
+    } else {
+        ShallowAI_endTurn(ai);
     }
 }
 

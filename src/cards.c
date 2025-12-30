@@ -9,7 +9,7 @@ const Cards kFullDeck = 0x3FFE3FFE3FFE3FFEULL;
 const Cards kLegalCards = 0x3FFF3FFF3FFF3FFFULL;
 const Cards kLowAces = 0x0001000100010001ULL;
 const Cards kHighAces = 0x2000200020002000ULL;
-const Cards kSpecialCard = 0x8000000000000000ULL;  // Temp used when swapping cards
+const Cards kJoker = 0x8000000000000000ULL;  // Temp used when swapping cards
 
 Cards Cards_fromString(const char *str) {
     const char *values = "a23456789TJQKA";
@@ -22,14 +22,14 @@ Cards Cards_fromString(const char *str) {
 
     while (true) {
         if (!*str || !*(str+1)) {
-            return kSpecialCard;
+            return kJoker;
         }
 
         char *valuePtr = strchr(values, *str);
         char *suitPtr = strchr(suits, *(str + 1));
 
         if (!valuePtr || !suitPtr) {
-            return kSpecialCard;
+            return kJoker;
         }
 
         str += 2;
@@ -44,33 +44,28 @@ Cards Cards_fromString(const char *str) {
         }
         
         if (*str != ' ') {
-            return kSpecialCard;
+            return kJoker;
         }
 
         str += 1;
     }
 }
 
-void Cards_printToFile(Cards cards, FILE *file) {
+void Cards_print(Cards cards) {
     bool first = true;
-
-    if (Cards_has(cards, kSpecialCard)) {
-        fprintf(file, "<special>");
-        cards &= ~kSpecialCard;
-        first = false;
-    }
 
     for (Cards cs = Cards_first(cards); cs != 0; cs = Cards_next(cards, cs)) {
         Card c = Cards_toCard(cs);
         if (first) {
             first = false;
         } else {
-            fprintf(file, " ");
+            putchar(' ');
         }
-        fprintf(file, "%s", Card_name(c));
+        
+        if (c == kJoker) {
+            printf("<special>");
+        } else {
+            printf("%s", Card_colorName(c));
+        }
     }
-}
-
-void Cards_print(Cards cards) {
-    Cards_printToFile(cards, stdout);
 }
