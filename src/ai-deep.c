@@ -6,9 +6,9 @@
 #include "ai-deep.h"
 #include "scoreboard.h"
 
-const int kNumTakeSimulations = 100;
-const int kNumDrawSimulationsLight = 20;
-const int kNumDrawSimulationsFull = 500;
+const int kNumTakeSimulations = 20;
+const int kNumDrawSimulationsLight = 5;
+const int kNumDrawSimulationsFull = 50;
 
 
 void DeepAI_beginTurn(AI *ai) {
@@ -28,9 +28,9 @@ bool DeepAI_takeTurn(AI *ai, Turn *turn) {
     // more lightly simualate all possible draw turns.  The intuition
     // is that we'll average over all draw turns, giving us a good estimate
     // of the expected value of drawing, which is all that matters here.
-
     Game permuted;
     for (int i = 0; i < kNumTakeSimulations; ++i) {
+        printf("i = %d\n", i);
         Game_copy(ai->game, &permuted);
         Game_permute(&permuted);
         DeepAI_simulateTakes(ai, &permuted, ai->scoreboard->takes);
@@ -44,7 +44,7 @@ bool DeepAI_takeTurn(AI *ai, Turn *turn) {
 
     // Decide whether to take or draw based on the evaluations.
     if (ai->bestTakeTurn.eval >= ai->averageDrawEval) {
-        *turn = ai->bestTakeTurn;;
+        *turn = ai->bestTakeTurn;
         return true;
     } else {
         return false;
@@ -209,7 +209,10 @@ void DeepAI_simulateGame(AI *ai, Game *game, ScoreboardScore *score) {
     }
 
     // Play out the game until it's over.
+    int tmp_rounds = 0;
     while (!simGame.isOver) {
+        tmp_rounds++;
+
         AI *ai = &simAIs[simGame.currentPlayerId];
 
         Turn turn;
@@ -218,6 +221,13 @@ void DeepAI_simulateGame(AI *ai, Game *game, ScoreboardScore *score) {
             // Peek at the top card of the draw pile.
             Cards drawCard = Pile_peek(&simGame.drawPile);
             AI_drawTurn(ai, drawCard, &turn);
+        }
+        if (tmp_rounds > 1000) {
+            Turn_print(&turn);
+        }
+        if (tmp_rounds > 1100) {
+            Game_print(&simGame);
+            assert(false);
         }
         AI_endTurn(ai);
 

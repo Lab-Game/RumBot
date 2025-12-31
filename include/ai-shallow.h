@@ -16,7 +16,7 @@ void ShallowAI_findBestMeld(AI *ai, Turn *bestTurn);
 void ShallowAI_findBestDiscard(AI *ai, Turn *bestTurn);
 int ShallowAI_evaluateGame(AI *ai);
 int ShallowAI_evaluateHand(Cards hand, Meld *meld, Cards drawable);
-int ShallowAI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable);
+int ShallowAI_playabilityCpts(Cards hand, Meld *meld, Cards drawable);
 Cards ShallowAI_playableCards(Cards hand, Meld *meld);
 
 #endif // AI_SHALLOW_H

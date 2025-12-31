@@ -138,30 +138,34 @@ int ShallowAI_evaluateGame(AI *ai) {
         return baseCentipoints + penaltyAverage;
     }
 
+    if (ai->mode == 0) {
+        return baseCentipoints;
+    }
+
     // Count points in the player's hand.  Presumably, these points are
     // helpful early in the game (because we can probably score them), but
     // hurtful later in the game (because we may be stuck with them).
-    int handCentipoints = 100 * Cards_points(player->hand);
+    int handCpts = Cards_points(player->hand) * 100;;
 
-    // In mode 1, the evaluation is just the base score plus 1 centipoint
-    // per point in the player's hand.  So keeping higher cards in your
-    // hand is slightly better.  This may be wrong late in the game.
+    // Estimate hand playability.
+    int playabilityCpts = ShallowAI_playabilityCpts(
+        player->hand, &game->meld, Player_couldDraw(player));
+
+    const float kHandWeight = 0.1f;
+    const float kPlayabilityWeight = 0.5f;
+
     if (ai->mode == 1) {
-        return baseCentipoints + 0.01 * handCentipoints;
+        handCpts = (int)(handCpts * kHandWeight);
+        playabilityCpts = (int)(playabilityCpts * kPlayabilityWeight);
     }
 
-    // In mode 2, we also consider the playability of the player's hand.
-    if (ai->mode == 2) {
-        Cards drawable = Player_couldDraw(player);
-        int handPlayability = ShallowAI_evaluateHandPlayability(player->hand, &game->meld, drawable);
-        return baseCentipoints + handPlayability * 0.5 + 0.01 * handCentipoints;
-    }
+    printf("Eval: base=%d handCpts=%d playabilityCpts=%d\n",
+           baseCentipoints, handCpts, playabilityCpts);
 
-    // In any other mode, just return the base score.
-    return baseCentipoints;
+    return baseCentipoints + handCpts + playabilityCpts;
 }
 
-int ShallowAI_evaluateHandPlayability(Cards hand, Meld *meld, Cards drawable) {
+int ShallowAI_playabilityCpts(Cards hand, Meld *meld, Cards drawable) {
     // Evaluate the quality of a hand given the table meld and
     // cards that could possibly be drawn.  In a good hand, there
     // are many possible draws that enable many playable cards.
