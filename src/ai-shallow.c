@@ -119,6 +119,30 @@ void ShallowAI_findBestDiscard(AI *ai, Turn *bestTurn) {
     }
 }
 
+// This is a rewrite of the ShallowAI_evaluateGame function, which I'm in the process of making.
+
+// An AI should prefer actions during its turn that lead to a more favorable game state
+// at the end of its turn.  The AI's evaluation function estimates the favorability
+// of a game state at the end of the AI's turn.  A higher return value indicates a more
+// favorable state.
+//
+// Evaluation scores across turns are not intended to be comparable.
+//
+// We first compute features of the game state, then combine them into an overall score.
+// The features are roughly in centipoints (1/100 of a point).  In particular, the
+// dominant feature is 100 * the number of points the AI has melded onto the table.
+//
+// An AI mode defines a linear combination of feature weights.  (This may not be sufficient
+// for great play; we may need non-linear combinations later, e.g. evaluating points-in-hand
+// differently depending on how far along the game is.)
+//
+// An optional pointer to a features strucutre may be provided to receive the computed features,
+// which may be useful for testing and analysis.
+
+int EvaluateGame(AI *ai) {
+
+}
+
 int ShallowAI_evaluateGame(AI *ai) {
     Game *game = ai->game;
     Player *player = ai->player;
