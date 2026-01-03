@@ -7,6 +7,7 @@
 
 Scoreboard *Scoreboard_fromGame(Game *game) {
     Scoreboard *scoreboard = malloc(sizeof(Scoreboard));
+    assert(scoreboard != NULL);
     scoreboard->takes = Scoreboard_initTakes(game);
     scoreboard->draws = Scoreboard_initDraws(game);
     return scoreboard;
@@ -25,6 +26,7 @@ ScoreboardTake *Scoreboard_initTakes(Game *game) {
         ScoreboardMeld *melds = Scoreboard_initMelds(game);
         if (melds != NULL) {
             ScoreboardTake *take = malloc(sizeof(ScoreboardTake));
+            assert(take != NULL);
             take->next = takes;
             take->numTaken = Pile_size(&game->turn.taken);
             take->melds = melds;
@@ -50,6 +52,7 @@ ScoreboardDraw *Scoreboard_initDraws(Game *game) {
         Player_draw(player);
 
         ScoreboardDraw *draw = malloc(sizeof(ScoreboardDraw));
+        assert(draw != NULL);
         draw->next = draws;
         draw->drawn = game->turn.drawn;
         draw->melds = Scoreboard_initMelds(game);
@@ -75,6 +78,7 @@ ScoreboardMeld *Scoreboard_initMelds(Game *game) {
         Player_meld(player, &meldList.melds[i]);
 
         ScoreboardMeld *meld = malloc(sizeof(ScoreboardMeld));
+        assert(meld != NULL);
         meld->next = melds;
         meld->meld = game->turn.meld;
         meld->discards = Scoreboard_initDiscards(game);
@@ -92,6 +96,7 @@ ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
     // Handle the special case of an empty hand.  In this case, no discard is required.
     if (Cards_size(player->hand) == 0) {
         ScoreboardDiscard *discard = malloc(sizeof(ScoreboardDiscard));
+        assert(discard != NULL);
         discard->next = NULL;
         discard->discard = 0;
         discard->score = Scoreboard_initScore(game);
@@ -112,6 +117,7 @@ ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
             Player_discard(player, c);
 
             ScoreboardDiscard *discard = malloc(sizeof(ScoreboardDiscard));
+            assert(discard != NULL);
             discard->next = discards;
             discard->discard = game->turn.discard;
             discard->score = Scoreboard_initScore(game);
@@ -126,6 +132,8 @@ ScoreboardDiscard *Scoreboard_initDiscards(Game *game) {
 
 ScoreboardScore *Scoreboard_initScore(Game *game) {
     ScoreboardScore *score = malloc(sizeof(ScoreboardScore));
+    assert(score != NULL);
+
     score->turn = game->turn;
     score->numGames = 0;
     for (int i = 0; i < NUM_PLAYERS; ++i) {

@@ -30,7 +30,6 @@ bool DeepAI_takeTurn(AI *ai, Turn *turn) {
     // of the expected value of drawing, which is all that matters here.
     Game permuted;
     for (int i = 0; i < kNumTakeSimulations; ++i) {
-        printf("i = %d\n", i);
         Game_copy(ai->game, &permuted);
         Game_permute(&permuted);
         DeepAI_simulateTakes(ai, &permuted, ai->scoreboard->takes);
@@ -43,7 +42,7 @@ bool DeepAI_takeTurn(AI *ai, Turn *turn) {
     DeepAI_extractBestDrawTurns(ai, ai->scoreboard);
 
     // Decide whether to take or draw based on the evaluations.
-    if (ai->bestTakeTurn.eval >= ai->averageDrawEval) {
+    if (ai->bestTakeTurn.eval > ai->averageDrawEval) {
         *turn = ai->bestTakeTurn;
         return true;
     } else {
@@ -55,14 +54,14 @@ void DeepAI_drawTurn(AI *ai, Cards drawCard, Turn *turn) {
     // Locate the ScoreboardDraw entry for the specified draw card.
     ScoreboardDraw *draw = NULL;
     for (ScoreboardDraw *d = ai->scoreboard->draws; d; d = d->next) {
-        if (draw->drawn == Cards_fromCard(drawCard)) {
+        if (d->drawn == drawCard) {
             draw = d;
             break;
         }
     }
     assert(draw != NULL);
 
-    // Perform additiona simulations for this specific draw card.
+    // Perform additional simulations for this specific draw card.
     Game permuted;
     for (int i = 0; i < kNumDrawSimulationsFull; ++i) {
         Game_copy(ai->game, &permuted);
@@ -78,7 +77,8 @@ void DeepAI_drawTurn(AI *ai, Cards drawCard, Turn *turn) {
     }
 
     // Recompute the best turn for this draw card.
-    Turn *bestTurn = &ai->bestDrawTurn[drawCard];
+    Card drawCardIndex = Cards_toCard(drawCard);
+    Turn *bestTurn = &ai->bestDrawTurn[drawCardIndex];
     Turn_init(bestTurn);
     for (ScoreboardMeld *m = draw->melds; m; m = m->next) {
         for (ScoreboardDiscard *d = m->discards; d != NULL; d = d->next) {

@@ -72,6 +72,8 @@ void AI_endTurn(AI *ai) {
     if (ai->mode == AI_HUMAN) {
         HumanAI_endTurn(ai);
     } else if (ai->deep) {
+        // Print the scoreboard for debugging.
+        Scoreboard_print(ai->scoreboard);
         DeepAI_endTurn(ai);
     } else {
         ShallowAI_endTurn(ai);

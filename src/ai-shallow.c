@@ -25,7 +25,7 @@ bool ShallowAI_takeTurn(AI *ai, Turn *turn) {
     ShallowAI_findBestDrawTurns(ai);
 
     // Decide whether to take or draw.
-    if (ai->bestTakeTurn.eval >= ai->averageDrawEval) {
+    if (ai->bestTakeTurn.eval > ai->averageDrawEval) {
         *turn = ai->bestTakeTurn;;
         return true;
     } else {
@@ -124,7 +124,7 @@ int ShallowAI_evaluateGame(AI *ai) {
     Player *player = ai->player;
 
     // Credit the player for their current score.
-    int baseCentipoints = player->score * 100;
+    int eval = player->score * 100;
 
     // If the player's hand is empty, then the game is over.
     // Assume each opponent loses about 700 centipoints per card
@@ -135,11 +135,7 @@ int ShallowAI_evaluateGame(AI *ai) {
             penaltyTotal += Cards_size(Game_player(game, i)->hand) * 700;
         }
         int penaltyAverage = penaltyTotal / (game->numPlayers - 1);
-        return baseCentipoints + penaltyAverage;
-    }
-
-    if (ai->mode == 0) {
-        return baseCentipoints;
+        return eval + penaltyAverage;
     }
 
     // Count points in the player's hand.  Presumably, these points are
@@ -155,14 +151,10 @@ int ShallowAI_evaluateGame(AI *ai) {
     const float kPlayabilityWeight = 0.5f;
 
     if (ai->mode == 1) {
-        handCpts = (int)(handCpts * kHandWeight);
-        playabilityCpts = (int)(playabilityCpts * kPlayabilityWeight);
+        eval += handCpts * kHandWeight + playabilityCpts * kPlayabilityWeight;
     }
 
-    printf("Eval: base=%d handCpts=%d playabilityCpts=%d\n",
-           baseCentipoints, handCpts, playabilityCpts);
-
-    return baseCentipoints + handCpts + playabilityCpts;
+    return eval;
 }
 
 int ShallowAI_playabilityCpts(Cards hand, Meld *meld, Cards drawable) {

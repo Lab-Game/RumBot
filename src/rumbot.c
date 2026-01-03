@@ -108,7 +108,7 @@ int main() {
     AI ais[NUM_PLAYERS];
     AI *ai_ptrs[NUM_PLAYERS];
 
-    AI_init(&ais[0], 1, false);
+    AI_init(&ais[0], 1, true);
     AI_init(&ais[1], 1, false);
     AI_init(&ais[2], 1, false);
     
